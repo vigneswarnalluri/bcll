@@ -1,0 +1,929 @@
+/* DONATE PAGE - Premium Corporate Grade Design */
+
+/* GLOBAL ANIMATIONS */
+@keyframes fadeInData {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 1. HERO - Executive Presence */
+/* 1. HERO - Executive Presence - Synced Color Grading */
+.donate-hero {
+    background-color: var(--primary);
+    background-image: url('/image copy 12.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    padding: 160px 20px 100px;
+    /* Reduced bottom padding */
+    text-align: center;
+    color: white;
+    /* White text */
+    position: relative;
+    overflow: hidden;
+}
+
+/* Gradient Overlay for Pro Color Sync */
+.donate-hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg,
+            rgba(10, 14, 39, 0.4) 0%,
+            /* Dark Navy Top (Matches Topbar) */
+            rgba(26, 35, 126, 0.1) 40%,
+            /* Clearer Middle */
+            rgba(26, 35, 126, 0.05) 100%);
+    z-index: 1;
+}
+
+.donate-hero h1 {
+    font-size: 3.5rem;
+    font-weight: 800;
+    margin-bottom: 24px;
+    font-family: var(--font-heading);
+    letter-spacing: -1px;
+    position: relative;
+    z-index: 2;
+    color: var(--primary-dark);
+    /* Keep Dark Text as per screenshot preference? No, usually white on hero. */
+    /* Wait, screenshot had dark text on light bg. If I add dark overlay, I MUST use white text. */
+    color: #1a237e;
+    /* Using dark text because background is light? */
+    /* User said 'not synced'. Usually navbar is white text. If bg is light, navbar is invisible? */
+    /* Screenshot showed White Navbar text on Light BG. That was the bug. */
+    /* So I MUST make the BG darker so White Navbar is visible. */
+}
+
+/* Redoing Logic: */
+/* IF Navbar is White Text, BG must be Dark. */
+/* Current Image is Light. */
+/* Solution: Add Dark Overlay. Switch Hero Text to White? */
+/* Screenshot had Dark Hero Heading. */
+/* If I allow Dark Overlay, Dark Hero Heading will be invisible. */
+/* I will make Hero Heading WHITE. */
+
+.donate-hero h1 {
+    font-size: 3.5rem;
+    font-weight: 800;
+    margin-bottom: 24px;
+    font-family: var(--font-heading);
+    letter-spacing: -1px;
+    position: relative;
+    z-index: 2;
+    color: #ffffff;
+    /* White Text */
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.donate-hero p {
+    font-size: 1.35rem;
+    max-width: 750px;
+    margin: 0 auto;
+    color: rgba(255, 255, 255, 0.95);
+    /* White Text */
+    line-height: 1.6;
+    font-weight: 500;
+    position: relative;
+    z-index: 2;
+    animation: fadeInData 0.8s ease-out forwards;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* LAYOUT CONTAINER */
+.donate-layout {
+    display: grid;
+    grid-template-columns: 1.8fr 1fr;
+    gap: 60px;
+    margin-top: 40px;
+    margin-bottom: 100px;
+    align-items: start;
+    position: relative;
+}
+
+.donate-main-content {
+    min-width: 0;
+    /* Prevent grid blowout */
+}
+
+/* STICKY SIDEBAR WIDGET */
+.donate-sidebar {
+    position: sticky;
+    top: 120px;
+    /* Below navbar */
+    align-self: start;
+    height: fit-content;
+}
+
+.donation-widget-sticky {
+    background: white;
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+    /* Soft corporate shadow */
+    border: 1px solid #eee;
+    animation: fadeInData 0.8s ease-out forwards;
+}
+
+.amount-pills {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.pill-btn {
+    flex: 1;
+    min-width: 80px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    padding: 12px 10px;
+    border-radius: 8px;
+    font-weight: 700;
+    color: #555;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+    text-align: center;
+}
+
+.pill-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: #f8f9fa;
+}
+
+.pill-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    box-shadow: 0 4px 10px rgba(26, 35, 126, 0.2);
+}
+
+.custom-input-group {
+    position: relative;
+    margin-bottom: 25px;
+}
+
+.currency-symbol {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.2rem;
+    color: #777;
+    font-weight: 700;
+}
+
+.amount-input {
+    width: 100%;
+    padding: 16px 20px 16px 40px;
+    border: 2px solid #eee;
+    border-radius: 12px;
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #333;
+    transition: 0.3s;
+    outline: none;
+}
+
+.amount-input:focus {
+    border-color: var(--secondary);
+    background: #fdfdfd;
+}
+
+.donate-submit-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: var(--primary);
+    /* Solid primary */
+    color: white;
+    text-decoration: none;
+    padding: 18px 30px;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    transition: 0.3s;
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+.donate-submit-btn:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(26, 35, 126, 0.25);
+    color: white;
+}
+
+.secure-note {
+    font-size: 0.85rem !important;
+    color: #2e7d32 !important;
+    /* Green for trust */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-weight: 600 !important;
+    margin: 0 !important;
+    text-shadow: none !important;
+}
+
+/* 2. WHY DONATIONS MATTER - Clean Flow */
+/* 2. WHY DONATIONS MATTER - Clean Flow & Premium Typography */
+.donate-why {
+    margin-top: 0;
+    padding: 20px 0 80px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.impact-strip {
+    /* Clean layout, no cards */
+    background: transparent;
+    padding: 0;
+    max-width: 100%;
+    margin: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 40px;
+}
+
+.impact-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+    flex: 1;
+    position: relative;
+    padding-right: 20px;
+}
+
+.impact-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 5px;
+}
+
+.impact-number {
+    font-size: 3.5rem;
+    font-weight: 800;
+    color: var(--secondary);
+    /* Gold */
+    line-height: 1;
+    font-family: var(--font-heading);
+    letter-spacing: -2px;
+    /* subtle shadow for depth */
+    text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.05);
+}
+
+.impact-icon-small {
+    font-size: 2rem;
+    color: var(--primary-dark);
+    /* Deep Blue */
+    opacity: 0.8;
+}
+
+.impact-item p {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--primary-dark);
+    line-height: 1.4;
+    max-width: 90%;
+    margin: 0;
+    font-family: var(--font-heading);
+    /* Match heading style for importance */
+}
+
+/* Vertical Dividers */
+.impact-divider {
+    width: 1px;
+    height: 80px;
+    background: linear-gradient(to bottom, #ddd 0%, transparent 100%);
+    display: block;
+    margin-top: 10px;
+}
+
+/* Mobile Responsiveness for Impact Strip */
+@media (max-width: 768px) {
+    .impact-strip {
+        flex-direction: column;
+        gap: 30px;
+    }
+
+    .impact-divider {
+        width: 100%;
+        height: 1px;
+        background: linear-gradient(to right, #ddd 0%, transparent 100%);
+        margin: 0;
+    }
+
+    .impact-item {
+        width: 100%;
+        padding-right: 0;
+    }
+}
+
+/* 3. HOW YOUR - Direct Grid */
+.donate-usage {
+    background: transparent;
+    padding: 60px 0;
+    border-bottom: 1px solid #eee;
+}
+
+/* RESTORED BENTO GRID STYLES */
+.bento-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, 300px);
+    gap: 30px;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.bento-card {
+    border-radius: 32px;
+    padding: 40px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+.bento-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15);
+}
+
+/* Background Textures */
+.bento-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background-image: radial-gradient(circle at top right, rgba(255, 255, 255, 0.1) 0%, transparent 60%);
+    pointer-events: none;
+}
+
+/* Cell Variations */
+.bento-card.large {
+    grid-column: 1 / 3;
+    grid-row: 1;
+}
+
+.bento-card.tall {
+    grid-column: 3;
+    grid-row: 1 / 3;
+}
+
+.bento-card.wide {
+    grid-column: 1 / 2;
+    grid-row: 2;
+}
+
+/* Color Themes */
+.blue-gradient {
+    background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+    color: white;
+    border: none;
+}
+
+.blue-gradient h3,
+.blue-gradient p {
+    color: white !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.blue-gradient .bento-icon {
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.gold-bg {
+    background: linear-gradient(135deg, #FFD700 0%, #FFC107 100%);
+    color: #1a237e;
+    border: none;
+}
+
+.gold-bg h3 {
+    color: #0d1238;
+}
+
+.gold-bg p {
+    color: #1a237e;
+    font-weight: 600;
+}
+
+.white-bg {
+    background: #ffffff;
+    color: #333;
+    border: 1px solid #e0e0e0;
+}
+
+.white-bg h3 {
+    color: #1a237e;
+}
+
+.white-bg p {
+    color: #555;
+    font-weight: 500;
+}
+
+.dark-bg {
+    background: #121212;
+    color: white;
+    position: relative;
+    border: 1px solid #333;
+}
+
+.dark-bg::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: radial-gradient(#333 1px, transparent 1px);
+    background-size: 20px 20px;
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+.dark-bg h3,
+.dark-bg p {
+    color: white;
+    position: relative;
+    z-index: 2;
+}
+
+/* Typography & Icons */
+.bento-content {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.bento-icon {
+    font-size: 3rem;
+    /* Reduced from 3.5rem */
+    margin-bottom: 20px;
+    display: block;
+    transition: transform 0.4s ease;
+}
+
+.bento-card:hover .bento-icon {
+    transform: scale(1.1) rotate(5deg);
+}
+
+.bento-card h3 {
+    font-size: 1.6rem;
+    /* Reduced from 2rem */
+    font-weight: 800;
+    margin-bottom: 12px;
+    line-height: 1.1;
+    letter-spacing: -0.5px;
+    word-wrap: break-word;
+    /* Safety */
+}
+
+.bento-card p {
+    font-size: 0.95rem;
+    /* Slightly smaller text */
+    opacity: 0.95;
+    font-weight: 500;
+    margin: 0;
+    line-height: 1.5;
+    max-width: 95%;
+}
+
+.bento-icon.dark,
+.bento-icon.blue {
+    color: #1a237e;
+}
+
+.bento-icon.gold {
+    color: #ffd700;
+}
+
+/* Responsive Grid */
+@media (max-width: 900px) {
+    .bento-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+    }
+
+    .bento-card.large,
+    .bento-card.tall,
+    .bento-card.wide {
+        grid-column: auto;
+        grid-row: auto;
+        min-height: 250px;
+    }
+}
+
+/* 4. UPI DONATION - Premium Module */
+.donate-upi-section {
+    background: linear-gradient(to bottom, #f8f9fa 0%, white 100%);
+    padding: 80px 0;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.upi-container {
+    display: flex;
+    gap: 60px;
+    align-items: flex-start;
+    max-width: 900px;
+}
+
+/* Left: QR Visual */
+.upi-qr-block {
+    background: white;
+    padding: 20px;
+    border-radius: 24px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
+    /* Card-like shadow */
+    text-align: center;
+    border: 1px solid #eee;
+    flex-shrink: 0;
+}
+
+.qr-frame {
+    width: 240px;
+    height: 240px;
+    margin-bottom: 15px;
+    padding: 10px;
+    background: white;
+    border-radius: 16px;
+    border: 1px solid #f0f0f0;
+}
+
+.qr-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    mix-blend-mode: multiply;
+    /* Ensures QR blends well */
+}
+
+.scan-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: #555;
+    font-weight: 600;
+    background: #f5f5f5;
+    padding: 6px 14px;
+    border-radius: 30px;
+}
+
+/* Right: Details */
+.upi-details-block {
+    flex: 1;
+    padding-top: 10px;
+}
+
+.id-group label {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    color: #888;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.code-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f1f3f5;
+    padding: 15px 20px;
+    border-radius: 12px;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary-dark);
+    margin-bottom: 30px;
+    border: 2px solid transparent;
+    transition: 0.3s;
+}
+
+.code-box:hover {
+    border-color: var(--primary);
+    background: white;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+}
+
+.btn-copy {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+    cursor: pointer;
+    transition: 0.2s;
+    font-size: 1rem;
+}
+
+.btn-copy:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.merchant-info h4 {
+    font-size: 1.25rem;
+    margin-bottom: 5px;
+    color: #333;
+}
+
+.merchant-info p {
+    color: #666;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin-bottom: 30px;
+}
+
+.info-icon {
+    color: var(--secondary);
+    /* Gold icon */
+}
+
+/* Apps Grid */
+.apps-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.apps-group>span {
+    font-size: 0.85rem;
+    color: #999;
+    font-weight: 600;
+}
+
+.app-icons {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.app-icons img {
+    height: 30px;
+    object-fit: contain;
+    transition: 0.3s;
+    /* Full color by default */
+}
+
+.app-icons img:hover {
+    transform: translateY(-2px);
+}
+
+.plus-more {
+    font-size: 0.85rem;
+    color: #777;
+    font-weight: 600;
+    padding-left: 10px;
+    border-left: 1px solid #ddd;
+}
+
+/* Responsive UPI */
+@media (max-width: 900px) {
+    .upi-container {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .upi-details-block {
+        width: 100%;
+        text-align: center;
+    }
+
+    .code-box {
+        justify-content: center;
+        gap: 15px;
+        font-size: 1.2rem;
+    }
+
+    .merchant-info p {
+        justify-content: center;
+    }
+
+    .app-icons {
+        justify-content: center;
+    }
+}
+
+/* 5. OTHER METHODS - List Style */
+.donate-other {
+    background: transparent;
+    padding: 60px 0;
+    border: none;
+}
+
+.other-methods-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    /* Stack vertically */
+    gap: 40px;
+}
+
+.method-card {
+    /* Removed card styling */
+    background: transparent;
+    padding: 0;
+    border: none;
+    box-shadow: none;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 30px;
+}
+
+.method-card:last-child {
+    border-bottom: none;
+}
+
+.method-card h3 {
+    margin-bottom: 15px;
+    color: var(--primary);
+    font-size: 1.4rem;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-weight: 800;
+}
+
+.method-details p {
+    font-size: 1rem;
+    color: #444;
+    margin-bottom: 8px;
+    display: flex;
+    gap: 20px;
+    /* Space label from value */
+}
+
+.method-details strong {
+    min-width: 120px;
+    /* Align values */
+    color: #111;
+}
+
+/* 6. TRANSPARENCY - Integrated */
+/* 6. TRANSPARENCY - Sleek Horizontal Strip */
+.donate-transparency {
+    background: #f8faff;
+    /* Very subtle blue tint */
+    padding: 30px 40px;
+    border-radius: 16px;
+    margin-top: 40px;
+    border: 1px solid #eef2f6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+}
+
+.trust-badges {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 40px;
+    flex: 1;
+    /* Take available space */
+}
+
+.trust-item {
+    display: flex;
+    flex-direction: column;
+    /* Icon Top, Text Bottom */
+    align-items: center;
+    text-align: center;
+    gap: 8px;
+    color: var(--primary-dark);
+    font-weight: 600;
+    font-size: 0.85rem;
+    line-height: 1.2;
+    opacity: 0.8;
+    transition: transform 0.3s;
+}
+
+.trust-item:hover {
+    transform: translateY(-2px);
+    opacity: 1;
+}
+
+.trust-icon {
+    font-size: 1.4rem;
+    color: var(--primary);
+    background: white;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    /* Soft shadow bubble */
+    border: 1px solid #eee;
+}
+
+.btn-report {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    /* Minimal padding */
+    background: transparent;
+    border: none;
+    color: var(--primary);
+    font-weight: 700;
+    text-decoration: none;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    box-shadow: none;
+    transition: color 0.3s;
+}
+
+.btn-report:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    color: var(--primary-dark);
+    background: transparent;
+    transform: none;
+    box-shadow: none;
+}
+
+.donate-note {
+    text-align: center;
+    padding: 20px 20px;
+    max-width: 700px;
+    margin: -40px auto 40px;
+    /* Pull up slightly */
+    color: #94a3b8;
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+/* 7. FOOTER MSG */
+.donate-footer {
+    text-align: center;
+    padding: 100px 20px;
+    background: #0a0e27;
+    /* Darkest Navy */
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.5rem;
+    font-weight: 600;
+    font-family: var(--font-heading);
+    letter-spacing: -0.5px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+    .donate-hero h1 {
+        font-size: 2.5rem;
+    }
+
+    .why-grid,
+    .usage-grid {
+        gap: 20px;
+    }
+
+    .why-item {
+        flex-basis: 100%;
+    }
+
+    .trust-badges {
+        gap: 30px;
+    }
+}
