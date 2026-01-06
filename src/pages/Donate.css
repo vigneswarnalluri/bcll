@@ -909,21 +909,92 @@
 }
 
 /* RESPONSIVE */
+/* RESPONSIVE OVERRIDES */
+@media (max-width: 1024px) {
+    .donate-layout {
+        grid-template-columns: 1fr;
+        gap: 40px;
+    }
+
+    .donate-sidebar {
+        position: relative;
+        top: 0;
+        width: 100%;
+        max-width: 500px;
+        margin: 0 auto;
+        order: -1;
+        /* IMPORTANT: Show Donation Form FIRST on mobile/tablet for conversion */
+    }
+}
+
 @media (max-width: 768px) {
     .donate-hero h1 {
-        font-size: 2.5rem;
+        font-size: 2.2rem;
     }
 
-    .why-grid,
-    .usage-grid {
-        gap: 20px;
+    .donate-hero p {
+        font-size: 1.1rem;
+        padding: 0 15px;
     }
 
-    .why-item {
-        flex-basis: 100%;
+    /* UPI Section Stack */
+    .upi-container {
+        flex-direction: column;
+        text-align: center;
+        gap: 30px;
+    }
+
+    .upi-qr-block {
+        border-right: none;
+        border-bottom: 1px solid #eee;
+        padding-right: 0;
+        padding-bottom: 30px;
+        width: 100%;
+    }
+
+    .upi-details-block {
+        padding-left: 0;
+        width: 100%;
+        align-items: center;
+        /* Center aligned content */
+    }
+
+    .id-group {
+        align-items: center;
+    }
+
+    /* Bento Grid Stack */
+    .bento-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+        height: auto;
+    }
+
+    .bento-card {
+        grid-column: auto !important;
+        grid-row: auto !important;
+        min-height: 220px;
+    }
+
+    /* Trust Badges */
+    .donate-transparency {
+        flex-direction: column;
+        gap: 30px;
+        text-align: center;
     }
 
     .trust-badges {
-        gap: 30px;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .trust-item {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .other-methods-grid {
+        grid-template-columns: 1fr;
     }
 }

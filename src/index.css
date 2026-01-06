@@ -25,12 +25,27 @@
   box-sizing: border-box;
 }
 
+html,
+body,
+#root {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  height: 100%;
+  scroll-behavior: smooth;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+}
+
 body {
   font-family: var(--font-body);
   background-color: var(--accent);
   color: var(--text);
   line-height: 1.6;
-  overflow-x: hidden;
 }
 
 h1,
@@ -64,13 +79,27 @@ button {
 
 /* Utilities */
 .container {
-  max-width: 1200px;
+  width: 100%;
+  max-width: 1240px;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0 24px;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
 }
 
 .section {
   padding: 80px 0;
+}
+
+@media (max-width: 768px) {
+  .section {
+    padding: 60px 0;
+  }
 }
 
 .btn {
@@ -92,9 +121,7 @@ button {
 .btn-primary:hover {
   text-decoration: underline;
   text-decoration-color: var(--white);
-  /* White text -> White line */
   text-underline-offset: 4px;
-  /* maintaining background color state to avoid flickering if needed, or simply keeping it same */
   background-color: var(--primary);
 }
 
@@ -107,7 +134,6 @@ button {
 .btn-secondary:hover {
   text-decoration: underline;
   text-decoration-color: var(--primary);
-  /* Blue text -> Blue line */
   text-underline-offset: 4px;
   background-color: var(--secondary);
 }

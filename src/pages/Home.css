@@ -1870,3 +1870,148 @@
     color: #666;
     margin: 0;
 }
+
+/* MOBILE RESPONSIVENESS OVERRIDES */
+@media (max-width: 768px) {
+
+    /* Global Container Fix */
+    .container {
+        width: 100% !important;
+        padding: 0 15px !important;
+        margin: 0 auto !important;
+    }
+
+    /* Hero Typography */
+    .hero-title {
+        font-size: 2.2rem !important;
+        padding: 0 10px;
+    }
+
+    .hero-tagline {
+        font-size: 1.1rem !important;
+        padding: 0 10px;
+    }
+
+    .hero-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        padding: 0 20px;
+        width: 100%;
+    }
+
+    .hero-buttons .btn {
+        margin: 0 !important;
+        width: 100%;
+        text-align: center;
+    }
+
+    /* Why Rehab Section - Stack Vertical & clean up */
+    .why-rehab-grid {
+        margin-top: 40px;
+        gap: 50px;
+        background-image: none;
+        width: 100%;
+    }
+
+    .why-rehab-grid::before {
+        display: none;
+    }
+
+    .why-card,
+    .why-card:nth-child(even) {
+        flex-direction: column !important;
+        gap: 20px;
+        align-items: center;
+        text-align: center;
+        width: 100% !important;
+    }
+
+    .why-img {
+        width: 100% !important;
+        height: 250px;
+        border-radius: 8px;
+    }
+
+    .why-card::before,
+    .why-card::after {
+        display: none;
+    }
+
+    .why-content {
+        width: 100% !important;
+        padding: 0;
+        text-align: center;
+    }
+
+    /* Problem Section */
+    .problem-icons {
+        gap: 30px;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .problem-item {
+        width: 45%;
+        /* Two per row on mobile */
+    }
+
+    /* Impact Stats */
+    .impact-grid {
+        grid-template-columns: 1fr !important;
+        gap: 40px;
+        width: 100%;
+        padding: 0 20px;
+    }
+
+    .impact-item {
+        width: 100%;
+    }
+
+    /* Join Options */
+    .join-options {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        width: 100%;
+    }
+
+    .option-card {
+        width: 100% !important;
+        margin: 0 !important;
+    }
+
+    /* Stories */
+    .stories-grid {
+        grid-template-columns: 1fr !important;
+        width: 100%;
+        padding: 0 10px;
+    }
+
+    .story-card {
+        width: 100% !important;
+    }
+
+    /* Donation Cards Grid */
+    .donation-grid {
+        grid-template-columns: 1fr !important;
+        width: 100% !important;
+        padding: 0 15px;
+        gap: 20px;
+    }
+
+    .donation-card {
+        width: 100% !important;
+        height: 400px !important;
+    }
+
+    .trust-grid {
+        justify-content: flex-start;
+        padding-bottom: 20px;
+    }
+
+    /* Life on Field */
+    .gallery-container {
+        padding: 0 10px;
+    }
+}
