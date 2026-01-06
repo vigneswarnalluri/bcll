@@ -2015,3 +2015,70 @@
         padding: 0 10px;
     }
 }
+
+/* MOBILE ONLY OVERRIDES - Strictly isolated */
+@media screen and (max-width: 768px) {
+    .container {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 15px !important;
+        margin: 0 !important;
+    }
+
+    .hero-title {
+        font-size: 2rem !important;
+        line-height: 1.2 !important;
+        margin-bottom: 15px !important;
+    }
+
+    .hero-tagline {
+        font-size: 1.1rem !important;
+        margin-bottom: 25px !important;
+    }
+
+    .hero-buttons {
+        flex-direction: column !important;
+        gap: 12px !important;
+        width: 100% !important;
+    }
+
+    .hero-buttons .btn {
+        width: 100% !important;
+        margin: 0 !important;
+    }
+
+    .section-title {
+        font-size: 1.8rem !important;
+        margin-bottom: 20px !important;
+    }
+
+    .problem-statement {
+        font-size: 1.2rem !important;
+        padding: 0 10px !important;
+    }
+
+    .problem-icons {
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 30px !important;
+    }
+
+    .problem-item {
+        width: 100% !important;
+    }
+
+    .donation-grid {
+        grid-template-columns: 1fr !important;
+        gap: 20px !important;
+    }
+
+    .story-card {
+        flex-direction: column !important;
+        height: auto !important;
+    }
+
+    .story-img {
+        width: 100% !important;
+        height: 250px !important;
+    }
+}
