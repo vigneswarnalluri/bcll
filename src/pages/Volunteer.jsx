@@ -35,6 +35,9 @@ const Volunteer = () => {
                 full_name: formData.name,
                 email: formData.email,
                 phone: formData.mobile,
+                dob: formData.dob,
+                blood_group: formData.bg,
+                address: formData.address,
                 area_of_interest: formData.interest,
                 status: 'New'
             }]);

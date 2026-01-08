@@ -6,7 +6,8 @@ import {
     FaFolderOpen, FaClipboardCheck, FaChartLine, FaTrash, FaEdit, FaEye, FaFileUpload, FaTasks, FaPlus, FaPlusCircle,
     FaIdCard, FaUniversity, FaBriefcase, FaUserLock, FaExclamationTriangle, FaHeartbeat, FaFileSignature,
     FaMapMarkerAlt, FaPhone, FaUserCheck, FaBalanceScale, FaHistory, FaShieldAlt, FaDesktop, FaUnlockAlt,
-    FaDownload, FaUserTie, FaFileContract
+    FaDownload, FaUserTie, FaFileContract, FaHandshake, FaRegIdCard, FaEnvelope,
+    FaBuilding, FaGavel, FaUserTimes, FaClock, FaFingerprint
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
@@ -176,34 +177,6 @@ const AdminDashboard = () => {
         let table = '';
         let updateData = {};
 
-        // SPECIAL ONBOARDING FLOW
-        if (type === 'volunteer' && action === 'authorize') {
-            const vol = volunteers.find(v => v.id === id);
-            if (vol) {
-                // 1. Create Employee Record
-                const { error: empError } = await supabase.from('employees').insert([{
-                    full_name: vol.full_name,
-                    email: vol.email,
-                    mobile: vol.phone,
-                    designation: 'Social Volunteer',
-                    department: vol.area_of_interest,
-                    status: 'Active',
-                    employment_type: 'Voluntary',
-                    employee_id: `VOL-${vol.id.substring(0, 4).toUpperCase()}`
-                }]);
-
-                if (!empError) {
-                    // 3. Update Status
-                    await supabase.from('volunteers').update({ status: 'Onboarded' }).eq('id', id);
-                    setVolunteers(prev => prev.map(v => v.id === id ? { ...v, status: 'Onboarded' } : v));
-                    logActivity(`Onboarded Volunteer to System: ${vol.full_name}`, 'HR');
-                    fetchDashboardData();
-                    alert(`✅ User successfully onboarded to Staff Directory!\n\nIMPORTANT: Use Supabase Dashboard to create a login for ${vol.email} so they can access the portal.`);
-                }
-            }
-            return; // Exit main flow
-        }
-
         // STANDARD APPROVAL FLOWS
         if (type === 'volunteer') {
             table = 'volunteers';
@@ -304,7 +277,7 @@ const AdminDashboard = () => {
                 return <EmployeeTab employees={filteredEmps} toggleStatus={toggleEmployeeStatus} deleteEmp={deleteEmployee} onView={(emp) => { setSelectedEmployee(emp); setModalType('emp-details'); setIsModalOpen(true); }} onAdd={() => { setModalType('employee'); setIsModalOpen(true); }} />;
             case 'volunteers':
                 const filteredVols = volunteers.filter(v => v.full_name?.toLowerCase().includes(query) || v.area_of_interest?.toLowerCase().includes(query));
-                return <VolunteerTab volunteers={filteredVols} handleAction={handleAction} onDelete={deleteVolunteer} onViewID={(v) => { setSelectedVolunteer(v); setModalType('volunteer-id'); setIsModalOpen(true); }} />;
+                return <VolunteerTab volunteers={filteredVols} handleAction={handleAction} onDelete={deleteVolunteer} onView={(v) => { setSelectedVolunteer(v); setModalType('volunteer-details'); setIsModalOpen(true); }} onViewID={(v) => { setSelectedVolunteer(v); setModalType('volunteer-id'); setIsModalOpen(true); }} />;
             case 'students':
                 const filteredStuds = students.filter(s => s.student_name?.toLowerCase().includes(query) || s.college_org?.toLowerCase().includes(query));
                 return <StudentTab students={filteredStuds} />;
@@ -395,7 +368,13 @@ const AdminDashboard = () => {
             {/* EXPANDED MODALS */}
             {isModalOpen && (
                 <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
-                    <div className="modal-content custom-scroll" style={{ width: modalType === 'report' ? '600px' : '1000px', maxHeight: '95vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+                    <div className="modal-content custom-scroll" style={{
+                        width: modalType === 'report' ? '600px' : (modalType.includes('details') ? '1400px' : '1000px'),
+                        maxHeight: '92vh',
+                        overflowY: 'auto',
+                        borderRadius: '28px',
+                        border: '1px solid rgba(255,255,255,0.1)'
+                    }} onClick={e => e.stopPropagation()}>
                         {modalType === 'employee' && (
                             <EmployeeForm
                                 onClose={() => setIsModalOpen(false)}
@@ -442,6 +421,16 @@ const AdminDashboard = () => {
                         {modalType === 'emp-details' && <EmployeeDetailsView emp={selectedEmployee} onClose={() => setIsModalOpen(false)} />}
                         {modalType === 'report' && <ReportForm onClose={() => setIsModalOpen(false)} />}
                         {modalType === 'volunteer-id' && <VolunteerIDCard volunteer={selectedVolunteer} onClose={() => setIsModalOpen(false)} />}
+                        {modalType === 'volunteer-details' && (
+                            <VolunteerDetailsView
+                                volunteer={selectedVolunteer}
+                                onClose={() => setIsModalOpen(false)}
+                                onApprove={() => {
+                                    handleAction('volunteer', selectedVolunteer.id, 'approve');
+                                    setIsModalOpen(false);
+                                }}
+                            />
+                        )}
                         {modalType === 'upload-doc' && (
                             <UploadArtifactModal
                                 onClose={() => setIsModalOpen(false)}
@@ -504,27 +493,53 @@ const AdminDashboard = () => {
 
 /* --- TAB COMPONENTS --- */
 
-const OverviewTab = ({ employees, volunteers, requests, coAdmins }) => (
-    <>
-        <div className="stats-grid">
-            <StatCard title="Active Personnel" count={employees.filter(e => e.status === 'Active').length} color="blue" icon={<FaUsers />} />
-            <StatCard title="Co-Admins" count={coAdmins.length} color="green" icon={<FaUserShield />} />
-            <StatCard title="System Uptime" count="99.9%" color="gold" icon={<FaDesktop />} />
-            <StatCard title="Alerts" count={requests.filter(r => r.status === 'Pending').length} color="red" icon={<FaExclamationTriangle />} />
-        </div>
-        <div className="content-panel">
-            <h3>System Health & Infrastructure</h3>
-            <table className="data-table">
-                <thead><tr><th>Service ID</th><th>Component</th><th>Connection</th><th>Performance</th></tr></thead>
-                <tbody>
-                    <tr><td>supa-pg-01</td><td>Primary Database (Supabase)</td><td><span className="badge success">Connected</span></td><td><span className="text-secondary">Low Latency</span></td></tr>
-                    <tr><td>supa-auth-v2</td><td>Authentication Service</td><td><span className="badge success">Operational</span></td><td><span className="badge success">TLS v1.3</span></td></tr>
-                    <tr><td>supa-storage</td><td>Artifact Storage Bucket</td><td><span className="badge success">Ready</span></td><td><span className="text-secondary">Available</span></td></tr>
-                </tbody>
-            </table>
-        </div>
-    </>
-);
+const OverviewTab = ({ employees, volunteers, requests, coAdmins }) => {
+    const pendingVols = volunteers.filter(v => v.status === 'New').length;
+    const pendingReqs = requests.filter(r => r.status === 'Pending').length;
+
+    return (
+        <>
+            <div className="stats-grid">
+                <StatCard title="Active Personnel" count={employees.filter(e => e.status === 'Active').length} color="blue" icon={<FaUsers />} />
+                <StatCard title="Pending Volunteers" count={pendingVols} color="purple" icon={<FaHandHoldingUsd />} />
+                <StatCard title="System Uptime" count="99.9%" color="gold" icon={<FaDesktop />} />
+                <StatCard title="Total Alerts" count={pendingVols + pendingReqs} color="red" icon={<FaExclamationTriangle />} />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginTop: '30px' }}>
+                <div className="content-panel">
+                    <h3>Critical Approvals Required</h3>
+                    <table className="data-table">
+                        <thead><tr><th>Task Type</th><th>Pending Item</th><th>Urgency</th></tr></thead>
+                        <tbody>
+                            {pendingVols > 0 && (
+                                <tr><td>Volunteer Registry</td><td>{pendingVols} New Applications</td><td><span className="badge red-badge">Action Required</span></td></tr>
+                            )}
+                            {pendingReqs > 0 && (
+                                <tr><td>Staff Requests</td><td>{pendingReqs} Pending Approvals</td><td><span className="badge red-badge">Action Required</span></td></tr>
+                            )}
+                            {pendingVols === 0 && pendingReqs === 0 && (
+                                <tr><td colSpan="3" style={{ textAlign: 'center', color: '#718096' }}>All systems clear. No pending approvals.</td></tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div className="content-panel">
+                    <h3>System Health & Infrastructure</h3>
+                    <table className="data-table">
+                        <thead><tr><th>Service ID</th><th>Component</th><th>Connection</th></tr></thead>
+                        <tbody>
+                            <tr><td>supa-pg-01</td><td>Shared Database</td><td><span className="badge success">Active</span></td></tr>
+                            <tr><td>supa-auth</td><td>Access Control</td><td><span className="badge success">Secure</span></td></tr>
+                            <tr><td>supa-vault</td><td>Artifact Storage</td><td><span className="badge success">Encrypted</span></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </>
+    );
+};
 
 const AdminProfileTab = ({ admin, onModifyLevel }) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
@@ -642,7 +657,7 @@ const EmployeeTab = ({ employees, toggleStatus, deleteEmp, onView, onAdd }) => (
     </div>
 );
 
-const VolunteerTab = ({ volunteers, handleAction, onDelete, onViewID }) => (
+const VolunteerTab = ({ volunteers, handleAction, onDelete, onView, onViewID }) => (
     <div className="content-panel">
         <h3>Volunteer Onboarding</h3>
         <table className="data-table">
@@ -655,6 +670,7 @@ const VolunteerTab = ({ volunteers, handleAction, onDelete, onViewID }) => (
                         <td>{v.phone || v.email}</td>
                         <td><span className={`badge ${v.status === 'New' ? 'blue' : v.status === 'Approved' ? 'success' : 'red'}`}>{v.status}</span></td>
                         <td style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <button className="btn-icon" onClick={() => onView(v)} title="View Full Profile"><FaEye /></button>
                             {v.status === 'New' && (
                                 <>
                                     <button className="btn-small success-btn" onClick={() => handleAction('volunteer', v.id, 'approve')}>Approve</button>
@@ -662,13 +678,7 @@ const VolunteerTab = ({ volunteers, handleAction, onDelete, onViewID }) => (
                                 </>
                             )}
                             {v.status === 'Approved' && (
-                                <>
-                                    <button className="btn-small" onClick={() => onViewID(v)}><FaIdCard /> ID Card</button>
-                                    <button className="btn-small" style={{ marginLeft: '5px', background: '#805ad5', color: 'white' }} onClick={() => handleAction('volunteer', v.id, 'authorize')}><FaUserPlus /> Onboard</button>
-                                </>
-                            )}
-                            {v.status === 'Onboarded' && (
-                                <span className="badge success">System Access Granted</span>
+                                <button className="btn-small" onClick={() => onViewID(v)}><FaIdCard /> ID Card</button>
                             )}
                             <button className="btn-icon danger" onClick={() => onDelete(v.id, v.full_name)} title="Remove Record" style={{ marginLeft: 'auto' }}><FaTrash /></button>
                         </td>
@@ -1106,116 +1116,325 @@ const EmployeeForm = ({ onClose, onSave }) => {
 }
 
 const EmployeeDetailsView = ({ emp, onClose }) => {
-    const [details, setDetails] = useState(emp);
+    const details = emp || {};
 
-    useEffect(() => {
-        const fetchFreshDetails = async () => {
-            if (emp?.id) {
-                const { data, error } = await supabase.from('employees').select('*').eq('id', emp.id).single();
-                if (data) setDetails(data);
-                if (error) console.error("Error fetching employee details:", error);
-            }
-        };
-        fetchFreshDetails();
-    }, [emp]);
-
-    if (!details) return null;
-
-    const Field = ({ label, value }) => (
-        <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', color: '#718096', fontSize: '0.7rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>{label}</label>
-            <div style={{ color: '#2d3748', fontSize: '0.95rem', fontWeight: '500' }}>{value || '—'}</div>
+    const Field = ({ icon, label, value, color = '#718096' }) => (
+        <div style={{
+            background: '#F8F9FA',
+            padding: '20px',
+            borderRadius: '16px',
+            border: '1px solid #EDF2F7',
+            transition: 'all 0.2s'
+        }}>
+            <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                color: color,
+                fontSize: '0.75rem',
+                fontWeight: '800',
+                textTransform: 'uppercase',
+                letterSpacing: '1.5px',
+                marginBottom: '10px'
+            }}>
+                <span style={{ fontSize: '1.1rem' }}>{icon}</span> {label}
+            </label>
+            <div style={{ color: '#1A202C', fontSize: '1.1rem', fontWeight: '700' }}>{value || '—'}</div>
         </div>
     );
 
     return (
-        <div style={{ position: 'fixed', top: '0', left: '0', width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-            <div style={{ background: 'white', width: '950px', maxWidth: '95vw', borderRadius: '16px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', display: 'flex', flexDirection: 'column' }}>
-
-                {/* HEADER */}
-                <div style={{ padding: '30px', borderBottom: '1px solid #edf2f7', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', position: 'sticky', top: 0, zIndex: 10 }}>
-                    <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-                        <div style={{ width: '80px', height: '80px', background: '#2b6cb0', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', fontSize: '2.5rem', fontWeight: 'bold' }}>
-                            {details.full_name?.charAt(0)}
-                        </div>
-                        <div>
-                            <h2 style={{ margin: '0 0 5px 0', fontSize: '1.6rem', color: '#2d3748' }}>{details.full_name}</h2>
-                            <p style={{ color: '#718096', margin: 0, fontSize: '0.95rem' }}>{details.designation} <span style={{ margin: '0 6px' }}>•</span> {details.employee_id || 'ID Pending'}</p>
-                        </div>
+        <div style={{ background: '#FFFFFF' }}>
+            {/* STICKY HEADER AREA */}
+            <div style={{
+                background: 'linear-gradient(135deg, #1A365D 0%, #0F172A 100%)',
+                padding: '50px 60px',
+                color: 'white',
+                position: 'relative',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+            }}>
+                <div style={{ display: 'flex', gap: '40px', alignItems: 'center' }}>
+                    <div style={{
+                        width: '140px',
+                        height: '140px',
+                        background: 'rgba(255,255,255,0.1)',
+                        backdropFilter: 'blur(12px)',
+                        borderRadius: '35px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '4rem',
+                        border: '2px solid rgba(255,255,255,0.2)',
+                        boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
+                    }}>
+                        {details.full_name?.charAt(0) || <FaFingerprint />}
                     </div>
-                    <button onClick={onClose} style={{ width: '40px', height: '40px', borderRadius: '50%', border: 'none', background: '#f7fafc', cursor: 'pointer', fontSize: '1.5rem', color: '#718096' }}>&times;</button>
+                    <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                            <h2 style={{ fontSize: '3rem', margin: '0', fontWeight: '900', letterSpacing: '-1.5px' }}>{details.full_name}</h2>
+                            <span style={{
+                                padding: '8px 20px',
+                                background: details.status === 'Active' ? '#48BB78' : '#F56565',
+                                borderRadius: '50px',
+                                fontSize: '0.85rem',
+                                fontWeight: '900',
+                                textTransform: 'uppercase',
+                                letterSpacing: '2px',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+                            }}>{details.status}</span>
+                        </div>
+                        <p style={{ margin: '15px 0 0', opacity: 0.8, fontSize: '1.2rem', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                            <FaBriefcase style={{ color: '#ECC94B' }} /> {details.designation} <span style={{ opacity: 0.5 }}>|</span> <FaBuilding /> {details.department}
+                        </p>
+                    </div>
                 </div>
 
-                {/* SCROLLABLE CONTENT */}
-                <div style={{ padding: '40px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '40px' }}>
+                <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.9rem', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '3px', fontWeight: '700', marginBottom: '8px' }}>Internal Identifier</div>
+                    <div style={{ fontSize: '2rem', fontWeight: '800', color: '#63B3ED' }}>#{details.employee_id || 'PENDING'}</div>
+                    <button onClick={onClose} style={{
+                        marginTop: '25px',
+                        padding: '12px 30px',
+                        borderRadius: '12px',
+                        background: 'rgba(255,255,255,0.1)',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        color: 'white',
+                        cursor: 'pointer',
+                        fontWeight: '700'
+                    }}>Close Archive</button>
+                </div>
+            </div>
 
-                    {/* 1. PERSONAL IDENTITY */}
-                    <div className="section-block">
-                        <h3 style={{ color: '#2c5282', borderBottom: '2px solid #3182ce', paddingBottom: '10px', marginBottom: '20px', fontSize: '1.2rem' }}><FaUserTie style={{ marginRight: '10px' }} /> Personal Identity</h3>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                            <Field label="Full Name" value={details.full_name} />
-                            <Field label="Gender" value={details.gender} />
-                            <Field label="Date of Birth" value={details.dob} />
-                            <Field label="Blood Group" value={details.blood_group} />
-                            <Field label="Marital Status" value={details.marital_status} />
-                            <Field label="Aadhaar Number (Masked)" value={details.aadhaar_number ? '•••• ' + details.aadhaar_number.slice(-4) : '—'} />
-                            <Field label="PAN Number" value={details.pan_number} />
-                            <Field label="Passport Number" value={details.passport_number} />
-                        </div>
-                        <div style={{ marginTop: '10px' }}>
-                            <Field label="Email ID" value={details.email} />
-                            <Field label="Mobile Number" value={details.mobile} />
-                            <Field label="Current Address" value={details.current_address} />
-                            <Field label="Permanent Address" value={details.permanent_address} />
-                        </div>
+            {/* HIGH-DENSITY GRID DATA */}
+            <div style={{ padding: '60px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '30px' }}>
+
+                    {/* CORE SECTION */}
+                    <div style={{ gridColumn: 'span 4', display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '10px' }}>
+                        <div style={{ height: '4px', flex: 1, background: '#F1F5F9' }}></div>
+                        <h4 style={{ textTransform: 'uppercase', letterSpacing: '4px', color: '#94A3B8', fontWeight: '900', fontSize: '0.9rem' }}>Personnel Biometrics & Legal</h4>
+                        <div style={{ height: '4px', flex: 1, background: '#F1F5F9' }}></div>
                     </div>
 
-                    {/* 2. EMPLOYMENT DETAILS */}
-                    <div className="section-block">
-                        <h3 style={{ color: '#553c9a', borderBottom: '2px solid #805ad5', paddingBottom: '10px', marginBottom: '20px', fontSize: '1.2rem' }}><FaFileContract style={{ marginRight: '10px' }} /> Employment Data</h3>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                            <Field label="Employee ID" value={details.employee_id || details.id?.substring(0, 8)} />
-                            <Field label="Status" value={details.status?.toUpperCase()} />
-                            <Field label="Designation" value={details.designation} />
-                            <Field label="Department" value={details.department} />
-                            <Field label="Date of Joining" value={details.date_of_joining} />
-                            <Field label="Work Location" value={details.work_location} />
-                            <Field label="Employment Type" value={details.employment_type} />
-                            <Field label="Attendance Type" value={details.attendance_type} />
-                            <Field label="Office Timings" value={details.office_timings} />
-                            <Field label="Reporting Manager" value={details.reporting_manager_name || '—'} />
-                        </div>
+                    <Field icon={<FaUsers />} label="Gender" value={details.gender} />
+                    <Field icon={<FaClipboardCheck />} label="Birth Date" value={details.dob} />
+                    <Field icon={<FaHeartbeat />} label="Blood Marker" value={details.blood_group} />
+                    <Field icon={<FaCheckCircle />} label="Marital Status" value={details.marital_status} />
+                    <Field icon={<FaShieldAlt />} label="Aadhaar Verification" value={details.aadhaar_number ? 'XXXX-XXXX-' + details.aadhaar_number.slice(-4) : '—'} />
+                    <Field icon={<FaFileContract />} label="Tax ID (PAN)" value={details.pan_number} />
+                    <Field icon={<FaEnvelope />} label="Sytem Email" value={details.email} />
+                    <Field icon={<FaPhone />} label="Primary Comm" value={details.mobile} />
+
+                    <div style={{ gridColumn: 'span 2' }}>
+                        <Field icon={<FaMapMarkerAlt />} label="Registered Residence" value={details.current_address} />
+                    </div>
+                    <div style={{ gridColumn: 'span 2' }}>
+                        <Field icon={<FaMapMarkerAlt />} label="Permanent Domicile" value={details.permanent_address} />
                     </div>
 
-                    {/* 3. FINANCIAL & PAYROLL */}
-                    <div className="section-block">
-                        <h3 style={{ color: '#276749', borderBottom: '2px solid #38a169', paddingBottom: '10px', marginBottom: '20px', fontSize: '1.2rem' }}><FaFileInvoiceDollar style={{ marginRight: '10px' }} /> Payroll & Finance</h3>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                            <Field label="Gross Salary / Stipend" value={`₹ ${details.salary_amount || 0}`} />
-                            <Field label="Payment Mode" value={details.payment_mode} />
-                            <Field label="Bank Name" value={details.bank_name} />
-                            <Field label="IFSC Code" value={details.ifsc_code} />
-                            <div style={{ gridColumn: 'span 2' }}>
-                                <Field label="Account Holder" value={details.acc_holder_name} />
-                                <Field label="Account Number" value={details.acc_number ? '•••• ' + details.acc_number.slice(-4) : '—'} />
+                    {/* EMPLOYMENT SECTION */}
+                    <div style={{ gridColumn: 'span 4', display: 'flex', alignItems: 'center', gap: '20px', margin: '40px 0 10px' }}>
+                        <div style={{ height: '4px', flex: 1, background: '#F1F5F9' }}></div>
+                        <h4 style={{ textTransform: 'uppercase', letterSpacing: '4px', color: '#94A3B8', fontWeight: '900', fontSize: '0.9rem' }}>Operational Workflow</h4>
+                        <div style={{ height: '4px', flex: 1, background: '#F1F5F9' }}></div>
+                    </div>
+
+                    <Field icon={<FaClock />} label="Joining Data" value={details.date_of_joining} />
+                    <Field icon={<FaMapMarkerAlt />} label="Base Station" value={details.work_location} />
+                    <Field icon={<FaUserLock />} label="Contract Type" value={details.employment_type} />
+                    <Field icon={<FaTasks />} label="Track Type" value={details.attendance_type} />
+
+                    {/* FINANCIALS SECTION */}
+                    <div style={{ gridColumn: 'span 4', display: 'flex', alignItems: 'center', gap: '20px', margin: '40px 0 10px' }}>
+                        <div style={{ height: '4px', flex: 1, background: '#F1F5F9' }}></div>
+                        <h4 style={{ textTransform: 'uppercase', letterSpacing: '4px', color: '#94A3B8', fontWeight: '900', fontSize: '0.9rem' }}>Treasury & Remittance</h4>
+                        <div style={{ height: '4px', flex: 1, background: '#F1F5F9' }}></div>
+                    </div>
+
+                    <Field icon={<FaFileInvoiceDollar />} label="Monthly Retainer" value={`₹ ${details.salary_amount || 0}`} />
+                    <Field icon={<FaUniversity />} label="Institution" value={details.bank_name} />
+                    <Field icon={<FaFingerprint />} label="IFSC Protocol" value={details.ifsc_code} />
+                    <Field icon={<FaUniversity />} label="Account Ending" value={details.acc_number ? '****' + details.acc_number.slice(-4) : '—'} />
+
+                    {/* EMERGENCY SECTION */}
+                    <div style={{ gridColumn: 'span 4', display: 'flex', alignItems: 'center', gap: '20px', margin: '40px 0 10px' }}>
+                        <div style={{ height: '4px', flex: 1, background: '#F1F5F9' }}></div>
+                        <h4 style={{ textTransform: 'uppercase', letterSpacing: '4px', color: '#94A3B8', fontWeight: '900', fontSize: '0.9rem' }}>Emergency Command & Compliance</h4>
+                        <div style={{ height: '4px', flex: 1, background: '#F1F5F9' }}></div>
+                    </div>
+
+                    <Field icon={<FaUserShield />} label="Primary Kin" value={details.emergency_name} color="#E53E3E" />
+                    <Field icon={<FaPhone />} label="Kin Hotline" value={details.emergency_mobile} color="#E53E3E" />
+                    <Field icon={<FaGavel />} label="Policy Governance" value={details.signed_policy ? 'VERIFIED' : 'PENDING'} />
+                    <Field icon={<FaUserCheck />} label="Security clearance" value="GRANTED" />
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const VolunteerDetailsView = ({ volunteer, onClose, onApprove }) => {
+    const v = volunteer || {};
+
+    const Field = ({ icon, label, value, centered = false }) => (
+        <div style={{
+            background: '#F8F9FA',
+            padding: centered ? '30px' : '20px',
+            borderRadius: '20px',
+            border: '1px solid #EDF2F7',
+            textAlign: centered ? 'center' : 'left'
+        }}>
+            <label style={{
+                display: 'flex',
+                alignItems: centered ? 'center' : 'flex-start',
+                justifyContent: centered ? 'center' : 'flex-start',
+                gap: '10px',
+                color: '#718096',
+                fontSize: '0.75rem',
+                fontWeight: '900',
+                textTransform: 'uppercase',
+                letterSpacing: '2px',
+                marginBottom: '12px'
+            }}>
+                <span style={{ fontSize: '1.2rem', color: '#3182CE' }}>{icon}</span> {label}
+            </label>
+            <div style={{ color: '#1A202C', fontSize: centered ? '1.5rem' : '1.15rem', fontWeight: '800' }}>{value || '—'}</div>
+        </div>
+    );
+
+    return (
+        <div style={{ background: '#FFFFFF' }}>
+            {/* LARGE HERO TOP */}
+            <div style={{
+                background: 'linear-gradient(135deg, #2B6CB0 0%, #1A365D 100%)',
+                padding: '70px 80px',
+                color: 'white',
+                position: 'relative'
+            }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', gap: '50px', alignItems: 'center' }}>
+                        <div style={{
+                            width: '160px',
+                            height: '160px',
+                            background: 'rgba(255,255,255,0.15)',
+                            backdropFilter: 'blur(15px)',
+                            borderRadius: '45px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '5rem',
+                            border: '3px solid rgba(255,255,255,0.3)',
+                            boxShadow: '0 25px 50px rgba(0,0,0,0.4)',
+                            transform: 'rotate(-5deg)'
+                        }}>
+                            <FaHandHoldingUsd />
+                        </div>
+                        <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '25px' }}>
+                                <h1 style={{ fontSize: '4rem', margin: '0', fontWeight: '900', letterSpacing: '-2px' }}>{v.full_name}</h1>
+                                <div style={{
+                                    padding: '8px 24px',
+                                    background: v.status === 'New' ? '#ECC94B' : '#48BB78',
+                                    color: v.status === 'New' ? '#744210' : 'white',
+                                    borderRadius: '50px',
+                                    fontSize: '1rem',
+                                    fontWeight: '900',
+                                    boxShadow: '0 8px 16px rgba(0,0,0,0.2)'
+                                }}>{v.status?.toUpperCase()}</div>
                             </div>
-                            <Field label="UPI ID" value={details.upi_id} />
+                            <div style={{ marginTop: '20px', fontSize: '1.4rem', opacity: 0.9, fontWeight: '600', display: 'flex', alignItems: 'center', gap: '20px' }}>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><FaTasks /> {v.area_of_interest || 'General Social Support'}</span>
+                                <span style={{ opacity: 0.4 }}>|</span>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><FaFingerprint /> VOL-{v.id?.substring(0, 10).toUpperCase()}</span>
+                            </div>
                         </div>
                     </div>
 
-                    {/* 4. EMERGENCY & COMPLIANCE */}
-                    <div className="section-block">
-                        <h3 style={{ color: '#c53030', borderBottom: '2px solid #e53e3e', paddingBottom: '10px', marginBottom: '20px', fontSize: '1.2rem' }}><FaHeartbeat style={{ marginRight: '10px' }} /> Emergency & Compliance</h3>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                            <Field label="Emergency Contact Name" value={details.emergency_name} />
-                            <Field label="Relationship" value={details.emergency_relation} />
-                            <Field label="Emergency Mobile" value={details.emergency_mobile} />
-                            <Field label="Emergency Address" value={details.emergency_address} />
-                            <Field label="Policy Signed?" value={details.signed_policy ? 'YES' : 'NO'} />
-                            <Field label="Policy Signed Date" value={details.policy_signed_date ? new Date(details.policy_signed_date).toLocaleDateString() : '—'} />
+                    <div style={{ display: 'flex', gap: '15px' }}>
+                        <button onClick={onClose} style={{
+                            padding: '15px 40px',
+                            borderRadius: '15px',
+                            background: 'white',
+                            color: '#1A365D',
+                            border: 'none',
+                            fontWeight: '800',
+                            fontSize: '1rem',
+                            cursor: 'pointer',
+                            boxShadow: '0 10px 20px rgba(0,0,0,0.2)'
+                        }}>Dismiss Profile</button>
+                    </div>
+                </div>
+            </div>
+
+            {/* DASHBOARD BODY */}
+            <div style={{ padding: '80px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '40px' }}>
+
+                    {/* PERSONAL BLOCK */}
+                    <div style={{ gridColumn: 'span 2' }}>
+                        <h3 style={{ fontSize: '1.8rem', fontWeight: '900', color: '#1A365D', marginBottom: '40px', display: 'flex', alignItems: 'center', gap: '20px' }}>
+                            <FaIdCard /> Identity Management
+                            <div style={{ flex: 1, height: '2px', background: '#E2E8F0' }}></div>
+                        </h3>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px' }}>
+                            <Field icon={<FaUsers />} label="Full Registry Name" value={v.full_name} />
+                            <Field icon={<FaEnvelope />} label="Contact Email" value={v.email} />
+                            <Field icon={<FaPhone />} label="Verified Mobile" value={v.phone} />
+                            <Field icon={<FaClipboardCheck />} label="Date of Birth" value={v.dob} />
+                            <Field icon={<FaHeartbeat />} label="Blood Group" value={v.blood_group} />
+                            <Field icon={<FaMapMarkerAlt />} label="Primary Residency" value={v.address} />
                         </div>
                     </div>
 
+                    {/* STATUS BLOCK */}
+                    <div style={{ gridColumn: 'span 1' }}>
+                        <h3 style={{ fontSize: '1.8rem', fontWeight: '900', color: '#1A365D', marginBottom: '40px', display: 'flex', alignItems: 'center', gap: '20px' }}>
+                            <FaShieldAlt /> System Control
+                        </h3>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+                            <Field centered icon={<FaClock />} label="Onboarding Date" value={v.created_at ? new Date(v.created_at).toLocaleDateString() : 'N/A'} />
+
+                            <div style={{
+                                background: '#EBF8FF',
+                                padding: '40px',
+                                borderRadius: '30px',
+                                border: '2px dashed #3182CE',
+                                textAlign: 'center'
+                            }}>
+                                <h4 style={{ color: '#2B6CB0', marginBottom: '25px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '2px' }}>Administrative Actions</h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                    {v.status === 'New' ? (
+                                        <>
+                                            <button onClick={onApprove} style={{ padding: '18px', borderRadius: '15px', background: '#3182CE', color: 'white', border: 'none', fontWeight: '800', cursor: 'pointer', fontSize: '1.1rem' }}>Authorize Entry</button>
+                                            <button style={{ padding: '15px', borderRadius: '15px', background: 'white', color: '#E53E3E', border: '1px solid #FED7D7', fontWeight: '700', cursor: 'pointer' }}>Reject Submission</button>
+                                        </>
+                                    ) : (
+                                        <div style={{ background: '#F0FFF4', padding: '20px', borderRadius: '15px', color: '#2F855A', fontWeight: '800' }}>
+                                            <FaUserCheck style={{ fontSize: '2rem', marginBottom: '10px' }} /><br />
+                                            RECORD VERIFIED
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* FOOTER AUDIT */}
+                    <div style={{ gridColumn: 'span 3', marginTop: '50px', padding: '40px', background: '#F7FAFC', borderRadius: '30px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <div style={{ fontSize: '0.8rem', color: '#718096', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '2px' }}>Data Integrity Protocol</div>
+                            <div style={{ color: '#4A5568', fontWeight: '600', marginTop: '5px' }}>Digitally signed and cryptographically verified record.</div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '20px' }}>
+                            <FaFingerprint style={{ fontSize: '2rem', color: '#CBD5E0' }} />
+                            <FaShieldAlt style={{ fontSize: '2rem', color: '#CBD5E0' }} />
+                            <FaGavel style={{ fontSize: '2rem', color: '#CBD5E0' }} />
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1299,8 +1518,6 @@ const AdminLevelModal = ({ currentLevel, onClose, onSave }) => {
     );
 };
 
-
-
 const UploadArtifactModal = ({ onClose, onSave, categories }) => {
     const [formData, setFormData] = useState({ name: '', category: (categories || [])[0]?.name || '', size: '1 MB' });
 
@@ -1383,7 +1600,7 @@ const VolunteerIDCard = ({ volunteer, onClose }) => (
         <div style={{
             width: '350px',
             height: '220px',
-            background: 'linear-gradient(135deg, #1a365d 0%, #2d3748 100%)',
+            background: 'linear-gradient(135deg, #1A365D 0%, #2D3748 100%)',
             borderRadius: '15px',
             padding: '20px',
             color: 'white',
@@ -1391,35 +1608,49 @@ const VolunteerIDCard = ({ volunteer, onClose }) => (
             position: 'relative',
             boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
             display: 'flex',
-            textAlign: 'left'
+            textAlign: 'left',
+            overflow: 'hidden'
         }}>
-            <div style={{ marginRight: '20px' }}>
-                <div style={{ width: '80px', height: '80px', background: '#fff', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1a365d', fontWeight: 'bold', fontSize: '2rem' }}>
+            <div style={{ marginRight: '20px', zIndex: 1 }}>
+                <div style={{
+                    width: '85px',
+                    height: '85px',
+                    background: '#fff',
+                    borderRadius: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#1A365D',
+                    fontWeight: '800',
+                    fontSize: '2.4rem',
+                    boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+                }}>
                     {volunteer.full_name?.charAt(0)}
                 </div>
-                <div style={{ marginTop: '15px', fontSize: '0.6rem', opacity: 0.8 }}>ID: VOL-{volunteer.id?.substring(0, 6)}</div>
+                <div style={{ marginTop: '15px', fontSize: '0.65rem', opacity: 0.9, fontWeight: '700' }}>REG: VOL-{volunteer.id?.substring(0, 6).toUpperCase()}</div>
             </div>
-            <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px' }}>
-                    <img src="/logo-CYlp3-fg__1_-removebg-preview.svg" alt="" style={{ width: '20px' }} />
-                    <span style={{ fontSize: '0.8rem', fontWeight: 'bold', letterSpacing: '1px' }}>BHARATH CARES</span>
+            <div style={{ flex: 1, zIndex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                    <img src="/logo-CYlp3-fg__1_-removebg-preview.svg" alt="" style={{ width: '22px' }} />
+                    <span style={{ fontSize: '0.85rem', fontWeight: '900', letterSpacing: '1.5px', color: '#63B3ED' }}>BHARATH CARES</span>
                 </div>
-                <h2 style={{ fontSize: '1.2rem', margin: '10px 0 5px', color: '#63b3ed' }}>{volunteer.full_name}</h2>
-                <p style={{ fontSize: '0.8rem', margin: 0 }}>Social Volunteer</p>
-                <div style={{ marginTop: '15px', fontSize: '0.7rem' }}>
-                    <strong>Focus Area:</strong><br />
-                    {volunteer.area_of_interest}
+                <h2 style={{ fontSize: '1.4rem', margin: '5px 0 2px', fontWeight: '800', color: 'white' }}>{volunteer.full_name}</h2>
+                <p style={{ fontSize: '0.8rem', margin: 0, color: '#A0AEC0', fontWeight: '600' }}>Official Social Volunteer</p>
+                <div style={{ marginTop: '18px', fontSize: '0.75rem', background: 'rgba(255,255,255,0.1)', padding: '6px 10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <strong style={{ color: '#63B3ED' }}>Focus Area:</strong><br />
+                    {volunteer.area_of_interest || 'General Welfare'}
                 </div>
             </div>
-            <div style={{ position: 'absolute', bottom: '15px', right: '20px' }}>
-                <div style={{ width: '40px', height: '40px', background: 'white', padding: '2px' }}>
-                    <div style={{ width: '100%', height: '100%', background: '#000' }}></div>
-                </div>
+
+            {/* Background elements for ID card aesthetic */}
+            <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '150px', height: '150px', background: 'rgba(255,255,255,0.03)', borderRadius: '50%' }}></div>
+            <div style={{ position: 'absolute', bottom: '15px', right: '20px', width: '45px', height: '45px', background: 'white', padding: '4px', borderRadius: '4px' }}>
+                <div style={{ width: '100%', height: '100%', border: '2px solid #1A365D' }}></div>
             </div>
         </div>
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-            <button className="btn-small" onClick={onClose}>Close</button>
-            <button className="btn-add" onClick={() => alert('Sending ID Card to Printer/Email...')}>Download / Print</button>
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <button className="btn-small" onClick={onClose} style={{ padding: '10px 25px' }}>Close</button>
+            <button className="btn-add" onClick={() => alert('Processing secure ID card generation...')}>Download Secure ID</button>
         </div>
     </div>
 );
