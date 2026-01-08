@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import {
     FaUsers, FaUserShield, FaHandHoldingUsd, FaFileAlt, FaSignOutAlt,
     FaUserPlus, FaCheckCircle, FaGraduationCap, FaFileInvoiceDollar,
-    FaFolderOpen, FaClipboardCheck, FaChartLine, FaTrash, FaEdit, FaEye, FaFileUpload, FaTasks, FaPlus,
+    FaFolderOpen, FaClipboardCheck, FaChartLine, FaTrash, FaEdit, FaEye, FaFileUpload, FaTasks, FaPlus, FaPlusCircle,
     FaIdCard, FaUniversity, FaBriefcase, FaUserLock, FaExclamationTriangle, FaHeartbeat, FaFileSignature,
     FaMapMarkerAlt, FaPhone, FaUserCheck, FaBalanceScale, FaHistory, FaShieldAlt, FaDesktop, FaUnlockAlt,
     FaDownload, FaUserTie, FaFileContract
@@ -25,6 +25,8 @@ const AdminDashboard = () => {
     const [scholarships, setScholarships] = useState([]);
     const [finances, setFinances] = useState([]);
     const [requests, setRequests] = useState([]);
+    const [docFiles, setDocFiles] = useState([]);
+    const [categories, setCategories] = useState([]);
 
     const [adminProfile, setAdminProfile] = useState({
         id: '...',
@@ -59,14 +61,10 @@ const AdminDashboard = () => {
             if (finData) setFinances(finData);
 
             // Fetch Leave Requests for "Approvals" tab
-            const { data: leaveData } = await supabase
-                .from('leave_requests')
-                .select('*, employees(full_name, designation)')
-                .order('created_at', { ascending: false });
-
-            if (leaveData) {
+            const { data: reqData } = await supabase.from('leave_requests').select('*, employees(full_name, designation)').order('created_at', { ascending: false });
+            if (reqData) {
                 // Transform for the UI
-                const formattedRequests = leaveData.map(l => ({
+                const formattedRequests = reqData.map(l => ({
                     id: l.id,
                     type: l.leave_type || 'Leave Request',
                     requester: l.employees?.full_name || 'Unknown',
@@ -76,6 +74,13 @@ const AdminDashboard = () => {
                 }));
                 setRequests(formattedRequests);
             }
+
+            // Fetch Organization Docs & Categories
+            const { data: catData } = await supabase.from('organization_categories').select('*').order('name');
+            if (catData) setCategories(catData);
+
+            const { data: docs } = await supabase.from('organization_docs').select('*').order('created_at', { ascending: false });
+            if (docs) setDocFiles(docs);
 
             // 3. Fetch Audit Logs
             const { data: logs } = await supabase
@@ -150,6 +155,7 @@ const AdminDashboard = () => {
     const [modalType, setModalType] = useState('');
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [selectedVolunteer, setSelectedVolunteer] = useState(null);
+    const [selectedFolder, setSelectedFolder] = useState(null);
 
     // --- HELPERS ---
     const logActivity = async (action, type = 'System') => {
@@ -307,7 +313,16 @@ const AdminDashboard = () => {
                 return <ScholarshipTab scholarships={filteredSchols} handleAction={handleAction} />;
             case 'finance': return <FinanceTab finances={finances} />;
             case 'reports': return <ReportsTab onAdd={() => { setModalType('report'); setIsModalOpen(true); }} />;
-            case 'e-office': return <EOfficeTab />;
+            case 'e-office': return (
+                <EOfficeTab
+                    docFiles={docFiles}
+                    categories={categories}
+                    onUpload={() => { setModalType('upload-doc'); setIsModalOpen(true); }}
+                    onAddFolder={() => { setModalType('create-folder'); setIsModalOpen(true); }}
+                    onRenameFolder={(f) => { setSelectedFolder(f); setModalType('rename-folder'); setIsModalOpen(true); }}
+                    refreshData={fetchDashboardData}
+                />
+            );
             case 'approvals':
                 const filteredReqs = requests.filter(r => r.requester.toLowerCase().includes(query) || r.type.toLowerCase().includes(query));
                 return <ApprovalsTab requests={filteredReqs} handleAction={handleAction} />;
@@ -427,6 +442,59 @@ const AdminDashboard = () => {
                         {modalType === 'emp-details' && <EmployeeDetailsView emp={selectedEmployee} onClose={() => setIsModalOpen(false)} />}
                         {modalType === 'report' && <ReportForm onClose={() => setIsModalOpen(false)} />}
                         {modalType === 'volunteer-id' && <VolunteerIDCard volunteer={selectedVolunteer} onClose={() => setIsModalOpen(false)} />}
+                        {modalType === 'upload-doc' && (
+                            <UploadArtifactModal
+                                onClose={() => setIsModalOpen(false)}
+                                categories={categories}
+                                onSave={async (docData) => {
+                                    // Resolve category_id
+                                    const cat = categories.find(c => c.name === docData.category);
+                                    const dataToInsert = {
+                                        ...docData,
+                                        category_id: cat?.id
+                                    };
+                                    const { error } = await supabase.from('organization_docs').insert([dataToInsert]);
+                                    if (!error) {
+                                        logActivity(`Uploaded new regulatory artifact: ${docData.name}`, 'Legal');
+                                        fetchDashboardData();
+                                        setIsModalOpen(false);
+                                    } else {
+                                        alert('Upload failed: ' + error.message);
+                                    }
+                                }}
+                            />
+                        )}
+                        {modalType === 'create-folder' && (
+                            <FolderFormModal
+                                onClose={() => setIsModalOpen(false)}
+                                onSave={async (name) => {
+                                    const { error } = await supabase.from('organization_categories').insert([{ name }]);
+                                    if (!error) {
+                                        logActivity(`Created new filing folder: ${name}`, 'Legal');
+                                        fetchDashboardData();
+                                        setIsModalOpen(false);
+                                    } else {
+                                        alert('Error creating folder: ' + error.message);
+                                    }
+                                }}
+                            />
+                        )}
+                        {modalType === 'rename-folder' && (
+                            <FolderFormModal
+                                folder={selectedFolder}
+                                onClose={() => setIsModalOpen(false)}
+                                onSave={async (newName) => {
+                                    const { error } = await supabase.from('organization_categories').update({ name: newName }).eq('id', selectedFolder.id);
+                                    if (!error) {
+                                        logActivity(`Renamed filing folder to: ${newName}`, 'Legal');
+                                        fetchDashboardData();
+                                        setIsModalOpen(false);
+                                    } else {
+                                        alert('Error renaming folder: ' + error.message);
+                                    }
+                                }}
+                            />
+                        )}
                     </div>
                 </div>
             )}
@@ -699,18 +767,106 @@ const ReportsTab = ({ onAdd }) => (
     </div>
 );
 
-const EOfficeTab = () => (
-    <div className="content-panel">
-        <h3>Digital Filing System (Regulatory Vault)</h3>
-        <div className="folder-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '25px', marginTop: '25px' }}>
-            <FolderBox name="Legal & Bye-laws" count="12" />
-            <FolderBox name="Income Tax (12A/80G)" count="08" />
-            <FolderBox name="Board Resolutions" count="45" />
-            <FolderBox name="Personnel KYC Vault" count="102" />
-            <FolderBox name="Program Audit Docs" count="67" />
+
+
+const EOfficeTab = ({ docFiles, categories, onUpload, refreshData, onAddFolder, onRenameFolder }) => {
+    const [view, setView] = useState('folders');
+    const [activeFolder, setActiveFolder] = useState(null);
+
+    const handleDeleteFolder = async (id, name) => {
+        if (!confirm(`Are you sure you want to delete the folder "${name}"? This will not delete the files but they will become uncategorized.`)) return;
+        const { error } = await supabase.from('organization_categories').delete().eq('id', id);
+        if (error) alert("Error deleting folder: " + error.message);
+        else refreshData();
+    };
+
+    const handleWipeVault = async () => {
+        if (!confirm("CRITICAL ACTION: Are you sure you want to delete ALL documents in the vault? This cannot be undone.")) return;
+        const { error } = await supabase.from('organization_docs').delete().neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+        if (error) alert("Error wiping vault: " + error.message);
+        else {
+            alert("Vault wiped successfully.");
+            refreshData();
+        }
+    };
+
+    const currentFiles = activeFolder ? (docFiles || []).filter(d => d.category === activeFolder.name || d.category_id === activeFolder.id) : [];
+
+    return (
+        <div className="content-panel">
+            <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px', alignItems: 'center' }}>
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {view === 'files' && <button className="btn-icon" onClick={() => setView('folders')}><FaHistory /></button>}
+                    {view === 'folders' ? 'Digital Filing System (Regulatory Vault)' : `Vault: ${activeFolder?.name || '...'}`}
+                </h3>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    {view === 'folders' && (
+                        <>
+                            <button className="btn-small" onClick={onAddFolder} style={{ background: '#48bb78', color: 'white' }}><FaPlusCircle /> New Folder</button>
+                            <button className="btn-small danger-btn" onClick={handleWipeVault}><FaTrash /> Wipe Vault</button>
+                        </>
+                    )}
+                    <button className="btn-add" onClick={onUpload}><FaFileUpload /> Upload Artifact</button>
+                </div>
+            </div>
+
+            {view === 'folders' ? (
+                <div className="folders-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '25px' }}>
+                    {(categories || []).length > 0 ? (categories.map(f => {
+                        const count = (docFiles || []).filter(d => d.category === f.name || d.category_id === f.id).length;
+                        return (
+                            <div key={f.id} className="folder-card" onClick={() => { setActiveFolder(f); setView('files'); }}
+                                style={{ padding: '30px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '20px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.3s ease', boxShadow: '0 4px 6px rgba(0,0,0,0.02)', position: 'relative' }}
+                                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-5px)'}
+                                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+                            >
+                                <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '5px' }}>
+                                    <button className="btn-icon" onClick={(e) => { e.stopPropagation(); onRenameFolder(f); }} title="Rename"><FaEdit style={{ fontSize: '0.8rem' }} /></button>
+                                    <button className="btn-icon danger" onClick={(e) => { e.stopPropagation(); handleDeleteFolder(f.id, f.name); }} title="Delete Folder"><FaTrash style={{ fontSize: '0.8rem' }} /></button>
+                                </div>
+                                <div style={{ fontSize: '3.5rem', color: '#ecc94b', marginBottom: '15px' }}><FaFolderOpen /></div>
+                                <h4 style={{ fontSize: '1rem', fontWeight: '700', marginBottom: '8px', color: '#2d3748' }}>{f.name}</h4>
+                                <p style={{ fontSize: '0.8rem', color: '#718096' }}>{count} Verified Artifacts</p>
+                            </div>
+                        );
+                    })) : (
+                        <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '100px', background: '#f8fafc', borderRadius: '25px', border: '2px dashed #cbd5e0' }}>
+                            <FaFolderOpen style={{ fontSize: '4rem', color: '#cbd5e0', marginBottom: '20px' }} />
+                            <h3 style={{ color: '#4a5568', marginBottom: '10px' }}>No Vault Folders Detected</h3>
+                            <p style={{ color: '#718096' }}>Run the <b>UPGRADE_FOLDERS.sql</b> script in Supabase or use <b>+ New Folder</b> above to get started.</p>
+                        </div>
+                    )}
+                </div>
+            ) : (
+                <table className="data-table">
+                    <thead><tr><th>File Name</th><th>Date Uploaded</th><th>Size</th><th>Actions</th></tr></thead>
+                    <tbody>
+                        {currentFiles.length > 0 ? currentFiles.map((file) => (
+                            <tr key={file.id}>
+                                <td style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><FaFileAlt style={{ color: '#e53e3e' }} /> {file.name}</td>
+                                <td>{new Date(file.created_at).toLocaleDateString()}</td>
+                                <td>{file.size || 'Unknown'}</td>
+                                <td>
+                                    <div className="action-buttons">
+                                        <button className="btn-icon" title="Preview" onClick={() => alert(`Opening Secure Preview: ${file.name}\nEstablishing encrypted tunnel...`)}><FaEye /></button>
+                                        <button className="btn-icon" title="Download" onClick={() => alert(`Downloading: ${file.name}\nFile size: ${file.size || '1.2 MB'}`)}><FaDownload /></button>
+                                        <button className="btn-icon danger" title="Delete Artifact" onClick={async () => {
+                                            if (confirm(`Remove "${file.name}" from the vault forever?`)) {
+                                                const { error } = await supabase.from('organization_docs').delete().eq('id', file.id);
+                                                if (!error) refreshData();
+                                                else alert("Error deleting file: " + error.message);
+                                            }
+                                        }}><FaTrash /></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        )) : <tr><td colSpan="4" style={{ textAlign: 'center', color: '#718096', padding: '20px' }}>No files in this folder.</td></tr>}
+                    </tbody>
+                </table>
+            )}
         </div>
-    </div>
-);
+    );
+};
 
 const ApprovalsTab = ({ requests, handleAction }) => (
     <div className="content-panel">
@@ -1066,29 +1222,52 @@ const EmployeeDetailsView = ({ emp, onClose }) => {
     );
 };
 
-const ReportForm = ({ onClose }) => (
-    <div style={{ padding: '40px' }}>
-        <h3>Finalize Organization Report</h3>
-        <p style={{ color: '#718096', marginBottom: '30px' }}>Upload program results, photos, and verified data for board review.</p>
-        <div style={{ border: '2px dashed #cbd5e0', padding: '50px', borderRadius: '20px', textAlign: 'center', background: '#f7fafc', marginBottom: '30px' }}>
-            <FaFileUpload style={{ fontSize: '3rem', color: '#a0aec0', marginBottom: '20px' }} />
-            <p style={{ fontWeight: '600' }}>Drop CSV/PDF here</p>
-            <button className="btn-small" style={{ background: 'white', border: '1px solid #ddd', marginTop: '10px' }}>Browse Local Files</button>
-        </div>
-        <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
-            <button className="btn-small" onClick={onClose}>Discard</button>
-            <button className="btn-add">Upload to Secure Server</button>
-        </div>
-    </div>
-);
+const ReportForm = ({ onClose }) => {
+    const [formData, setFormData] = useState({ title: '', category: 'Impact', status: 'Draft' });
 
-const FolderBox = ({ name, count }) => (
-    <div className="folder-vox" style={{ padding: '25px', border: '1px solid #edf2f7', borderRadius: '20px', background: 'white', transition: 'all 0.3s', cursor: 'pointer', textAlign: 'center' }}>
-        <FaFolderOpen style={{ fontSize: '3rem', color: '#ecc94b', marginBottom: '15px' }} />
-        <h4 style={{ margin: 0 }}>{name}</h4>
-        <p style={{ margin: '5px 0 0', fontSize: '0.85rem', color: '#718096' }}>{count} Verified Artifacts</p>
-    </div>
-);
+    const handleSave = async () => {
+        const { error } = await supabase.from('field_reports').insert([formData]);
+        if (!error) {
+            alert('Report Uploaded Successfully');
+            onClose();
+        } else {
+            alert('Failed to upload report');
+        }
+    };
+
+    return (
+        <div style={{ padding: '30px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+                <h3>Upload Field Report</h3>
+                <button className="btn-icon" onClick={onClose}>&times;</button>
+            </div>
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label>Report Title</label>
+                <input className="form-control" type="text" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} />
+            </div>
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label>Category</label>
+                <select className="form-control" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
+                    <option>Impact</option>
+                    <option>Financial</option>
+                    <option>Rehab</option>
+                    <option>General</option>
+                </select>
+            </div>
+            <div className="form-group" style={{ marginBottom: '30px' }}>
+                <label>Status</label>
+                <select className="form-control" value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
+                    <option>Draft</option>
+                    <option>Public</option>
+                </select>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px' }}>
+                <button className="btn-small" onClick={onClose}>Cancel</button>
+                <button className="btn-add" onClick={handleSave}><FaFileUpload /> Upload Report</button>
+            </div>
+        </div>
+    );
+};
 
 const AdminLevelModal = ({ currentLevel, onClose, onSave }) => {
     const [level, setLevel] = useState(currentLevel);
@@ -1115,6 +1294,74 @@ const AdminLevelModal = ({ currentLevel, onClose, onSave }) => {
             <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
                 <button className="btn-small" onClick={onClose}>Cancel</button>
                 <button className="btn-add" onClick={() => onSave(level)}>Commit Level Change</button>
+            </div>
+        </div>
+    );
+};
+
+
+
+const UploadArtifactModal = ({ onClose, onSave, categories }) => {
+    const [formData, setFormData] = useState({ name: '', category: (categories || [])[0]?.name || '', size: '1 MB' });
+
+    return (
+        <div style={{ padding: '30px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+                <h3>Upload Regulatory Artifact</h3>
+                <button className="btn-icon" onClick={onClose}>&times;</button>
+            </div>
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label>Document Name</label>
+                <input className="form-control" type="text" placeholder="e.g. Trust Deed 2025" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+            </div>
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label>Filing Category (Vault)</label>
+                <select className="form-control" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
+                    {categories.map(cat => (
+                        <option key={cat.id} value={cat.name}>{cat.name}</option>
+                    ))}
+                </select>
+            </div>
+            <div className="form-group" style={{ marginBottom: '30px' }}>
+                <label>File Attachment</label>
+                <input className="form-control" type="file" onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) setFormData({ ...formData, size: (file.size / 1024 / 1024).toFixed(2) + ' MB' });
+                }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px' }}>
+                <button className="btn-small" onClick={onClose}>Cancel</button>
+                <button className="btn-add" onClick={() => onSave(formData)}><FaFileUpload /> Upload & Verify</button>
+            </div>
+        </div>
+    );
+};
+
+const FolderFormModal = ({ onClose, onSave, folder = null }) => {
+    const [name, setName] = useState(folder ? folder.name : '');
+
+    return (
+        <div style={{ padding: '30px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+                <h3>{folder ? 'Rename Folder' : 'Create New Vault Folder'}</h3>
+                <button className="btn-icon" onClick={onClose}>&times;</button>
+            </div>
+            <div className="form-group" style={{ marginBottom: '30px' }}>
+                <label>Folder Name</label>
+                <input
+                    className="form-control"
+                    type="text"
+                    placeholder="e.g. Audit Reports 2026"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    autoFocus
+                />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px' }}>
+                <button className="btn-small" onClick={onClose}>Cancel</button>
+                <button className="btn-add" onClick={() => onSave(name)} disabled={!name}>
+                    {folder ? 'Update Name' : 'Initialize Folder'}
+                </button>
             </div>
         </div>
     );
