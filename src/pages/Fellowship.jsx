@@ -1,7 +1,29 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './Fellowship.css';
 
 const Fellowship = () => {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isSubmitted, setIsSubmitted] = useState(false);
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        setIsModalOpen(false);
+        setIsSubmitted(true);
+    };
+
+    if (isSubmitted) {
+        return (
+            <div className="fellowship-page">
+                <div className="page-header fellowship-header">
+                    <div className="container">
+                        <h1>Application Received!</h1>
+                        <p>Thank you for applying to the Vikasith Bharat Fellowship. Our academic committee will review your profile and contact you for the next steps.</p>
+                        <button className="btn btn-primary" onClick={() => setIsSubmitted(false)} style={{ marginTop: '20px' }}>Back to Fellowship</button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
     return (
         <div className="fellowship-page">
             <div className="page-header fellowship-header">
@@ -125,10 +147,63 @@ const Fellowship = () => {
                         </div>
                     </div>
                     <div className="text-center" style={{ marginTop: '40px' }}>
-                        <button className="btn btn-primary">Apply for Fellowship</button>
+                        <button className="btn btn-primary lg" onClick={() => setIsModalOpen(true)}>Apply for Fellowship Program</button>
                     </div>
                 </div>
             </div>
+
+            {isModalOpen && (
+                <div className="modal-overlay" onClick={() => setIsModalOpen(false)} style={{ zIndex: 3000 }}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ width: '800px', maxWidth: '90%' }}>
+                        <div className="modal-header">
+                            <h3>Fellowship Application Form</h3>
+                            <button className="close-modal" onClick={() => setIsModalOpen(false)}>&times;</button>
+                        </div>
+                        <form className="modal-form" onSubmit={handleSubmit}>
+                            <div className="form-grid">
+                                <div className="form-group">
+                                    <label>Full Name (As per Aadhaar)</label>
+                                    <input type="text" placeholder="John Doe" required />
+                                </div>
+                                <div className="form-group">
+                                    <label>Email ID</label>
+                                    <input type="email" placeholder="john@example.com" required />
+                                </div>
+                                <div className="form-group">
+                                    <label>Mobile Number</label>
+                                    <input type="tel" placeholder="+91 00000 00000" required />
+                                </div>
+                                <div className="form-group">
+                                    <label>College Name</label>
+                                    <input type="text" placeholder="Engineering College" required />
+                                </div>
+                                <div className="form-group">
+                                    <label>Course & Branch</label>
+                                    <input type="text" placeholder="B.Tech - CSE" required />
+                                </div>
+                                <div className="form-group">
+                                    <label>Year of Study</label>
+                                    <select required>
+                                        <option value="">Select Year</option>
+                                        <option>1st Year</option>
+                                        <option>2nd Year</option>
+                                        <option>3rd Year</option>
+                                        <option>4th Year</option>
+                                    </select>
+                                </div>
+                                <div className="form-group full-width">
+                                    <label>Why do you want to join this fellowship? (Short description)</label>
+                                    <textarea rows="3" placeholder="Tell us about your motivation..." required></textarea>
+                                </div>
+                            </div>
+                            <div className="modal-actions">
+                                <button type="button" className="btn-cancel" onClick={() => setIsModalOpen(false)}>Cancel</button>
+                                <button type="submit" className="btn-save">Submit Application</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

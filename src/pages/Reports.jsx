@@ -24,21 +24,27 @@ const Reports = () => {
     );
 };
 
-const ReportSection = ({ title, items }) => (
-    <div className="report-card">
-        <h3>{title}</h3>
-        <ul className="file-list">
-            {items.map((item, idx) => (
-                <li key={idx}>
-                    <div className="file-info">
-                        <FaFilePdf className="file-icon" />
-                        <span>{item}</span>
-                    </div>
-                    <button className="download-btn"><FaDownload /></button>
-                </li>
-            ))}
-        </ul>
-    </div>
-);
+const ReportSection = ({ title, items }) => {
+    const handleDownload = (item) => {
+        alert(`Starting download for: ${item}.\nNote: This is a demo. Actual files will be available on the production server.`);
+    };
+
+    return (
+        <div className="report-card">
+            <h3>{title}</h3>
+            <ul className="file-list">
+                {items.map((item, idx) => (
+                    <li key={idx}>
+                        <div className="file-info">
+                            <FaFilePdf className="file-icon" />
+                            <span>{item}</span>
+                        </div>
+                        <button className="download-btn" onClick={() => handleDownload(item)}><FaDownload /></button>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+};
 
 export default Reports;

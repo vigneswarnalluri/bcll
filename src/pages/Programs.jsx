@@ -8,6 +8,8 @@ import {
 import './Programs.css';
 
 const Programs = () => {
+    const [searchTerm, setSearchTerm] = React.useState('');
+
     const processSteps = [
         { icon: <FaSearch />, title: "Identify", desc: "Identify individuals in vulnerable situations" },
         { icon: <FaHandHoldingHeart />, title: "Support", desc: "Provide structured support (food, shelter, health)" },
@@ -33,6 +35,20 @@ const Programs = () => {
                 <div className="container">
                     <h1>Our Programs</h1>
                     <p>Our programs address immediate needs while creating long-term, sustainable impact through rehabilitation and opportunity.</p>
+
+                    <div className="prog-search-wrapper">
+                        <div className="prog-search-relative">
+                            <FaSearch className="prog-search-icon" />
+                            <input
+                                type="text"
+                                placeholder="Search all initiatives..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="prog-search-input"
+                                aria-label="Search Programs"
+                            />
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -58,7 +74,10 @@ const Programs = () => {
                 <div className="container">
                     <h2 className="section-title text-center">Our Initiatives</h2>
                     <div className="programs-grid">
-                        {programList.map((prog) => (
+                        {programList.filter(p =>
+                            p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            p.desc.toLowerCase().includes(searchTerm.toLowerCase())
+                        ).map((prog) => (
                             <div key={prog.id} className="prog-card">
                                 <div className="prog-img-container">
                                     <img src={prog.img} alt={prog.title} />
@@ -73,6 +92,14 @@ const Programs = () => {
                             </div>
                         ))}
                     </div>
+                    {programList.filter(p =>
+                        p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        p.desc.toLowerCase().includes(searchTerm.toLowerCase())
+                    ).length === 0 && (
+                            <div className="no-results text-center">
+                                <p>No programs found matching "{searchTerm}". Please try a different keyword.</p>
+                            </div>
+                        )}
                 </div>
             </section>
 

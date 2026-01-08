@@ -1,27 +1,46 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 import './Login.css';
 
 const Login = () => {
-    const [role, setRole] = useState('employee'); // 'admin' or 'employee'
-    const [credentials, setCredentials] = useState({ username: '', password: '' });
+    const [role, setRole] = useState('employee');
+    const [credentials, setCredentials] = useState({ email: '', password: '' });
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
-    const handleLogin = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
-        // Mock login logic
-        if (role === 'admin') {
-            if (credentials.username === 'admin' && credentials.password === 'admin') {
+        setLoading(true);
+
+        try {
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: credentials.email,
+                password: credentials.password,
+            });
+
+            if (error) throw error;
+
+            // Fetch profile to determine dashboard
+            const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('role_type')
+                .eq('id', data.user.id)
+                .single();
+
+            if (profileError) throw profileError;
+
+            // Secure Redirect based on verified DB role
+            if (profile.role_type === 'Super Admin' || profile.role_type === 'Admin' || profile.role_type === 'Co-Admin') {
                 navigate('/admin-dashboard');
             } else {
-                alert('Invalid Admin Credentials (Try: admin/admin)');
-            }
-        } else {
-            if (credentials.username === 'emp' && credentials.password === 'emp') {
                 navigate('/employee-dashboard');
-            } else {
-                alert('Invalid Employee Credentials (Try: emp/emp)');
             }
+
+        } catch (error) {
+            alert(`Authentication Failed: ${error.message}`);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -49,16 +68,14 @@ const Login = () => {
                 </div>
 
                 <form onSubmit={handleLogin} className="login-form">
-                    <div className="form-group">
-                        <label>Username / ID</label>
-                        <input
-                            type="text"
-                            value={credentials.username}
-                            onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
-                            placeholder={role === 'admin' ? "Admin ID" : "Employee ID"}
-                            required
-                        />
-                    </div>
+                    <label>Official Email ID</label>
+                    <input
+                        type="email"
+                        value={credentials.email}
+                        onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
+                        placeholder="your.name@bcllf.org"
+                        required
+                    />
                     <div className="form-group">
                         <label>Password</label>
                         <input
@@ -69,7 +86,9 @@ const Login = () => {
                             required
                         />
                     </div>
-                    <button type="submit" className="btn btn-primary full-width">Login</button>
+                    <button type="submit" className="btn btn-primary full-width" disabled={loading}>
+                        {loading ? 'Authenticating...' : 'Secure Login'}
+                    </button>
                 </form>
                 <div className="login-footer">
                     <p>Restricted access for foundation staff only.</p>

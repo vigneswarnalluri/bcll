@@ -11,14 +11,30 @@ const Contact = () => {
         message: ''
     });
 
+    const [isSubmitted, setIsSubmitted] = useState(false);
+
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        alert("Message sent successfully!");
+        setIsSubmitted(true);
     };
+
+    if (isSubmitted) {
+        return (
+            <div className="contact-page">
+                <div className="page-header contact-header">
+                    <div className="container">
+                        <h1>Message Sent!</h1>
+                        <p>Thank you for reaching out. Our team will get back to you within 24-48 hours.</p>
+                        <button className="btn btn-primary" onClick={() => setIsSubmitted(false)} style={{ marginTop: '20px' }}>Send Another</button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="contact-page">

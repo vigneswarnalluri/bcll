@@ -157,48 +157,56 @@ const Home = () => {
                     <p className="text-center section-text">Real solutions for real problems. See how we help:</p>
                     <div className="core-programs-grid">
                         <ProgramCard
+                            id="meal"
                             image="/image copy 4.png"
                             title="Give a Meal"
                             desc="Nutritious food for the hungry."
                             benefit="Benefit: Prevents starvation and builds trust for rehabilitation."
                         />
                         <ProgramCard
+                            id="bed"
                             image="/image copy 5.png"
                             title="A Bed, A Dream"
                             desc="Shelter and dignity for the homeless."
                             benefit="Benefit: Provides safety and a fixed address for ID proofs."
                         />
                         <ProgramCard
+                            id="cloth"
                             image="/image copy 6.png"
                             title="Clothe a Child"
                             desc="Clothing support for children."
                             benefit="Benefit: Restores dignity and protection from harsh weather."
                         />
                         <ProgramCard
+                            id="health"
                             image="/image copy 7.png"
                             title="Health & Happiness"
                             desc="Medical camps and assistance."
                             benefit="Benefit: Treat chronic ailments & improve life expectancy."
                         />
                         <ProgramCard
+                            id="home"
                             image="/image copy 8.png"
                             title="Home of Hope"
                             desc="Shelter for orphans & elderly."
                             benefit="Benefit: A loving family environment for the abandoned."
                         />
                         <ProgramCard
+                            id="scholar"
                             image="/image copy 9.png"
                             title="Scholarships"
                             desc="Education support for students."
                             benefit="Benefit: Breaks the poverty cycle through higher education."
                         />
                         <ProgramCard
+                            id="rehab"
                             image="/image copy 10.png"
                             title="Rehabilitation"
                             desc="Skill development & training."
                             benefit="Benefit: Vocational skills lead to financial independence."
                         />
                         <ProgramCard
+                            id="rehab"
                             image="/ChatGPT Image Jan 6, 2026, 12_48_48 PM.png"
                             title="Fellowship"
                             desc="Youth leadership program."
@@ -537,8 +545,8 @@ const Home = () => {
     );
 };
 
-const ProgramCard = ({ image, title, desc, benefit }) => (
-    <div className="program-card">
+const ProgramCard = ({ id, image, title, desc, benefit }) => (
+    <Link to={`/programs/${id}`} className="program-card">
         <img src={image} alt={title} className="card-img" />
         <div className="card-content">
             <h3 className="program-title">{title}</h3>
@@ -548,7 +556,7 @@ const ProgramCard = ({ image, title, desc, benefit }) => (
                 <span>{benefit.replace('Benefit: ', '')}</span>
             </p>
         </div>
-    </div>
+    </Link>
 );
 
 const WhyCard = ({ image, title, desc, example }) => (

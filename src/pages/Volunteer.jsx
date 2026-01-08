@@ -9,6 +9,7 @@ import {
     FaGavel, FaBan, FaHandshake, FaUserShield, FaMoneyBillWave
 } from 'react-icons/fa';
 import './Volunteer.css';
+import { supabase } from '../lib/supabase';
 
 const Volunteer = () => {
     const [formData, setFormData] = useState({
@@ -20,15 +21,45 @@ const Volunteer = () => {
         address: '',
         interest: 'Food Distribution'
     });
+    const [isSubmitted, setIsSubmitted] = useState(false);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        alert("Thank you for your interest! Currently this is a demo.");
+
+        try {
+            const { error } = await supabase.from('volunteers').insert([{
+                full_name: formData.name,
+                email: formData.email,
+                phone: formData.mobile,
+                area_of_interest: formData.interest,
+                status: 'New'
+            }]);
+
+            if (error) throw error;
+            setIsSubmitted(true);
+        } catch (error) {
+            console.error('Submission failed:', error);
+            alert('Failed to submit application. Please try again.');
+        }
     };
+
+    if (isSubmitted) {
+        return (
+            <div className="volunteer-page">
+                <div className="page-header volunteer-header">
+                    <div className="container">
+                        <h1>Thank You!</h1>
+                        <p>Your volunteer application has been received. Our team will contact you shortly.</p>
+                        <button className="btn btn-primary" onClick={() => setIsSubmitted(false)} style={{ marginTop: '20px' }}>Register Another</button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="volunteer-page">

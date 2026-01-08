@@ -19,11 +19,35 @@ const Donate = () => {
         setAmount(val);
     };
 
+    const [isSubmitted, setIsSubmitted] = useState(false);
+
     // Function to handle copying UPI ID
     const copyToClipboard = () => {
         navigator.clipboard.writeText('bclftrust@indianbk');
         alert('UPI ID copied to clipboard!');
     };
+
+    const handleSubmit = (e) => {
+        if (e) e.preventDefault();
+        setIsSubmitted(true);
+    };
+
+    if (isSubmitted) {
+        return (
+            <div className="donate-page">
+                <section className="donate-hero">
+                    <div className="container">
+                        <h1>Thank You for Your Support!</h1>
+                        <p>Your contribution helps us continue our mission of rehabilitation and dignity.</p>
+                        <div style={{ marginTop: '30px' }}>
+                            <p style={{ marginBottom: '20px', color: '#666' }}>Please share the transaction ID with info@bcllf.org for your 80G receipt.</p>
+                            <button className="btn btn-primary" onClick={() => setIsSubmitted(false)}>Back to Donate</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        );
+    }
 
     const upiLink = `upi://pay?pa=bclftrust@indianbk&pn=Bharath Cares Life Line&am=${amount}&cu=INR`;
 
@@ -240,9 +264,9 @@ const Donate = () => {
                             />
                         </div>
 
-                        <a href={upiLink} className="donate-submit-btn">
+                        <button onClick={handleSubmit} className="donate-submit-btn" style={{ border: 'none', width: '100%', cursor: 'pointer' }}>
                             Donate ₹{amount || '0'} <FaArrowRight />
-                        </a>
+                        </button>
 
                         <p className="secure-note"><FaCheckCircle /> Secure UPI Payment</p>
 

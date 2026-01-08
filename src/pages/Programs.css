@@ -21,6 +21,43 @@
     font-weight: 500;
 }
 
+.prog-search-wrapper {
+    margin: 40px auto 0;
+    max-width: 600px;
+}
+
+.prog-search-relative {
+    position: relative;
+    width: 100%;
+}
+
+.prog-search-icon {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #666;
+    font-size: 1.2rem;
+}
+
+.prog-search-input {
+    width: 100%;
+    padding: 18px 20px 18px 60px;
+    border-radius: 50px;
+    border: none;
+    font-size: 1.1rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    outline: none;
+    transition: all 0.3s ease;
+    background: white;
+    color: var(--text);
+}
+
+.prog-search-input:focus {
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
+}
+
 /* === 2. PROCESS FLOW (Identify -> Support -> Reintegrate) === */
 .process-flow {
     display: flex;

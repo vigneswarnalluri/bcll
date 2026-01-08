@@ -14,8 +14,10 @@ import Donate from './pages/Donate';
 import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 import EmployeeDashboard from './pages/EmployeeDashboard';
+import ProgramDetail from './pages/ProgramDetail';
 
 import ScrollToTop from './components/ScrollToTop';
+import ScrollToTopButton from './components/ScrollToTopButton';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -25,8 +27,11 @@ const Layout = ({ children }) => {
   return (
     <>
       {!hideNavFooter && <Navbar />}
-      {children}
+      <main id="main-content">
+        {children}
+      </main>
       {!hideNavFooter && <Footer />}
+      <ScrollToTopButton />
     </>
   );
 };
@@ -41,6 +46,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<About />} />
             <Route path="/programs" element={<Programs />} />
+            <Route path="/programs/:id" element={<ProgramDetail />} />
             <Route path="/fellowship" element={<Fellowship />} />
             <Route path="/volunteer" element={<Volunteer />} />
             <Route path="/gallery" element={<Gallery />} />

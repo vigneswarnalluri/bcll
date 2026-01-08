@@ -16,7 +16,6 @@
     transition: all 0.3s ease;
     position: relative;
     z-index: 1000;
-    /* border-bottom: 1px solid rgba(255, 255, 255, 0.05); Removed to fix white line issue */
 }
 
 .top-bar.hidden {
@@ -70,11 +69,9 @@
     text-underline-offset: 4px;
 }
 
-/* Navbar container adjustment */
 .navbar {
     background: transparent;
     height: 100px;
-    /* Taller for premium feel */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -83,12 +80,10 @@
     z-index: 999;
     width: 100%;
     transition: all 0.4s ease;
-    /* border-bottom: 1px solid rgba(255, 255, 255, 0.1); Removed to fix white line issue */
 }
 
 .navbar .container {
     max-width: 95%;
-    /* Wider than standard 1200px */
 }
 
 .navbar-container {
@@ -99,13 +94,6 @@
     height: 100%;
 }
 
-/* Navbar Light Mode (For white pages) */
-.navbar.navbar-light-mode {
-    /* No fixed position here to avoid overlap with topbar */
-    /* background: white; Optional: if transparency is issue */
-}
-
-/* Scrolled State (Fixed & Animated) */
 .navbar.scrolled {
     background: rgba(255, 255, 255, 0.98);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
@@ -126,7 +114,6 @@
     }
 }
 
-/* Logo Styles */
 .navbar-logo {
     display: flex;
     align-items: center;
@@ -141,15 +128,12 @@
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
-/* Apply dark logo styles when scrolled OR in light mode */
 .navbar.scrolled .logo-img,
 .navbar.navbar-light-mode .logo-img {
     height: 55px;
-    /* Optional: keep large if not scrolled? Let's shrink for consistency or keep large */
     filter: none;
 }
 
-/* Let's keep logo large on light mode until scroll */
 .navbar.navbar-light-mode:not(.scrolled) .logo-img {
     height: 65px;
 }
@@ -182,7 +166,6 @@
     white-space: nowrap;
 }
 
-/* Dark Text for Scrolled OR Light Mode */
 .navbar.scrolled .logo-main,
 .navbar.navbar-light-mode .logo-main {
     color: var(--primary);
@@ -194,7 +177,6 @@
     color: var(--text-light);
 }
 
-/* Menu items */
 .nav-menu {
     display: flex;
     align-items: center;
@@ -224,7 +206,6 @@
     text-underline-offset: 4px;
 }
 
-/* Dark Links for Scrolled OR Light Mode */
 .navbar.scrolled .nav-links,
 .navbar.navbar-light-mode .nav-links {
     color: var(--text);
@@ -241,7 +222,6 @@
     text-underline-offset: 4px;
 }
 
-/* Donate Button */
 .donate-btn-nav {
     background: transparent;
     border: 2px solid var(--secondary);
@@ -266,7 +246,6 @@
     box-shadow: none;
 }
 
-/* Dark Button for Scrolled OR Light Mode */
 .navbar.scrolled .donate-btn-nav,
 .navbar.navbar-light-mode .donate-btn-nav {
     background: var(--primary);
@@ -285,7 +264,6 @@
     color: var(--white);
 }
 
-/* Mobile Toggle */
 .menu-icon {
     display: none;
     color: var(--white);
@@ -301,8 +279,6 @@
     .top-bar {
         display: none;
     }
-
-    /* Simpler specific mobile/desktop split */
 
     .navbar-logo {
         gap: 8px;
@@ -354,11 +330,163 @@
     .menu-icon {
         display: block;
         z-index: 1001;
-        /* Above menu */
     }
 
-    /* Ensure logo is above menu in mobile if needed, or handle z-index carefully */
     .navbar.scrolled .menu-icon.active {
         color: var(--white);
+    }
+}
+
+/* --- NAV SEARCH FEATURES --- */
+.nav-search-btn {
+    background: none;
+    border: none;
+    color: var(--white);
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: 0.3s;
+    opacity: 0.9;
+    display: flex;
+    align-items: center;
+}
+
+.navbar.scrolled .nav-search-btn,
+.navbar.navbar-light-mode .nav-search-btn {
+    color: var(--primary);
+}
+
+.nav-search-btn:hover {
+    color: var(--secondary);
+    opacity: 1;
+}
+
+/* SEARCH OVERLAY */
+.search-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(26, 35, 126, 0.95);
+    backdrop-filter: blur(10px);
+    z-index: 10000;
+    display: flex;
+    justify-content: center;
+    padding-top: 15vh;
+}
+
+.search-modal {
+    width: 90%;
+    max-width: 800px;
+    color: white;
+}
+
+.search-input-group {
+    display: flex;
+    align-items: center;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+    padding-bottom: 20px;
+    gap: 20px;
+}
+
+.modal-search-icon {
+    font-size: 2rem;
+    color: var(--secondary);
+}
+
+.search-input-group input {
+    background: none;
+    border: none;
+    width: 100%;
+    font-size: 2.5rem;
+    color: white;
+    outline: none;
+    font-family: var(--font-heading);
+}
+
+.search-input-group input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.close-search {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.close-search:hover {
+    color: var(--secondary);
+    transform: rotate(90deg);
+}
+
+.search-results {
+    margin-top: 40px;
+    max-height: 50vh;
+    overflow-y: auto;
+}
+
+.search-results ul {
+    list-style: none;
+    padding: 0;
+}
+
+.search-results li {
+    margin-bottom: 15px;
+}
+
+.search-results a {
+    font-size: 1.5rem;
+    color: white;
+    text-decoration: none;
+    transition: 0.2s;
+    display: block;
+    padding: 10px 0;
+}
+
+.search-results a:hover {
+    color: var(--secondary);
+    padding-left: 20px;
+}
+
+.search-suggestions {
+    margin-top: 20px;
+}
+
+.search-suggestions p {
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.search-suggestions .tags {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.search-suggestions span {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 8px 20px;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.search-suggestions span:hover {
+    background: var(--secondary);
+    color: var(--primary);
+}
+
+.no-search-results {
+    font-size: 1.2rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+@media (max-width: 768px) {
+    .search-input-group input {
+        font-size: 1.5rem;
     }
 }

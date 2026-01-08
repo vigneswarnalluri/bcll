@@ -55,11 +55,33 @@ ul {
   list-style: none;
 }
 
+/* Accessibility */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 0;
+  background: var(--primary);
+  color: var(--white);
+  padding: 15px;
+  z-index: 10000;
+  transition: top 0.3s;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+*:focus-visible {
+  outline: 3px solid var(--secondary);
+  outline-offset: 4px;
+}
+
 button {
   cursor: pointer;
   font-family: var(--font-heading);
   border: none;
   outline: none;
+  transition: all 0.3s ease;
 }
 
 /* Utilities */
