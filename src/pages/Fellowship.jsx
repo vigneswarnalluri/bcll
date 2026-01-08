@@ -122,7 +122,7 @@ const Fellowship = () => {
                             <h4>Basic Info</h4>
                             <ul>
                                 <li>Full Name (Aadhaar)</li>
-                                <li>Student ID (Auto-gen)</li>
+                                <li>Student ID</li>
                                 <li>Contact Details</li>
                                 <li>Gender & DOB</li>
                             </ul>
@@ -142,7 +142,6 @@ const Fellowship = () => {
                                 <li>Account Holder Name</li>
                                 <li>Account Number</li>
                                 <li>IFSC Code & Bank Name</li>
-                                <li>(Admin Access Only)</li>
                             </ul>
                         </div>
                     </div>

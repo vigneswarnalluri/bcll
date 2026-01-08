@@ -46,7 +46,7 @@ const Navbar = () => {
     { name: 'Reports', path: '/reports' },
     { name: 'Volunteer', path: '/volunteer' },
     { name: 'Contact', path: '/contact' },
-    { name: 'Portal', path: '/login' },
+    { name: 'Login', path: '/login' },
   ];
 
   const searchItems = [
