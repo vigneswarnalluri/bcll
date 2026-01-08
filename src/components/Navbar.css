@@ -83,7 +83,8 @@
 }
 
 .navbar .container {
-    max-width: 95%;
+    max-width: 98%;
+    padding: 0 20px;
 }
 
 .navbar-container {
@@ -118,11 +119,11 @@
     display: flex;
     align-items: center;
     text-decoration: none;
-    gap: 20px;
+    gap: 12px;
 }
 
 .logo-img {
-    height: 65px;
+    height: 50px;
     width: auto;
     transition: 0.3s;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
@@ -130,12 +131,12 @@
 
 .navbar.scrolled .logo-img,
 .navbar.navbar-light-mode .logo-img {
-    height: 55px;
+    height: 45px;
     filter: none;
 }
 
 .navbar.navbar-light-mode:not(.scrolled) .logo-img {
-    height: 65px;
+    height: 50px;
 }
 
 .logo-text-group {
@@ -148,21 +149,21 @@
     color: var(--white);
     font-family: var(--font-heading);
     font-weight: 800;
-    font-size: 1.6rem;
+    font-size: 1.3rem;
     line-height: 1;
     text-transform: uppercase;
     letter-spacing: 1.5px;
     text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-    margin-bottom: 5px;
+    margin-bottom: 3px;
 }
 
 .logo-sub {
     color: var(--secondary);
     font-family: var(--font-body);
-    font-size: 0.75rem;
+    font-size: 0.65rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 3px;
+    letter-spacing: 2px;
     white-space: nowrap;
 }
 
