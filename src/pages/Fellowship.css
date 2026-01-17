@@ -878,8 +878,8 @@
 }
 
 .modal-body {
-    padding: 20px 32px;
-    /* Drastically reduced vertical padding */
+    padding: 16px 20px;
+    /* Reduced padding for mobile tightness */
 }
 
 .formal-form {
@@ -1000,6 +1000,12 @@
 .form-row-1 {
     display: block;
     margin-bottom: 8px;
+}
+
+.dob-grid {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr;
+    gap: 8px;
 }
 
 @keyframes f-slideIn {
@@ -1191,6 +1197,64 @@
 
     .f-container {
         padding: 0 20px;
+    }
+
+    .modal-body {
+        padding: 12px 16px;
+    }
+
+    .modal-header h2 {
+        font-size: 0.95rem;
+    }
+
+    .step-dots {
+        margin-top: 8px;
+        gap: 4px;
+    }
+
+    .step-dots span {
+        width: 16px;
+        height: 3px;
+    }
+
+    .step-dots span.active {
+        width: 24px;
+    }
+
+    .modal-header {
+        padding: 10px 16px;
+    }
+
+    .form-group label {
+        font-size: 0.65rem;
+    }
+
+    .form-group input,
+    .form-group select {
+        padding: 8px 10px;
+        font-size: 0.75rem;
+    }
+
+    .dob-grid {
+        grid-template-columns: 65px 1fr 75px;
+        gap: 4px;
+    }
+
+    .form-sub-header {
+        font-size: 0.6rem;
+        margin-bottom: 8px;
+    }
+
+    .form-footer-compact {
+        margin-top: 16px;
+        flex-direction: row;
+        /* Keep side-by-side if small enough, or stack */
+        gap: 8px;
+    }
+
+    .form-footer-compact .f-btn {
+        padding: 10px 15px;
+        font-size: 0.85rem;
     }
 
     /* Stipend & Exposure Mobile Fixes */

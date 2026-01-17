@@ -1046,7 +1046,7 @@ const Fellowship = () => {
                                         </div>
                                         <div className="form-group" style={{ marginBottom: '12px' }}>
                                             <label>Date of Birth</label>
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr', gap: '8px' }}>
+                                            <div className="dob-grid">
                                                 <select name="dobDay" value={formData.dobDay} onChange={handleChange} required>
                                                     <option value="">Day</option>
                                                     {days.map(d => <option key={d} value={d}>{d}</option>)}
