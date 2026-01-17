@@ -29,7 +29,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.5);
     z-index: 2;
 }
 
@@ -260,8 +260,8 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(26, 35, 126, 0.75);
-    /* Deep Blue Overlay aligning with brand */
+    background: rgba(0, 0, 0, 0.75);
+    /* Neutral Black Overlay */
     z-index: 1;
 }
 
