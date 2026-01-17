@@ -36,11 +36,12 @@ const Donate = () => {
 
         // Added mc=8398 (Social Services) and mode=02 (to mimic QR scan behavior)
         const payeeAddress = 'bclftrust@indianbk';
-        const payeeName = 'BHARATH CARES LIFE LINE FOUNDATION';
+        const payeeName = 'BHARATH CARES LIFE LINE';
         const formattedAmount = parseFloat(amount).toFixed(2);
+        const trRef = `BCLLF${Date.now().toString().slice(-6)}`;
 
-        // Simplified link to match high-authority QR scan structures
-        const upiLink = `upi://pay?pa=${payeeAddress}&pn=${encodeURIComponent(payeeName)}&am=${formattedAmount}&cu=INR&mc=8398&mode=02&purpose=00`;
+        // Added tr (transaction ref) and tid (transaction id) for better integration
+        const upiLink = `upi://pay?pa=${payeeAddress}&pn=${encodeURIComponent(payeeName)}&am=${formattedAmount}&cu=INR&mc=8398&tr=${trRef}&mode=02&purpose=00`;
 
         window.location.href = upiLink;
 
@@ -284,7 +285,31 @@ const Donate = () => {
                             Donate ₹{amount || '0'} <FaArrowRight />
                         </button>
 
-                        <p className="secure-note"><FaCheckCircle /> Secure UPI Payment</p>
+                        <div style={{ marginTop: '15px', textAlign: 'center' }}>
+                            <p style={{ fontSize: '0.8rem', color: '#666', marginBottom: '8px' }}>Button not working? Use manual mode:</p>
+                            <button
+                                onClick={copyToClipboard}
+                                className="btn-small"
+                                style={{
+                                    background: '#f1f3f5',
+                                    color: 'var(--primary)',
+                                    width: '100%',
+                                    padding: '10px',
+                                    borderRadius: '8px',
+                                    fontSize: '0.85rem',
+                                    fontWeight: '700',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '8px',
+                                    border: '1px solid #e2e8f0'
+                                }}
+                            >
+                                <FaCopy /> Copy UPI ID: bclftrust@indianbk
+                            </button>
+                        </div>
+
+                        <p className="secure-note" style={{ marginTop: '15px' }}><FaCheckCircle /> Secure UPI Payment</p>
 
                         <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid #eee' }}>
                             <p style={{ fontSize: '0.9rem', color: '#555', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '600' }}>
