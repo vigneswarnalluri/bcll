@@ -16,7 +16,15 @@ import {
     HiOutlineBadgeCheck
 } from 'react-icons/hi';
 import './Fellowship.css';
-import { supabase } from '../lib/supabase'; const colleges = [...new Set([
+import { supabase } from '../lib/supabase';
+
+// Import Assets
+import heroImg from '../assets/viksit_bharat_fellowship_hero_1768564664062.png';
+import quantumImg from '../assets/quantum_computing_track_1768564684280.png';
+import cloudImg from '../assets/cloud_computing_track_1768564703263.png';
+import mobileImg from '../assets/mobile_app_dev_track_1768564724458.png';
+
+const colleges = [...new Set([
     "A V S Engineering College",
     "A.C. College Of Engineering And Technology (Autonomous)",
     "A.M. Reddy Memorial College of Engineering & Technology",
@@ -788,7 +796,7 @@ const Fellowship = () => {
                         <div className="overview-visual-right">
                             <div className="image-frame">
                                 <img
-                                    src="/src/assets/viksit_bharat_fellowship_hero_1768564664062.png"
+                                    src={heroImg}
                                     alt="Viksit Bharat Vision"
                                 />
                                 <div className="floating-stat-box">
@@ -816,19 +824,19 @@ const Fellowship = () => {
                         <TrackCard
                             isFeatured
                             badge="Highly Recommended"
-                            image="/src/assets/quantum_computing_track_1768564684280.png"
+                            image={quantumImg}
                             title="A) Quantum Computing"
                             features={['Quantum Fundamentals & Qubits', 'Quantum Algorithms & Circuits', 'Real-world Research Applications']}
                             desc="Directly aligned with the AP Government's Quantum Valley Initiative."
                         />
                         <TrackCard
-                            image="/src/assets/cloud_computing_track_1768564703263.png"
+                            image={cloudImg}
                             title="B) Cloud Computing"
                             features={['Virtualization & Networking', 'DevOps & Scalability', 'Enterprise Cloud Solutions']}
                             desc="Focus on real-world cloud platforms and deployment models."
                         />
                         <TrackCard
-                            image="/src/assets/mobile_app_dev_track_1768564724458.png"
+                            image={mobileImg}
                             title="C) Mobile Application Development"
                             features={['Modern UI/UX Principles', 'APIs & Database Integration', 'Industry-standard Deployment']}
                             desc="Hands-on experience with modern mobile ecosystem tools."
