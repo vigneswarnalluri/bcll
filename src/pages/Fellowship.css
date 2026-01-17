@@ -1076,37 +1076,61 @@
     .institutional-grid {
         grid-template-columns: repeat(2, 1fr);
     }
+
+    .tech-grid {
+        gap: 30px;
+    }
 }
 
 @media (max-width: 1024px) {
     .f-section {
-        padding: 100px 0;
+        padding: 80px 0;
     }
 
     .f-two-col-grid,
     .stipend-executive-wrap {
         grid-template-columns: 1fr;
+        gap: 40px;
     }
 
     .f-roadmap-grid {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(2, 1fr);
     }
 
     .premium-cta-card {
         flex-direction: column;
         text-align: center;
-        gap: 48px;
-        padding: 60px;
+        gap: 32px;
+        padding: 40px 24px;
     }
 
     .cta-info h2 {
-        font-size: 2.5rem;
+        font-size: 2.2rem;
+    }
+
+    .institutional-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 }
 
 @media (max-width: 768px) {
-    .f-roadmap-grid {
-        grid-template-columns: 1fr;
+    .f-section {
+        padding: 60px 0;
+    }
+
+    .hero-title {
+        font-size: 2.2rem;
+        line-height: 1.1;
+    }
+
+    .hero-subtitle {
+        font-size: 1rem;
+        margin-bottom: 32px;
+    }
+
+    .hero-actions {
+        flex-direction: column;
+        gap: 16px;
     }
 
     .form-row-3,
@@ -1114,16 +1138,59 @@
         grid-template-columns: 1fr;
     }
 
-    .hero-title {
-        font-size: 3rem;
+    .f-section-title {
+        font-size: 1.85rem;
+        letter-spacing: -0.02em;
     }
 
-    .hero-actions {
-        flex-direction: column;
+    .f-section-header.center {
+        margin-bottom: 40px;
     }
 
-    .modal-body {
-        padding: 32px;
+    .tech-grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+
+    .tech-card-formal .card-info-wrap {
+        padding: 30px;
+    }
+
+    .f-roadmap-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .f-roadmap-grid::before {
+        display: none;
+    }
+
+    .institutional-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .premium-cta-card h2 {
+        font-size: 1.75rem !important;
+    }
+
+    .f-btn-premium {
+        padding: 16px 32px;
+        font-size: 1.1rem;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .modal-container {
+        width: 100%;
+        max-width: 100%;
+        border-radius: 0;
+        margin: 0;
+        height: 100%;
+    }
+
+    .f-container {
+        padding: 0 20px;
     }
 }
 
