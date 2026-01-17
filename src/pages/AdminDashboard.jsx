@@ -704,12 +704,15 @@ const AdminDashboard = () => {
             {/* EXPANDED MODALS */}
             {isModalOpen && (
                 <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
-                    <div className="modal-content custom-scroll" style={{
+                    <div className="modal-content" style={{
                         width: modalType === 'report' ? '600px' : (modalType.includes('details') ? '1400px' : '1000px'),
                         maxHeight: '92vh',
-                        overflowY: 'auto',
+                        display: 'flex',
+                        flexDirection: 'column',
                         borderRadius: '28px',
-                        border: '1px solid rgba(255,255,255,0.1)'
+                        backgroundColor: '#fff',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        overflow: 'hidden'
                     }} onClick={e => e.stopPropagation()}>
                         {modalType === 'employee' && (
                             <EmployeeForm
@@ -1172,48 +1175,54 @@ const EditProfileModal = ({ admin, onClose, onSave }) => {
     };
 
     return (
-        <div style={{ padding: '40px' }}>
-            <h3 style={{ marginBottom: '25px' }}>Update Admin Profile Details</h3>
-            <div className="form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                <div className="form-group">
-                    <label>Full Name</label>
-                    <input name="full_name" className="form-control" type="text" value={formData.full_name} onChange={handleChange} />
-                </div>
-                <div className="form-group">
-                    <label>Official Email</label>
-                    <input name="email" className="form-control" type="email" value={formData.email} onChange={handleChange} />
-                </div>
-                <div className="form-group">
-                    <label>Official Mobile</label>
-                    <input name="mobile" className="form-control" type="tel" value={formData.mobile} onChange={handleChange} />
-                </div>
-                <div className="form-group">
-                    <label>Date of Birth</label>
-                    <input name="dob" className="form-control" type="date" value={formData.dob} onChange={handleChange} />
-                </div>
-                <div className="form-group">
-                    <label>Gender</label>
-                    <select name="gender" className="form-control" value={formData.gender} onChange={handleChange}>
-                        <option value="">Select Gender</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-                <div className="form-group">
-                    <label>Joined HQ Date</label>
-                    <input name="appointment_date" className="form-control" type="date" value={formData.appointment_date} onChange={handleChange} />
-                </div>
-                <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                    <label>Personal Address</label>
-                    <input name="address" className="form-control" type="text" value={formData.address} onChange={handleChange} />
-                </div>
-                <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                    <label>Emergency Contact Info</label>
-                    <input name="emergency" className="form-control" type="text" value={formData.emergency} onChange={handleChange} placeholder="Name - Relation - Mobile" />
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <div style={{ padding: '30px 30px 0', borderBottom: '1px solid #f1f5f9', marginBottom: '20px' }}>
+                <h3 style={{ marginBottom: '25px' }}>Update Admin Profile Details</h3>
+            </div>
+
+            <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', padding: '0 30px' }}>
+                <div className="form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div className="form-group">
+                        <label>Full Name</label>
+                        <input name="full_name" className="form-control" type="text" value={formData.full_name} onChange={handleChange} />
+                    </div>
+                    <div className="form-group">
+                        <label>Official Email</label>
+                        <input name="email" className="form-control" type="email" value={formData.email} onChange={handleChange} />
+                    </div>
+                    <div className="form-group">
+                        <label>Official Mobile</label>
+                        <input name="mobile" className="form-control" type="tel" value={formData.mobile} onChange={handleChange} />
+                    </div>
+                    <div className="form-group">
+                        <label>Date of Birth</label>
+                        <input name="dob" className="form-control" type="date" value={formData.dob} onChange={handleChange} />
+                    </div>
+                    <div className="form-group">
+                        <label>Gender</label>
+                        <select name="gender" className="form-control" value={formData.gender} onChange={handleChange}>
+                            <option value="">Select Gender</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div className="form-group">
+                        <label>Joined HQ Date</label>
+                        <input name="appointment_date" className="form-control" type="date" value={formData.appointment_date} onChange={handleChange} />
+                    </div>
+                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                        <label>Personal Address</label>
+                        <input name="address" className="form-control" type="text" value={formData.address} onChange={handleChange} />
+                    </div>
+                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                        <label>Emergency Contact Info</label>
+                        <input name="emergency" className="form-control" type="text" value={formData.emergency} onChange={handleChange} placeholder="Name - Relation - Mobile" />
+                    </div>
                 </div>
             </div>
-            <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end', marginTop: '30px' }}>
+
+            <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end', padding: '30px', borderTop: '1px solid #f1f5f9', background: '#fff' }}>
                 <button className="btn-small" onClick={onClose}>Cancel</button>
                 <button className="btn-add" onClick={() => onSave(formData)}>Update Profile</button>
             </div>
@@ -1882,19 +1891,21 @@ const AdminForm = ({ onClose, onSave, admin, initialStep = 1 }) => {
     };
 
     return (
-        <div style={{ padding: '30px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                <h3>Provision Administrative Account (Step {step}/5)</h3>
-                <button className="btn-icon" onClick={onClose}>&times;</button>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', maxHeight: '92vh' }}>
+            <div style={{ padding: '30px 30px 0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+                    <h3>Provision Administrative Account (Step {step}/5)</h3>
+                    <button className="btn-icon" onClick={onClose}>&times;</button>
+                </div>
+
+                <div className="form-steps-indicator" style={{ display: 'flex', gap: '8px', marginBottom: '30px' }}>
+                    {categories.map((c, i) => (
+                        <div key={c} style={{ flex: 1, padding: '10px 3px', background: step === i + 1 ? '#2d3748' : '#edf2f7', color: step === i + 1 ? 'white' : '#718096', textAlign: 'center', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 'bold' }}>{c}</div>
+                    ))}
+                </div>
             </div>
 
-            <div className="form-steps-indicator" style={{ display: 'flex', gap: '8px', marginBottom: '30px' }}>
-                {categories.map((c, i) => (
-                    <div key={c} style={{ flex: 1, padding: '10px 3px', background: step === i + 1 ? '#2d3748' : '#edf2f7', color: step === i + 1 ? 'white' : '#718096', textAlign: 'center', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 'bold' }}>{c}</div>
-                ))}
-            </div>
-
-            <div className="form-content" style={{ minHeight: '500px' }}>
+            <div className="form-content custom-scroll" style={{ flex: 1, overflowY: 'auto', padding: '0 30px', minHeight: '300px' }}>
                 {step === 1 && (
                     <div className="form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                         <div className="form-group"><label>Full Name</label><input className="form-control" name="full_name" value={formData.full_name} onChange={handleChange} type="text" placeholder="Legal Name" required /></div>
@@ -1985,7 +1996,7 @@ const AdminForm = ({ onClose, onSave, admin, initialStep = 1 }) => {
                 )}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '40px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '30px', borderTop: '1px solid #edf2f7', background: '#fff', borderBottomLeftRadius: '28px', borderBottomRightRadius: '28px' }}>
                 <button className="btn-small" disabled={step === 1} onClick={() => setStep(step - 1)}>Back</button>
                 {step < 5 ? <button className="btn-add" onClick={handleNext}>Continue</button> : <button className="btn-add" onClick={handleFinalSave}>Securely Provision Admin</button>}
             </div>
@@ -2047,19 +2058,21 @@ const EmployeeForm = ({ onClose, onSave }) => {
     };
 
     return (
-        <div style={{ padding: '30px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                <h3>Hire New Personnel (Step {step}/5)</h3>
-                <button className="btn-icon" onClick={onClose}>&times;</button>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', maxHeight: '92vh' }}>
+            <div style={{ padding: '30px 30px 0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+                    <h3>Hire New Personnel (Step {step}/5)</h3>
+                    <button className="btn-icon" onClick={onClose}>&times;</button>
+                </div>
+
+                <div className="form-steps-indicator" style={{ display: 'flex', gap: '8px', marginBottom: '30px' }}>
+                    {categories.map((c, i) => (
+                        <div key={c} style={{ flex: 1, padding: '10px 5px', background: step === i + 1 ? 'var(--primary)' : '#edf2f7', color: step === i + 1 ? 'white' : '#718096', textAlign: 'center', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold' }}>{c}</div>
+                    ))}
+                </div>
             </div>
 
-            <div className="form-steps-indicator" style={{ display: 'flex', gap: '8px', marginBottom: '30px' }}>
-                {categories.map((c, i) => (
-                    <div key={c} style={{ flex: 1, padding: '10px 5px', background: step === i + 1 ? 'var(--primary)' : '#edf2f7', color: step === i + 1 ? 'white' : '#718096', textAlign: 'center', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold' }}>{c}</div>
-                ))}
-            </div>
-
-            <div className="form-content" style={{ minHeight: '450px' }}>
+            <div className="form-content custom-scroll" style={{ flex: 1, overflowY: 'auto', padding: '0 30px', minHeight: '300px' }}>
                 {step === 1 && (
                     <div className="form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                         <div className="form-group"><label>Full Name (as per Aadhaar)</label><input className="form-control" name="full_name" value={formData.full_name} onChange={handleChange} type="text" placeholder="John Doe" /></div>
@@ -2119,7 +2132,7 @@ const EmployeeForm = ({ onClose, onSave }) => {
                 )}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '40px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '30px', borderTop: '1px solid #edf2f7', background: '#fff', borderBottomLeftRadius: '28px', borderBottomRightRadius: '28px' }}>
                 <button className="btn-small" disabled={step === 1} onClick={() => setStep(step - 1)}>Previous</button>
                 {step < 5 ? <button className="btn-add" onClick={() => setStep(step + 1)}>Next Section</button> : <button className="btn-add" onClick={handleFinalSave}>Digitally Generate Profile</button>}
             </div>
@@ -2467,32 +2480,38 @@ const ReportForm = ({ onClose }) => {
     };
 
     return (
-        <div style={{ padding: '30px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                <h3>Upload Field Report</h3>
-                <button className="btn-icon" onClick={onClose}>&times;</button>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <div style={{ padding: '30px 30px 0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+                    <h3>Upload Field Report</h3>
+                    <button className="btn-icon" onClick={onClose}>&times;</button>
+                </div>
             </div>
-            <div className="form-group" style={{ marginBottom: '20px' }}>
-                <label>Report Title</label>
-                <input className="form-control" type="text" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} />
+
+            <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', padding: '0 30px' }}>
+                <div className="form-group" style={{ marginBottom: '20px' }}>
+                    <label>Report Title</label>
+                    <input className="form-control" type="text" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} />
+                </div>
+                <div className="form-group" style={{ marginBottom: '20px' }}>
+                    <label>Category</label>
+                    <select className="form-control" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
+                        <option>Impact</option>
+                        <option>Financial</option>
+                        <option>Rehab</option>
+                        <option>General</option>
+                    </select>
+                </div>
+                <div className="form-group" style={{ marginBottom: '30px' }}>
+                    <label>Status</label>
+                    <select className="form-control" value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
+                        <option>Draft</option>
+                        <option>Public</option>
+                    </select>
+                </div>
             </div>
-            <div className="form-group" style={{ marginBottom: '20px' }}>
-                <label>Category</label>
-                <select className="form-control" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
-                    <option>Impact</option>
-                    <option>Financial</option>
-                    <option>Rehab</option>
-                    <option>General</option>
-                </select>
-            </div>
-            <div className="form-group" style={{ marginBottom: '30px' }}>
-                <label>Status</label>
-                <select className="form-control" value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
-                    <option>Draft</option>
-                    <option>Public</option>
-                </select>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px' }}>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px', padding: '30px', borderTop: '1px solid #f1f5f9' }}>
                 <button className="btn-small" onClick={onClose}>Cancel</button>
                 <button className="btn-add" onClick={handleSave}><FaFileUpload /> Upload Report</button>
             </div>
@@ -2508,26 +2527,30 @@ const AdminLevelModal = ({ currentLevel, onClose, onSave }) => {
 
     const [level, setLevel] = useState(normalizedLevel);
     return (
-        <div style={{ padding: '40px' }}>
-            <h3 style={{ marginBottom: '20px' }}>Adjust Administrative Authority</h3>
-            <p style={{ color: '#718096', marginBottom: '30px' }}>Elevating or restricting admin levels will immediately synchronize permissions across all connected devices.</p>
-
-            <div className="form-group" style={{ marginBottom: '30px' }}>
-                <label>Select Authority Tier</label>
-                <select className="form-control" value={level} onChange={(e) => setLevel(e.target.value)}>
-                    <option>L1 - Full Authority</option>
-                    <option>L2 - High Operations</option>
-                    <option>L3 - Mid Management</option>
-                    <option>L4 - Base Support</option>
-                </select>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <div style={{ padding: '40px 40px 0' }}>
+                <h3 style={{ marginBottom: '20px' }}>Adjust Administrative Authority</h3>
+                <p style={{ color: '#718096', marginBottom: '30px' }}>Elevating or restricting admin levels will immediately synchronize permissions across all connected devices.</p>
             </div>
 
-            <div style={{ padding: '20px', background: '#fffaf0', border: '1px solid #ecc94b', borderRadius: '15px', marginBottom: '30px' }}>
-                <h5 style={{ color: '#b7791f', display: 'flex', alignItems: 'center', gap: '10px' }}><FaShieldAlt /> Restriction Warning</h5>
-                <p style={{ fontSize: '0.85rem', margin: '10px 0 0' }}>Changing levels may revoke access to financial data or audit logs. Ensure this action is authorized by the board.</p>
+            <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', padding: '0 40px' }}>
+                <div className="form-group" style={{ marginBottom: '30px' }}>
+                    <label>Select Authority Tier</label>
+                    <select className="form-control" value={level} onChange={(e) => setLevel(e.target.value)}>
+                        <option>L1 - Full Authority</option>
+                        <option>L2 - High Operations</option>
+                        <option>L3 - Mid Management</option>
+                        <option>L4 - Base Support</option>
+                    </select>
+                </div>
+
+                <div style={{ padding: '20px', background: '#fffaf0', border: '1px solid #ecc94b', borderRadius: '15px', marginBottom: '30px' }}>
+                    <h5 style={{ color: '#b7791f', display: 'flex', alignItems: 'center', gap: '10px' }}><FaShieldAlt /> Restriction Warning</h5>
+                    <p style={{ fontSize: '0.85rem', margin: '10px 0 0' }}>Changing levels may revoke access to financial data or audit logs. Ensure this action is authorized by the board.</p>
+                </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end', padding: '30px', borderTop: '1px solid #f1f5f9' }}>
                 <button className="btn-small" onClick={onClose}>Cancel</button>
                 <button className="btn-add" onClick={() => onSave(level)}>Commit Level Change</button>
             </div>
@@ -2539,38 +2562,44 @@ const UploadArtifactModal = ({ onClose, onSave, categories }) => {
     const [formData, setFormData] = useState({ name: '', category: (categories || [])[0]?.name || '', size: '0 MB', fileObject: null });
 
     return (
-        <div style={{ padding: '30px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                <h3>Upload Regulatory Artifact</h3>
-                <button className="btn-icon" onClick={onClose}>&times;</button>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <div style={{ padding: '30px 30px 0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+                    <h3>Upload Regulatory Artifact</h3>
+                    <button className="btn-icon" onClick={onClose}>&times;</button>
+                </div>
             </div>
-            <div className="form-group" style={{ marginBottom: '20px' }}>
-                <label>Document Name</label>
-                <input className="form-control" type="text" placeholder="e.g. Trust Deed 2025" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+
+            <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', padding: '0 30px' }}>
+                <div className="form-group" style={{ marginBottom: '20px' }}>
+                    <label>Document Name</label>
+                    <input className="form-control" type="text" placeholder="e.g. Trust Deed 2025" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                </div>
+                <div className="form-group" style={{ marginBottom: '20px' }}>
+                    <label>Filing Category (Vault)</label>
+                    <select className="form-control" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
+                        {categories.map(cat => (
+                            <option key={cat.id} value={cat.name}>{cat.name}</option>
+                        ))}
+                    </select>
+                </div>
+                <div className="form-group" style={{ marginBottom: '30px' }}>
+                    <label>File Attachment</label>
+                    <input className="form-control" type="file" onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                            setFormData({
+                                ...formData,
+                                size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
+                                fileObject: file,
+                                name: formData.name || file.name.split('.')[0] // Autopopulate name if empty
+                            });
+                        }
+                    }} />
+                </div>
             </div>
-            <div className="form-group" style={{ marginBottom: '20px' }}>
-                <label>Filing Category (Vault)</label>
-                <select className="form-control" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
-                    {categories.map(cat => (
-                        <option key={cat.id} value={cat.name}>{cat.name}</option>
-                    ))}
-                </select>
-            </div>
-            <div className="form-group" style={{ marginBottom: '30px' }}>
-                <label>File Attachment</label>
-                <input className="form-control" type="file" onChange={(e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                        setFormData({
-                            ...formData,
-                            size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
-                            fileObject: file,
-                            name: formData.name || file.name.split('.')[0] // Autopopulate name if empty
-                        });
-                    }
-                }} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px' }}>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px', padding: '30px', borderTop: '1px solid #f1f5f9' }}>
                 <button className="btn-small" onClick={onClose}>Cancel</button>
                 <button className="btn-add" onClick={() => onSave(formData)} disabled={!formData.fileObject}><FaFileUpload /> Upload & Verify</button>
             </div>
@@ -2582,23 +2611,29 @@ const FolderFormModal = ({ onClose, onSave, folder = null }) => {
     const [name, setName] = useState(folder ? folder.name : '');
 
     return (
-        <div style={{ padding: '30px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                <h3>{folder ? 'Rename Folder' : 'Create New Vault Folder'}</h3>
-                <button className="btn-icon" onClick={onClose}>&times;</button>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <div style={{ padding: '30px 30px 0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+                    <h3>{folder ? 'Rename Folder' : 'Create New Vault Folder'}</h3>
+                    <button className="btn-icon" onClick={onClose}>&times;</button>
+                </div>
             </div>
-            <div className="form-group" style={{ marginBottom: '30px' }}>
-                <label>Folder Name</label>
-                <input
-                    className="form-control"
-                    type="text"
-                    placeholder="e.g. Audit Reports 2026"
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    autoFocus
-                />
+
+            <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', padding: '0 30px' }}>
+                <div className="form-group" style={{ marginBottom: '30px' }}>
+                    <label>Folder Name</label>
+                    <input
+                        className="form-control"
+                        type="text"
+                        placeholder="e.g. Audit Reports 2026"
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        autoFocus
+                    />
+                </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px' }}>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px', padding: '30px', borderTop: '1px solid #f1f5f9' }}>
                 <button className="btn-small" onClick={onClose}>Cancel</button>
                 <button className="btn-add" onClick={() => onSave(name)} disabled={!name}>
                     {folder ? 'Update Name' : 'Initialize Folder'}
