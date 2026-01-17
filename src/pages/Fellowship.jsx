@@ -604,6 +604,8 @@ const Fellowship = () => {
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [formStep, setFormStep] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isVerifyingUtr, setIsVerifyingUtr] = useState(false);
+    const [isUtrVerified, setIsUtrVerified] = useState(false);
     const [formData, setFormData] = useState({
         student_name: '',
         aadhaar_no: '',
@@ -652,6 +654,28 @@ const Fellowship = () => {
     const handleChange = (e) => {
         const { name, value } = e.target;
 
+        // Account Holder Name - Text only, no numbers
+        if (name === 'acc_holder') {
+            const textOnly = value.replace(/[0-9]/g, '');
+            setFormData(prev => ({ ...prev, [name]: textOnly }));
+            return;
+        }
+
+        // Bank Name - Letters, Numbers, and Spaces ONLY
+        if (name === 'bank_name') {
+            const cleanValue = value.replace(/[^a-zA-Z0-9 ]/g, '');
+            setFormData(prev => ({ ...prev, [name]: cleanValue }));
+            return;
+        }
+
+        // IFSC Code - Alphanumeric and Uppercase for consistency
+        if (name === 'ifsc_code') {
+            const alphaNumericUpper = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+            if (alphaNumericUpper.length > 11) return; // Standard IFSC length
+            setFormData(prev => ({ ...prev, [name]: alphaNumericUpper }));
+            return;
+        }
+
         // Enforce numeric-only for specific fields
         if (['aadhaar_no', 'phone', 'acc_no', 'utr_number'].includes(name)) {
             const numericValue = value.replace(/\D/g, ''); // Remove non-digits
@@ -661,6 +685,11 @@ const Fellowship = () => {
             if (name === 'phone' && numericValue.length > 10) return;
             if (name === 'acc_no' && numericValue.length > 18) return;
             if (name === 'utr_number' && numericValue.length > 12) return;
+
+            // Reset verification if UTR is modified
+            if (name === 'utr_number') {
+                setIsUtrVerified(false);
+            }
 
             setFormData(prev => ({ ...prev, [name]: numericValue }));
             return;
@@ -682,6 +711,20 @@ const Fellowship = () => {
         setIsDropdownOpen(false);
     };
 
+    const handleVerifyUtr = async () => {
+        if (formData.utr_number.length !== 12) {
+            alert('Please enter a valid 12-digit UTR/Transaction ID');
+            return;
+        }
+
+        setIsVerifyingUtr(true);
+        // Simulate bank API check/validation delay
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        setIsVerifyingUtr(false);
+        setIsUtrVerified(true);
+    };
+
     const handleNext = (e) => {
         e.preventDefault();
         setFormStep(prev => prev + 1);
@@ -693,6 +736,12 @@ const Fellowship = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!isUtrVerified) {
+            alert('Please verify your transaction reference before submitting.');
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
@@ -712,7 +761,7 @@ const Fellowship = () => {
                 acc_no: formData.acc_no,
                 ifsc_code: formData.ifsc_code,
                 utr_number: formData.utr_number,
-                status: 'Active'
+                status: 'Pending'
             }]);
 
             if (error) throw error;
@@ -1141,10 +1190,10 @@ const Fellowship = () => {
                                         <h4 className="form-sub-header">Bank Disbursement Info</h4>
                                         <div className="form-row-2">
                                             <div className="form-group"><label>Account Holder Name</label><input type="text" name="acc_holder" value={formData.acc_holder} onChange={handleChange} required placeholder="Name on Passbook" /></div>
-                                            <div className="form-group"><label>Bank Name</label><input type="text" name="bank_name" value={formData.bank_name} onChange={handleChange} required placeholder="Bank Branch Name" /></div>
+                                            <div className="form-group"><label>Bank Name</label><input type="text" name="bank_name" value={formData.bank_name} onChange={handleChange} required placeholder="Bank Branch Name" pattern="[A-Za-z0-9 ]+" title="Letters, numbers and spaces are allowed" /></div>
                                         </div>
                                         <div className="form-row-2">
-                                            <div className="form-group"><label>Account No</label><input type="text" name="acc_no" value={formData.acc_no} onChange={handleChange} required inputMode="numeric" pattern="[0-9]*" placeholder="11-16 Digit No" /></div>
+                                            <div className="form-group"><label>Account No</label><input type="text" name="acc_no" value={formData.acc_no} onChange={handleChange} required inputMode="numeric" pattern="[0-9]*" placeholder="11-18 Digit No" /></div>
                                             <div className="form-group"><label>IFSC Code</label><input type="text" name="ifsc_code" value={formData.ifsc_code} onChange={handleChange} required placeholder="SBIN0001234" /></div>
                                         </div>
                                     </div>
@@ -1171,17 +1220,52 @@ const Fellowship = () => {
                                         </div>
                                         <div className="form-group">
                                             <label>Enter Transaction UTR / Ref No</label>
-                                            <input
-                                                type="text"
-                                                name="utr_number"
-                                                value={formData.utr_number}
-                                                onChange={handleChange}
-                                                required
-                                                placeholder="12 Digit Transaction ID"
-                                                maxLength="12"
-                                                inputMode="numeric"
-                                            />
-                                            <small style={{ display: 'block', marginTop: '4px', color: 'var(--f-text-muted)', fontSize: '0.7rem' }}>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <input
+                                                    type="text"
+                                                    name="utr_number"
+                                                    value={formData.utr_number}
+                                                    onChange={handleChange}
+                                                    required
+                                                    placeholder="12 Digit Transaction ID"
+                                                    maxLength="12"
+                                                    inputMode="numeric"
+                                                    style={{ flex: 1 }}
+                                                    disabled={isUtrVerified || isVerifyingUtr}
+                                                />
+                                                {!isUtrVerified ? (
+                                                    <button
+                                                        type="button"
+                                                        className="f-btn f-btn-primary"
+                                                        onClick={handleVerifyUtr}
+                                                        disabled={formData.utr_number.length !== 12 || isVerifyingUtr}
+                                                        style={{ padding: '0 20px', fontSize: '0.85rem', minWidth: '100px' }}
+                                                    >
+                                                        {isVerifyingUtr ? 'Validating...' : 'Verify'}
+                                                    </button>
+                                                ) : (
+                                                    <div style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        background: '#ecfdf5',
+                                                        color: '#059669',
+                                                        padding: '0 15px',
+                                                        borderRadius: '8px',
+                                                        fontSize: '0.75rem',
+                                                        fontWeight: 700,
+                                                        border: '1px solid #10b981'
+                                                    }}>
+                                                        <span style={{ fontSize: '1rem', marginRight: '4px' }}>✓</span> Logged
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {isUtrVerified && (
+                                                <p style={{ margin: '8px 0 0', color: '#059669', fontSize: '0.75rem', fontWeight: 600 }}>
+                                                    Your payment reference is ready for administrative review.
+                                                </p>
+                                            )}
+                                            <small style={{ display: 'block', marginTop: '6px', color: 'var(--f-text-muted)', fontSize: '0.7rem' }}>
                                                 * Mandatory: Enter the 12-digit UTR number from your payment confirmation.
                                             </small>
                                         </div>
@@ -1194,7 +1278,17 @@ const Fellowship = () => {
                                             Back
                                         </button>
                                     )}
-                                    <button type="submit" disabled={isSubmitting} className="f-btn f-btn-primary" style={{ flexGrow: 1, padding: '12px 32px' }}>
+                                    <button
+                                        type="submit"
+                                        disabled={isSubmitting || (formStep === 4 && !isUtrVerified)}
+                                        className="f-btn f-btn-primary"
+                                        style={{
+                                            flexGrow: 1,
+                                            padding: '12px 32px',
+                                            opacity: (formStep === 4 && !isUtrVerified) ? 0.6 : 1,
+                                            cursor: (formStep === 4 && !isUtrVerified) ? 'not-allowed' : 'pointer'
+                                        }}
+                                    >
                                         {isSubmitting ? 'Processing...' : (formStep === 4 ? 'Confirm & Submit Application' : 'Continue to Next Step')}
                                     </button>
                                 </div>

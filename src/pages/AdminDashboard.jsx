@@ -10,6 +10,7 @@ import {
     FaBuilding, FaGavel, FaUserTimes, FaClock, FaFingerprint, FaSearch
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import { PROGRAM_TRACKS, COLLEGES } from '../data/fellowshipOptions';
 import './Dashboard.css';
 
 const AdminDashboard = () => {
@@ -359,6 +360,36 @@ const AdminDashboard = () => {
         } catch (e) { console.error('Logging failed', e); }
     };
 
+    const exportToCSV = (data, fileName) => {
+        if (!data || data.length === 0) {
+            alert('No data available to export');
+            return;
+        }
+
+        // Collect all headers from all rows to handle inconsistent data
+        const headers = Array.from(new Set(data.flatMap(row => Object.keys(row))));
+
+        const csvRows = [
+            headers.join(','),
+            ...data.map(row => headers.map(header => {
+                const val = row[header] === null || row[header] === undefined ? '' : row[header];
+                const stringVal = typeof val === 'object' ? JSON.stringify(val) : String(val);
+                return `"${stringVal.replace(/"/g, '""')}"`;
+            }).join(','))
+        ];
+
+        const csvString = "\uFEFF" + csvRows.join('\n'); // Add BOM for Excel UTF-8
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `${fileName}_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
     // --- HANDLERS ---
     const handleAction = async (type, id, action) => {
         let table = '';
@@ -373,6 +404,10 @@ const AdminDashboard = () => {
             table = 'scholarships';
             updateData = { status: action === 'approve' ? 'Approved' : 'Rejected' };
             setScholarships(prev => prev.map(s => s.id === id ? { ...s, status: updateData.status } : s));
+        } else if (type === 'student') {
+            table = 'students';
+            updateData = { status: action === 'approve' ? 'Approved' : 'Rejected' };
+            setStudents(prev => prev.map(s => s.id === id ? { ...s, status: updateData.status } : s));
         } else if (type === 'request') { // Leave Request
             table = 'leave_requests';
             updateData = { status: action === 'approve' ? 'Approved' : 'Rejected' };
@@ -532,12 +567,12 @@ const AdminDashboard = () => {
             case 'employees':
                 return <EmployeeTab employees={employees} toggleStatus={toggleEmployeeStatus} deleteEmp={deleteEmployee} onView={(emp) => { setSelectedEmployee(emp); setModalType('emp-details'); setIsModalOpen(true); }} onAdd={() => { setModalType('employee'); setIsModalOpen(true); }} />;
             case 'volunteers':
-                return <VolunteerTab volunteers={volunteers} handleAction={handleAction} onDelete={deleteVolunteer} onView={(v) => { setSelectedVolunteer(v); setModalType('volunteer-details'); setIsModalOpen(true); }} onViewID={(v) => { setSelectedVolunteer(v); setModalType('volunteer-id'); setIsModalOpen(true); }} />;
+                return <VolunteerTab volunteers={volunteers} handleAction={handleAction} onDelete={deleteVolunteer} onExport={exportToCSV} onView={(v) => { setSelectedVolunteer(v); setModalType('volunteer-details'); setIsModalOpen(true); }} onViewID={(v) => { setSelectedVolunteer(v); setModalType('volunteer-id'); setIsModalOpen(true); }} />;
             case 'students':
-                return <StudentTab students={students} onDelete={deleteStudent} onView={(s) => { setSelectedStudent(s); setModalType('student-details'); setIsModalOpen(true); }} />;
+                return <StudentTab students={students} onDelete={deleteStudent} handleAction={handleAction} onExport={exportToCSV} onView={(s) => { setSelectedStudent(s); setModalType('student-details'); setIsModalOpen(true); }} />;
             case 'scholarships':
-                return <ScholarshipTab scholarships={scholarships} handleAction={handleAction} onDelete={deleteScholarship} />;
-            case 'finance': return <FinanceTab finances={finances} onDelete={deleteFinanceEntry} />;
+                return <ScholarshipTab scholarships={scholarships} handleAction={handleAction} onDelete={deleteScholarship} onExport={exportToCSV} />;
+            case 'finance': return <FinanceTab finances={finances} onDelete={deleteFinanceEntry} onExport={exportToCSV} />;
             case 'reports': return <ReportsTab reports={reports} onDelete={deleteReport} onAdd={() => { setModalType('report'); setIsModalOpen(true); }} />;
             case 'e-office':
                 return (
@@ -850,7 +885,14 @@ const AdminDashboard = () => {
                                 }}
                             />
                         )}
-                        {modalType === 'student-details' && <StudentDetailsView student={selectedStudent} onClose={() => setIsModalOpen(false)} />}
+                        {modalType === 'student-details' && (
+                            <StudentDetailsView
+                                student={selectedStudent}
+                                onClose={() => setIsModalOpen(false)}
+                                onApprove={() => { handleAction('student', selectedStudent.id, 'approve'); setIsModalOpen(false); }}
+                                onReject={() => { handleAction('student', selectedStudent.id, 'reject'); setIsModalOpen(false); }}
+                            />
+                        )}
                         {modalType === 'upload-doc' && (
                             <UploadArtifactModal
                                 onClose={() => setIsModalOpen(false)}
@@ -1286,117 +1328,296 @@ const EmployeeTab = ({ employees, toggleStatus, deleteEmp, onView, onAdd }) => (
     </div>
 );
 
-const VolunteerTab = ({ volunteers, handleAction, onDelete, onView, onViewID }) => (
-    <div className="content-panel">
-        <h3>Volunteer Onboarding</h3>
-        <table className="data-table">
-            <thead><tr><th>Name</th><th>Area of Interest</th><th>Contact</th><th>Status</th><th>Actions</th></tr></thead>
-            <tbody>
-                {(volunteers || []).map(v => (
-                    <tr key={v.id}>
-                        <td>{v.full_name}</td>
-                        <td>{v.area_of_interest}</td>
-                        <td>{v.phone || v.email}</td>
-                        <td><span className={`badge ${v.status === 'New' ? 'blue' : v.status === 'Approved' ? 'success' : 'red'}`}>{v.status}</span></td>
-                        <td style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <button className="btn-icon" onClick={() => onView(v)} title="View Full Profile"><FaEye /></button>
-                            {v.status === 'New' && (
-                                <>
-                                    <button className="btn-small success-btn" onClick={() => handleAction('volunteer', v.id, 'approve')}>Approve</button>
-                                    <button className="btn-small danger-btn" onClick={() => handleAction('volunteer', v.id, 'reject')} style={{ marginLeft: '5px' }}>Reject</button>
-                                </>
-                            )}
-                            {v.status === 'Approved' && (
-                                <button className="btn-small" onClick={() => onViewID(v)}><FaIdCard /> ID Card</button>
-                            )}
-                            <button className="btn-icon danger" onClick={() => onDelete(v.id, v.full_name)} title="Remove Record" style={{ marginLeft: 'auto' }}><FaTrash /></button>
-                        </td>
-                    </tr>
-                ))}
-            </tbody>
-        </table>
-    </div>
-);
+const VolunteerTab = ({ volunteers, handleAction, onDelete, onView, onViewID, onExport }) => {
+    const [filterStatus, setFilterStatus] = useState('All');
 
-const StudentTab = ({ students, onView, onDelete }) => (
-    <div className="content-panel">
-        <h3>Academic Registrations</h3>
-        <table className="data-table">
-            <thead><tr><th>Student Name</th><th>Register ID</th><th>College/Org</th><th>Program</th><th>Current Status</th><th>Actions</th></tr></thead>
-            <tbody>
-                {(students || []).map(s => (
-                    <tr key={s.id}>
-                        <td>{s.student_name}</td>
-                        <td>{s.student_id || '—'}</td>
-                        <td>{s.college_org}</td>
-                        <td>{s.program || '—'}</td>
-                        <td><span className="badge success">{s.status}</span></td>
-                        <td>
-                            <div className="action-buttons">
-                                <button className="btn-icon" onClick={() => onView(s)} title="View Details"><FaEye /></button>
-                                <button className="btn-icon danger" onClick={() => onDelete(s.id, s.student_name)} title="Delete Record"><FaTrash /></button>
-                            </div>
-                        </td>
-                    </tr>
-                ))}
-            </tbody>
-        </table>
-    </div>
-);
+    const filteredData = (volunteers || []).filter(v =>
+        filterStatus === 'All' || v.status === filterStatus
+    );
 
-const ScholarshipTab = ({ scholarships, handleAction, onDelete }) => (
-    <div className="content-panel">
-        <h3>Scholarship Verification</h3>
-        <table className="data-table">
-            <thead><tr><th>ID</th><th>Applicant</th><th>Income Status</th><th>Academic</th><th>Status</th><th>Action</th></tr></thead>
-            <tbody>
-                {(scholarships || []).map(s => (
-                    <tr key={s.id}>
-                        <td>{s.application_id}</td>
-                        <td>{s.applicant_name}</td>
-                        <td>{s.income_status}</td>
-                        <td>{s.academic_score}</td>
-                        <td><span className="badge">{s.status}</span></td>
-                        <td>
-                            <div className="action-buttons" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                {s.status === 'Awaiting Approval' && (
-                                    <button className="btn-small success-btn" onClick={() => handleAction('scholarship', s.id, 'approve')}>Approve</button>
+    return (
+        <div className="content-panel">
+            <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+                <h3 style={{ margin: 0 }}>Volunteer Onboarding</h3>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                    <select
+                        value={filterStatus}
+                        onChange={(e) => setFilterStatus(e.target.value)}
+                        style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.85rem' }}
+                        aria-label="Filter volunteers by status"
+                    >
+                        <option value="All">All Statuses</option>
+                        <option value="New">New Applications</option>
+                        <option value="Approved">Approved</option>
+                        <option value="Rejected">Rejected</option>
+                    </select>
+                    <button
+                        className="btn-small"
+                        onClick={() => onExport(filteredData, 'Volunteer_List')}
+                        title="Download as CSV"
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}
+                    >
+                        <FaDownload /> Export
+                    </button>
+                </div>
+            </div>
+            <table className="data-table" role="table">
+                <thead><tr><th>Name</th><th>Area of Interest</th><th>Contact</th><th>Status</th><th>Actions</th></tr></thead>
+                <tbody>
+                    {filteredData.length > 0 ? filteredData.map(v => (
+                        <tr key={v.id} role="row">
+                            <td>{v.full_name}</td>
+                            <td>{v.area_of_interest}</td>
+                            <td>{v.phone || v.email}</td>
+                            <td><span className={`badge ${v.status === 'New' ? 'blue' : v.status === 'Approved' ? 'success' : 'red'}`}>{v.status}</span></td>
+                            <td style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <button className="btn-icon" onClick={() => onView(v)} title="View Full Profile"><FaEye /></button>
+                                {v.status === 'New' && (
+                                    <>
+                                        <button className="btn-small success-btn" onClick={() => handleAction('volunteer', v.id, 'approve')}>Approve</button>
+                                        <button className="btn-small danger-btn" onClick={() => handleAction('volunteer', v.id, 'reject')} style={{ marginLeft: '5px' }}>Reject</button>
+                                    </>
                                 )}
-                                <button className="btn-icon danger" onClick={() => onDelete(s.id, s.applicant_name)} title="Remove Application"><FaTrash /></button>
-                            </div>
-                        </td>
-                    </tr>
-                ))}
-            </tbody>
-        </table>
-    </div>
-);
-
-const FinanceTab = ({ finances, onDelete }) => (
-    <div className="content-panel">
-        <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px' }}>
-            <h3>Treasury & Payroll Log</h3>
-            <button className="btn-small"><FaFileInvoiceDollar /> Generate Salary Slips</button>
+                                {v.status === 'Approved' && (
+                                    <button className="btn-small" onClick={() => onViewID(v)}><FaIdCard /> ID Card</button>
+                                )}
+                                <button className="btn-icon danger" onClick={() => onDelete(v.id, v.full_name)} title="Remove Record" style={{ marginLeft: 'auto' }}><FaTrash /></button>
+                            </td>
+                        </tr>
+                    )) : (
+                        <tr><td colSpan="5" style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>No volunteers found.</td></tr>
+                    )}
+                </tbody>
+            </table>
         </div>
-        <table className="data-table">
-            <thead><tr><th>Date</th><th>Type</th><th>Allocation Context</th><th>Amount</th><th>Audit</th><th>Actions</th></tr></thead>
-            <tbody>
-                {(finances || []).map(f => (
-                    <tr key={f.id}>
-                        <td>{f.transaction_date || f.date}</td>
-                        <td>{f.type}</td>
-                        <td>{f.category_context || '-'}</td>
-                        <td><strong>₹ {Number(f.amount).toLocaleString()}</strong></td>
-                        <td><span className="badge success">{f.status || 'Audited'}</span></td>
-                        <td>
-                            <button className="btn-icon danger" onClick={() => onDelete(f.id, f.category_context || f.type)} title="Delete entry"><FaTrash /></button>
-                        </td>
-                    </tr>
-                ))}
-            </tbody>
-        </table>
-    </div>
-);
+    );
+};
+
+const StudentTab = ({ students, onView, onDelete, handleAction, onExport }) => {
+    const [filterStatus, setFilterStatus] = useState('All');
+    const [filterProgram, setFilterProgram] = useState('All');
+    const [filterCollege, setFilterCollege] = useState('All');
+
+    const filteredData = (students || []).filter(s => {
+        const matchesStatus = filterStatus === 'All' || s.status === filterStatus;
+        const matchesProgram = filterProgram === 'All' || s.program === filterProgram;
+        const matchesCollege = filterCollege === 'All' || s.college_org === filterCollege;
+        return matchesStatus && matchesProgram && matchesCollege;
+    });
+
+    const allPrograms = [...new Set([...PROGRAM_TRACKS, ...(students || []).map(s => s.program).filter(Boolean)])].sort();
+    const allColleges = [...new Set([...COLLEGES, ...(students || []).map(s => s.college_org).filter(Boolean)])].sort();
+
+    return (
+        <div className="content-panel">
+            <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+                <h3 style={{ margin: 0 }}>Academic Registrations</h3>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                    <button
+                        className="btn-small"
+                        onClick={() => onExport(filteredData, 'Student_Registrations')}
+                        title="Download as CSV"
+                        aria-label="Export student registrations as CSV"
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}
+                    >
+                        <FaDownload /> Export CSV
+                    </button>
+                </div>
+            </div>
+
+            {/* Filter Controls */}
+            <div className="filter-bar" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '20px', padding: '15px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                <div className="filter-group">
+                    <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', marginBottom: '6px' }}>Filter by Status</label>
+                    <select
+                        value={filterStatus}
+                        onChange={(e) => setFilterStatus(e.target.value)}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.9rem' }}
+                        aria-label="Filter students by status"
+                    >
+                        <option value="All">All Statuses</option>
+                        <option value="Pending">Pending Verification</option>
+                        <option value="Approved">Approved / Active</option>
+                        <option value="Active">Active (Legacy)</option>
+                        <option value="Rejected">Rejected</option>
+                    </select>
+                </div>
+                <div className="filter-group">
+                    <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', marginBottom: '6px' }}>Filter by Program</label>
+                    <select
+                        value={filterProgram}
+                        onChange={(e) => setFilterProgram(e.target.value)}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.9rem' }}
+                        aria-label="Filter students by academic program"
+                    >
+                        <option value="All">All Programs</option>
+                        {allPrograms.map(p => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                </div>
+                <div className="filter-group">
+                    <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', marginBottom: '6px' }}>Filter by College</label>
+                    <select
+                        value={filterCollege}
+                        onChange={(e) => setFilterCollege(e.target.value)}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.9rem' }}
+                        aria-label="Filter students by college or organization"
+                    >
+                        <option value="All">All Institutions</option>
+                        {allColleges.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                </div>
+            </div>
+
+            <div className="table-responsive" style={{ overflowX: 'auto' }}>
+                <table className="data-table" role="table" aria-label="Student registrations list">
+                    <thead>
+                        <tr role="row">
+                            <th role="columnheader">Student Name</th>
+                            <th role="columnheader">Register ID</th>
+                            <th role="columnheader">College/Org</th>
+                            <th role="columnheader">Program</th>
+                            <th role="columnheader">Status</th>
+                            <th role="columnheader">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filteredData.length > 0 ? filteredData.map(s => (
+                            <tr key={s.id} role="row">
+                                <td role="cell"><strong>{s.student_name}</strong></td>
+                                <td role="cell"><code style={{ fontSize: '0.8rem' }}>{s.student_id || '—'}</code></td>
+                                <td role="cell" style={{ maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={s.college_org}>{s.college_org}</td>
+                                <td role="cell">{s.program || '—'}</td>
+                                <td role="cell">
+                                    <span className={`badge ${s.status === 'Approved' ? 'success' : s.status === 'Pending' ? 'blue' : (s.status === 'Active' ? 'warning' : 'red')}`} style={{ minWidth: '80px', textAlign: 'center' }}>
+                                        {s.status}
+                                    </span>
+                                </td>
+                                <td role="cell">
+                                    <div className="action-buttons" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        <button className="btn-icon" onClick={() => onView(s)} title="View Full Details" aria-label={`View details for ${s.student_name}`}><FaEye /></button>
+                                        {(s.status === 'Pending' || s.status === 'Active') && (
+                                            <>
+                                                <button className="btn-icon success" style={{ background: '#ecfdf5', color: '#059669' }} onClick={() => handleAction('student', s.id, 'approve')} title="Approve Student" aria-label={`Approve ${s.student_name}`}><FaCheckCircle /></button>
+                                                <button className="btn-icon danger" style={{ background: '#fef2f2', color: '#dc2626' }} onClick={() => handleAction('student', s.id, 'reject')} title="Reject Student" aria-label={`Reject ${s.student_name}`}><FaUserTimes /></button>
+                                            </>
+                                        )}
+                                        <button className="btn-icon danger" onClick={() => onDelete(s.id, s.student_name)} title="Remove Record" aria-label={`Delete registration for ${s.student_name}`}><FaTrash /></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        )) : (
+                            <tr>
+                                <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                                    <FaSearch style={{ fontSize: '2rem', marginBottom: '10px', opacity: 0.3 }} /><br />
+                                    No students match the current filters.
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+};
+
+const ScholarshipTab = ({ scholarships, handleAction, onDelete, onExport }) => {
+    const [filterStatus, setFilterStatus] = useState('All');
+    const filteredData = (scholarships || []).filter(s => filterStatus === 'All' || s.status === filterStatus);
+
+    return (
+        <div className="content-panel">
+            <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+                <h3 style={{ margin: 0 }}>Scholarship Verification</h3>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                    <select
+                        value={filterStatus}
+                        onChange={(e) => setFilterStatus(e.target.value)}
+                        style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.85rem' }}
+                    >
+                        <option value="All">All Statuses</option>
+                        <option value="Awaiting Approval">Awaiting Approval</option>
+                        <option value="Approved">Approved</option>
+                    </select>
+                    <button className="btn-small" onClick={() => onExport(filteredData, 'Scholarship_List')} style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}>
+                        <FaDownload /> Export
+                    </button>
+                </div>
+            </div>
+            <table className="data-table" role="table">
+                <thead><tr><th>ID</th><th>Applicant</th><th>Income Status</th><th>Academic</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody>
+                    {filteredData.length > 0 ? filteredData.map(s => (
+                        <tr key={s.id} role="row">
+                            <td>{s.application_id}</td>
+                            <td>{s.applicant_name}</td>
+                            <td>{s.income_status}</td>
+                            <td>{s.academic_score}</td>
+                            <td><span className="badge">{s.status}</span></td>
+                            <td>
+                                <div className="action-buttons" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                    {s.status === 'Awaiting Approval' && (
+                                        <button className="btn-small success-btn" onClick={() => handleAction('scholarship', s.id, 'approve')}>Approve</button>
+                                    )}
+                                    <button className="btn-icon danger" onClick={() => onDelete(s.id, s.applicant_name)} title="Remove Application"><FaTrash /></button>
+                                </div>
+                            </td>
+                        </tr>
+                    )) : (
+                        <tr><td colSpan="6" style={{ textAlign: 'center', padding: '40px' }}>No scholarships found.</td></tr>
+                    )}
+                </tbody>
+            </table>
+        </div>
+    );
+};
+
+const FinanceTab = ({ finances, onDelete, onExport }) => {
+    const [filterType, setFilterType] = useState('All');
+    const filteredData = (finances || []).filter(f => filterType === 'All' || f.type === filterType);
+
+    return (
+        <div className="content-panel">
+            <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+                <h3 style={{ margin: 0 }}>Treasury & Payroll Log</h3>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                    <select
+                        value={filterType}
+                        onChange={(e) => setFilterType(e.target.value)}
+                        style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.85rem' }}
+                    >
+                        <option value="All">All Types</option>
+                        <option value="Donation">Donation</option>
+                        <option value="Salary">Salary</option>
+                        <option value="Expense">Expense</option>
+                    </select>
+                    <button className="btn-small" onClick={() => onExport(filteredData, 'Finance_Log')} style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}>
+                        <FaDownload /> Export
+                    </button>
+                    <button className="btn-small"><FaFileInvoiceDollar /> Generate Slips</button>
+                </div>
+            </div>
+            <table className="data-table" role="table">
+                <thead><tr><th>Date</th><th>Type</th><th>Allocation Context</th><th>Amount</th><th>Audit</th><th>Actions</th></tr></thead>
+                <tbody>
+                    {filteredData.length > 0 ? filteredData.map(f => (
+                        <tr key={f.id} role="row">
+                            <td>{f.transaction_date || f.date}</td>
+                            <td>{f.type}</td>
+                            <td>{f.category_context || '-'}</td>
+                            <td><strong>₹ {Number(f.amount).toLocaleString()}</strong></td>
+                            <td><span className="badge success">{f.status || 'Audited'}</span></td>
+                            <td>
+                                <button className="btn-icon danger" onClick={() => onDelete(f.id, f.category_context || f.type)} title="Delete entry"><FaTrash /></button>
+                            </td>
+                        </tr>
+                    )) : (
+                        <tr><td colSpan="6" style={{ textAlign: 'center', padding: '40px' }}>No financial records found.</td></tr>
+                    )}
+                </tbody>
+            </table>
+        </div>
+    );
+};
 
 const ReportsTab = ({ reports, onAdd, onDelete }) => (
     <div className="content-panel">
@@ -2714,7 +2935,7 @@ const VolunteerIDCard = ({ volunteer, onClose }) => (
     </div>
 );
 
-const StudentDetailsView = ({ student, onClose }) => {
+const StudentDetailsView = ({ student, onClose, onApprove, onReject }) => {
     const s = student || {};
 
     const Field = ({ icon, label, value }) => (
@@ -2727,13 +2948,13 @@ const StudentDetailsView = ({ student, onClose }) => {
     );
 
     return (
-        <div className="details-view-container animate-fade-in" style={{ paddingBottom: '30px' }}>
+        <div className="details-view-container animate-fade-in custom-scroll" style={{ height: '100%', overflowY: 'auto', paddingBottom: '40px' }}>
             <div className="details-header" style={{ background: 'linear-gradient(135deg, #1A365D 0%, #2A4365 100%)', padding: '40px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                     <h2 style={{ fontSize: '2rem', marginBottom: '10px', color: '#ffffff' }}>{s.student_name}</h2>
                     <div style={{ display: 'flex', gap: '15px' }}>
                         <span className="badge" style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}>{s.student_id}</span>
-                        <span className="badge success">{s.status}</span>
+                        <span className={`badge ${s.status === 'Approved' ? 'success' : s.status === 'Pending' ? 'blue' : (s.status === 'Active' ? 'warning' : 'red')}`}>{s.status}</span>
                     </div>
                 </div>
                 <button className="btn-small" onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)' }}>Close Archive</button>
@@ -2758,6 +2979,19 @@ const StudentDetailsView = ({ student, onClose }) => {
                     <Field icon={<FaFingerprint />} label="IFSC Code" value={s.ifsc_code} />
                     <Field icon={<FaUniversity />} label="Account Number" value={s.acc_no} />
                     <Field icon={<FaFileInvoiceDollar />} label="Payment UTR / Ref No" value={s.utr_number} />
+
+                    {(s.status === 'Pending' || s.status === 'Active') && (
+                        <div style={{ gridColumn: 'span 3', marginTop: '30px', padding: '25px', background: '#f8fafc', borderRadius: '15px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                <h4 style={{ margin: 0, color: '#1e293b' }}>Administrative Verification Required</h4>
+                                <p style={{ margin: '5px 0 0', fontSize: '0.85rem', color: '#64748b' }}>Cross-verify the UTR above with your bank records before approving.</p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '15px' }}>
+                                <button className="f-btn f-btn-primary" style={{ padding: '10px 25px', fontSize: '0.9rem' }} onClick={onApprove}>Approve Application</button>
+                                <button className="f-btn f-btn-outline" style={{ padding: '10px 25px', fontSize: '0.9rem', color: '#ef4444', borderColor: '#fee2e2' }} onClick={onReject}>Reject Application</button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
