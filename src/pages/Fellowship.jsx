@@ -619,7 +619,8 @@ const Fellowship = () => {
         acc_holder: '',
         bank_name: '',
         acc_no: '',
-        ifsc_code: ''
+        ifsc_code: '',
+        utr_number: ''
     });
 
     const years = Array.from({ length: 47 }, (_, i) => 2012 - i);
@@ -652,13 +653,14 @@ const Fellowship = () => {
         const { name, value } = e.target;
 
         // Enforce numeric-only for specific fields
-        if (['aadhaar_no', 'phone', 'acc_no'].includes(name)) {
+        if (['aadhaar_no', 'phone', 'acc_no', 'utr_number'].includes(name)) {
             const numericValue = value.replace(/\D/g, ''); // Remove non-digits
 
             // Apply length limits
             if (name === 'aadhaar_no' && numericValue.length > 12) return;
             if (name === 'phone' && numericValue.length > 10) return;
             if (name === 'acc_no' && numericValue.length > 18) return;
+            if (name === 'utr_number' && numericValue.length > 12) return;
 
             setFormData(prev => ({ ...prev, [name]: numericValue }));
             return;
@@ -709,6 +711,7 @@ const Fellowship = () => {
                 bank_name: formData.bank_name,
                 acc_no: formData.acc_no,
                 ifsc_code: formData.ifsc_code,
+                utr_number: formData.utr_number,
                 status: 'Active'
             }]);
 
@@ -1031,12 +1034,13 @@ const Fellowship = () => {
                                     <span className={formStep >= 1 ? 'active' : ''}></span>
                                     <span className={formStep >= 2 ? 'active' : ''}></span>
                                     <span className={formStep >= 3 ? 'active' : ''}></span>
+                                    <span className={formStep >= 4 ? 'active' : ''}></span>
                                 </div>
                             </div>
                             <button className="close-btn" onClick={() => { setIsModalOpen(false); setFormStep(1); }}>&times;</button>
                         </div>
                         <div className="modal-body">
-                            <form className="formal-form" onSubmit={formStep === 3 ? handleSubmit : handleNext}>
+                            <form className="formal-form" onSubmit={formStep === 4 ? handleSubmit : handleNext}>
                                 {formStep === 1 && (
                                     <div className="form-grid-section animate-slide">
                                         <h4 className="form-sub-header">Student Identification</h4>
@@ -1143,8 +1147,43 @@ const Fellowship = () => {
                                             <div className="form-group"><label>Account No</label><input type="text" name="acc_no" value={formData.acc_no} onChange={handleChange} required inputMode="numeric" pattern="[0-9]*" placeholder="11-16 Digit No" /></div>
                                             <div className="form-group"><label>IFSC Code</label><input type="text" name="ifsc_code" value={formData.ifsc_code} onChange={handleChange} required placeholder="SBIN0001234" /></div>
                                         </div>
-                                        <div className="fee-notice-formal" style={{ textAlign: 'center', marginTop: '20px' }}>
-                                            Registration Fee: ₹500.00
+                                    </div>
+                                )}
+
+                                {formStep === 4 && (
+                                    <div className="form-grid-section animate-slide">
+                                        <h4 className="form-sub-header">Payment Verification</h4>
+                                        <div className="payment-instruction-box" style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid var(--f-border)', marginBottom: '20px' }}>
+                                            <div style={{ textAlign: 'center', marginBottom: '15px' }}>
+                                                <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--f-primary)', marginBottom: '8px' }}>Scan QR to Pay Registration Fee</p>
+                                                <p style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--f-secondary)' }}>₹500.00</p>
+                                            </div>
+                                            <div className="qr-container-mini" style={{ textAlign: 'center', marginBottom: '15px' }}>
+                                                <img
+                                                    src="/Bharath Cares Life Line_qr_code.png"
+                                                    alt="Payment QR Code"
+                                                    style={{ width: '150px', height: '150px', borderRadius: '8px', border: '1px solid #eee' }}
+                                                />
+                                            </div>
+                                            <div style={{ textAlign: 'center' }}>
+                                                <p style={{ fontSize: '0.75rem', color: 'var(--f-text-muted)' }}>UPI ID: <strong style={{ color: 'var(--f-dark)' }}>bclftrust@indianbk</strong></p>
+                                            </div>
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Enter Transaction UTR / Ref No</label>
+                                            <input
+                                                type="text"
+                                                name="utr_number"
+                                                value={formData.utr_number}
+                                                onChange={handleChange}
+                                                required
+                                                placeholder="12 Digit Transaction ID"
+                                                maxLength="12"
+                                                inputMode="numeric"
+                                            />
+                                            <small style={{ display: 'block', marginTop: '4px', color: 'var(--f-text-muted)', fontSize: '0.7rem' }}>
+                                                * Mandatory: Enter the 12-digit UTR number from your payment confirmation.
+                                            </small>
                                         </div>
                                     </div>
                                 )}
@@ -1156,7 +1195,7 @@ const Fellowship = () => {
                                         </button>
                                     )}
                                     <button type="submit" disabled={isSubmitting} className="f-btn f-btn-primary" style={{ flexGrow: 1, padding: '12px 32px' }}>
-                                        {isSubmitting ? 'Processing...' : (formStep === 3 ? 'Confirm & Submit Application' : 'Continue to Next Step')}
+                                        {isSubmitting ? 'Processing...' : (formStep === 4 ? 'Confirm & Submit Application' : 'Continue to Next Step')}
                                     </button>
                                 </div>
                             </form>

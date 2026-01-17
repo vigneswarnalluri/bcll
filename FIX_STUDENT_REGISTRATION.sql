@@ -13,7 +13,8 @@ ADD COLUMN IF NOT EXISTS program TEXT,
 ADD COLUMN IF NOT EXISTS acc_holder TEXT,
 ADD COLUMN IF NOT EXISTS bank_name TEXT,
 ADD COLUMN IF NOT EXISTS acc_no TEXT,
-ADD COLUMN IF NOT EXISTS ifsc_code TEXT;
+ADD COLUMN IF NOT EXISTS ifsc_code TEXT,
+ADD COLUMN IF NOT EXISTS utr_number TEXT;
 
 -- 2. Update existing rows if necessary (optional)
 -- UPDATE students SET status = 'Active' WHERE status IS NULL;

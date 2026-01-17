@@ -2757,6 +2757,7 @@ const StudentDetailsView = ({ student, onClose }) => {
                     <Field icon={<FaUniversity />} label="Bank Institution" value={s.bank_name} />
                     <Field icon={<FaFingerprint />} label="IFSC Code" value={s.ifsc_code} />
                     <Field icon={<FaUniversity />} label="Account Number" value={s.acc_no} />
+                    <Field icon={<FaFileInvoiceDollar />} label="Payment UTR / Ref No" value={s.utr_number} />
                 </div>
             </div>
         </div>
