@@ -9,7 +9,7 @@ const Donate = () => {
 
     const handleAmountSelect = (val) => {
         setAmount(val);
-        setCustomAmount('');
+        setCustomAmount(val.toString());
     };
 
     const handleCustomChange = (e) => {
@@ -29,6 +29,15 @@ const Donate = () => {
 
     const handleSubmit = (e) => {
         if (e) e.preventDefault();
+        if (!amount || amount <= 0) {
+            alert("Please select or enter a valid amount.");
+            return;
+        }
+
+        const upiLink = `upi://pay?pa=bclftrust@indianbk&pn=Bharath Cares Life Line&am=${amount}&cu=INR`;
+        window.location.href = upiLink;
+
+        // Show the post-donation info screen
         setIsSubmitted(true);
     };
 
