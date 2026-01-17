@@ -265,64 +265,50 @@ const Donate = () => {
 
                 {/* RIGHT COLUMN - Sticky Sidebar */}
                 <div className="donate-sidebar">
-                    <div className="donation-widget-sticky">
-                        <h3 style={{ marginBottom: '20px', color: '#1a237e', fontWeight: '800' }}>Make a Donation</h3>
-                        <div className="amount-pills">
-                            {[500, 1000, 2000, 5000].map((val) => (
-                                <button
-                                    key={val}
-                                    className={`pill-btn ${amount == val ? 'active' : ''}`}
-                                    onClick={() => handleAmountSelect(val)}
-                                >
-                                    ₹{val}
-                                </button>
-                            ))}
-                        </div>
+                    <div className="donation-widget-sticky" style={{ textAlign: 'center' }}>
+                        <h3 style={{ marginBottom: '15px', color: '#1a237e', fontWeight: '800' }}>Donate via UPI</h3>
 
-                        <div className="custom-input-group">
-                            <span className="currency-symbol">₹</span>
-                            <input
-                                type="number"
-                                min="1"
-                                placeholder="Enter amount"
-                                value={customAmount}
-                                onChange={handleCustomChange}
-                                className="amount-input"
+                        {/* 1. PHYSICAL QR - Most Reliable */}
+                        <div style={{ background: '#f8f9fa', padding: '15px', borderRadius: '15px', marginBottom: '20px', border: '1px solid #eee' }}>
+                            <img
+                                src="/Bharath%20Cares%20Life%20Line_qr_code.png"
+                                alt="Official QR"
+                                style={{ width: '100%', maxWidth: '200px', borderRadius: '10px' }}
                             />
+                            <p style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1a237e', marginTop: '10px' }}>Scan with any App (GPay, PhonePe, etc.)</p>
                         </div>
 
-                        <button onClick={handleSubmit} className="donate-submit-btn" style={{ border: 'none', width: '100%', cursor: 'pointer' }}>
-                            {parseFloat(amount) > 2000 ? 'Scan QR to Pay' : `Donate ₹${amount || '0'}`} <FaArrowRight />
-                        </button>
+                        <div className="id-group" style={{ marginBottom: '20px' }}>
+                            <div className="code-box" style={{ fontSize: '1.1rem', padding: '12px' }}>
+                                <span>bclftrust@indianbk</span>
+                                <button className="btn-copy" onClick={copyToClipboard} title="Copy UPI ID">
+                                    <FaCopy />
+                                </button>
+                            </div>
+                        </div>
 
-                        {parseFloat(amount) > 2000 && (
-                            <p style={{ fontSize: '0.75rem', color: '#d32f2f', textAlign: 'center', marginTop: '-10px', marginBottom: '15px' }}>
-                                Note: Amounts above ₹2,000 require a QR scan for security.
-                            </p>
-                        )}
+                        {/* 2. WHATSAPP REQUEST - Highly Successful */}
+                        <a
+                            href="https://wa.me/917382321315?text=Hello,%20I%20would%20like%20to%20donate%20to%20Bharath%20Cares%20Life%20Line.%20Please%20share%20payment%20details."
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="donate-submit-btn"
+                            style={{ background: '#25D366', border: 'none', width: '100%', marginBottom: '15px' }}
+                        >
+                            <FaCheckCircle /> Donate via WhatsApp
+                        </a>
 
-                        <div style={{ marginTop: '15px', textAlign: 'center' }}>
-                            <p style={{ fontSize: '0.8rem', color: '#666', marginBottom: '8px' }}>Button not working? Use manual mode:</p>
-                            <button
-                                onClick={copyToClipboard}
-                                className="btn-small"
-                                style={{
-                                    background: '#f1f3f5',
-                                    color: 'var(--primary)',
-                                    width: '100%',
-                                    padding: '10px',
-                                    borderRadius: '8px',
-                                    fontSize: '0.85rem',
-                                    fontWeight: '700',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '8px',
-                                    border: '1px solid #e2e8f0'
-                                }}
-                            >
-                                <FaCopy /> Copy UPI ID: bclftrust@indianbk
-                            </button>
+                        <p style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
+                            Experiencing bank limits? WhatsApp us for a direct payment link.
+                        </p>
+
+                        <div style={{ borderTop: '1px solid #eee', paddingTop: '20px' }}>
+                            <h4 style={{ fontSize: '1rem', color: '#1a237e', marginBottom: '10px' }}>Direct Bank Transfer</h4>
+                            <div style={{ textAlign: 'left', fontSize: '0.85rem', background: '#fff9e6', padding: '12px', borderRadius: '10px', color: '#856404' }}>
+                                <p><strong>A/c:</strong> 8139736308</p>
+                                <p><strong>IFSC:</strong> IDIB000M604</p>
+                                <p><strong>Name:</strong> BHARATH CARES LIFE LINE</p>
+                            </div>
                         </div>
 
                         <p className="secure-note" style={{ marginTop: '15px' }}><FaCheckCircle /> Secure UPI Payment</p>
