@@ -45,12 +45,12 @@ const Donate = () => {
         return (
             <div className="donate-page">
                 <section className="donate-hero">
-                    <div className="container">
+                    <div className="container" style={{ position: 'relative', zIndex: 10 }}>
                         <h1>Thank You for Your Support!</h1>
                         <p>Your contribution helps us continue our mission of rehabilitation and dignity.</p>
                         <div style={{ marginTop: '30px' }}>
-                            <p style={{ marginBottom: '20px', color: '#666' }}>Please share the transaction ID with info@bcllf.org for your 80G receipt.</p>
-                            <button className="btn btn-primary" onClick={() => setIsSubmitted(false)}>Back to Donate</button>
+                            <p style={{ marginBottom: '20px', color: '#ffffff', opacity: 0.8 }}>Please share the transaction ID with info@bcllf.org for your 80G receipt.</p>
+                            <button className="btn btn-primary" onClick={() => { setIsSubmitted(false); window.scrollTo(0, 0); }}>Back to Donate</button>
                         </div>
                     </div>
                 </section>
