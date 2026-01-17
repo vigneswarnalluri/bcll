@@ -34,7 +34,15 @@ const Donate = () => {
             return;
         }
 
-        const upiLink = `upi://pay?pa=bclftrust@indianbk&pn=Bharath Cares Life Line&am=${amount}&cu=INR`;
+        // Standard UPI params: pa (vpa), pn (payee name), am (amount), cu (currency), tn (transaction note)
+        const payeeAddress = 'bclftrust@indianbk';
+        const payeeName = 'Bharath Cares Life Line Foundation';
+        const transactionNote = 'Donation to BCLLF';
+
+        const formattedAmount = parseFloat(amount).toFixed(2);
+        const upiLink = `upi://pay?pa=${payeeAddress}&pn=${encodeURIComponent(payeeName)}&tn=${encodeURIComponent(transactionNote)}&am=${formattedAmount}&cu=INR`;
+
+        // Deep link redirection
         window.location.href = upiLink;
 
         // Show the post-donation info screen
