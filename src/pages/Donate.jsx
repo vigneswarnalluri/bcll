@@ -29,23 +29,33 @@ const Donate = () => {
 
     const handleSubmit = (e) => {
         if (e) e.preventDefault();
-        if (!amount || amount <= 0) {
+        const numAmount = parseFloat(amount);
+
+        if (!numAmount || numAmount <= 0) {
             alert("Please select or enter a valid amount.");
             return;
         }
 
-        // Added mc=8398 (Social Services) and mode=02 (to mimic QR scan behavior)
+        // IMPORTANT: Most Indian banks limit 'UPI Intent' (clicking a button) to ₹2,000 
+        // to prevent fraud. For higher amounts, physical QR scanning is REQUIRED.
+        if (numAmount > 2000) {
+            alert(`Due to banking security limits on web-links, payments above ₹2,000 should be made by scanning the QR code directly. Your amount (₹${numAmount}) is ready for scanning below.`);
+            // Scroll to QR section
+            const upiSection = document.querySelector('.donate-upi-section');
+            if (upiSection) {
+                upiSection.scrollIntoView({ behavior: 'smooth' });
+            }
+            return;
+        }
+
         const payeeAddress = 'bclftrust@indianbk';
         const payeeName = 'BHARATH CARES LIFE LINE';
-        const formattedAmount = parseFloat(amount).toFixed(2);
+        const formattedAmount = numAmount.toFixed(2);
         const trRef = `BCLLF${Date.now().toString().slice(-6)}`;
 
-        // Added tr (transaction ref) and tid (transaction id) for better integration
         const upiLink = `upi://pay?pa=${payeeAddress}&pn=${encodeURIComponent(payeeName)}&am=${formattedAmount}&cu=INR&mc=8398&tr=${trRef}&mode=02&purpose=00`;
 
         window.location.href = upiLink;
-
-        // Show the post-donation info screen
         setIsSubmitted(true);
     };
 
@@ -282,8 +292,14 @@ const Donate = () => {
                         </div>
 
                         <button onClick={handleSubmit} className="donate-submit-btn" style={{ border: 'none', width: '100%', cursor: 'pointer' }}>
-                            Donate ₹{amount || '0'} <FaArrowRight />
+                            {parseFloat(amount) > 2000 ? 'Scan QR to Pay' : `Donate ₹${amount || '0'}`} <FaArrowRight />
                         </button>
+
+                        {parseFloat(amount) > 2000 && (
+                            <p style={{ fontSize: '0.75rem', color: '#d32f2f', textAlign: 'center', marginTop: '-10px', marginBottom: '15px' }}>
+                                Note: Amounts above ₹2,000 require a QR scan for security.
+                            </p>
+                        )}
 
                         <div style={{ marginTop: '15px', textAlign: 'center' }}>
                             <p style={{ fontSize: '0.8rem', color: '#666', marginBottom: '8px' }}>Button not working? Use manual mode:</p>
