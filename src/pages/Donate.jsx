@@ -92,8 +92,38 @@ const Donate = () => {
                 {/* LEFT COLUMN - Main Content */}
                 <div className="donate-main-content">
 
-                    {/* 1. DONATE VIA UPI - Top Priority */}
-                    <section className="donate-upi-section" style={{ paddingTop: '30px', paddingBottom: '60px', borderBottom: '1px solid #eee' }}>
+                    {/* 1. BANK TRANSFER & OTHER METHODS - Top Priority */}
+                    <section className="donate-other" style={{ paddingTop: '30px', paddingBottom: '60px', borderBottom: '1px solid #eee' }}>
+                        <div className="other-methods-grid">
+                            <div className="method-card">
+                                <h3><FaUniversity /> Bank Transfer</h3>
+                                <div className="method-details">
+                                    <p><strong>Account Name:</strong> Bharath Cares Life Line Foundation</p>
+                                    <p><strong>Bank:</strong> INDIAN BANK</p>
+                                    <p><strong>Account No:</strong> 8139736308</p>
+                                    <p><strong>IFSC Code:</strong> IDIB000M604</p>
+                                    <p><strong>Branch:</strong> Mangalagiri, Guntur</p>
+                                </div>
+                            </div>
+                            <div className="method-card">
+                                <h3><FaMoneyCheckAlt /> Cheque / DD</h3>
+                                <div className="method-details">
+                                    <p>Payable to: <strong>Bharath Cares Life Line Foundation</strong></p>
+                                    <p>Send to our registered office address.</p>
+                                </div>
+                            </div>
+                            <div className="method-card">
+                                <h3><FaBuilding /> CSR / Institutional</h3>
+                                <div className="method-details">
+                                    <p>For CSR partnerships or bulk donations, please contact:</p>
+                                    <p><strong>info@bcllf.org</strong></p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* 2. DONATE VIA UPI */}
+                    <section className="donate-upi-section" style={{ paddingTop: '60px', paddingBottom: '60px', borderBottom: '1px solid #eee' }}>
                         <h2 className="section-title">Scan to Donate</h2>
                         <div className="upi-container">
                             {/* Left: QR Visual */}
@@ -131,36 +161,6 @@ const Donate = () => {
                                         <img src="/paytm-logo.png" alt="Paytm" title="Paytm" />
                                         <span className="plus-more">+ BHIM & More</span>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    {/* MOVED: OTHER METHODS (Bank, Cheque, CSR) - Top Priority */}
-                    <section className="donate-other" style={{ paddingTop: '60px', paddingBottom: '60px' }}>
-                        <div className="other-methods-grid">
-                            <div className="method-card">
-                                <h3><FaUniversity /> Bank Transfer</h3>
-                                <div className="method-details">
-                                    <p><strong>Account Name:</strong> Bharath Cares Life Line Foundation</p>
-                                    <p><strong>Bank:</strong> INDIAN BANK</p>
-                                    <p><strong>Account No:</strong> 8139736308</p>
-                                    <p><strong>IFSC Code:</strong> IDIB000M604</p>
-                                    <p><strong>Branch:</strong> Mangalagiri, Guntur</p>
-                                </div>
-                            </div>
-                            <div className="method-card">
-                                <h3><FaMoneyCheckAlt /> Cheque / DD</h3>
-                                <div className="method-details">
-                                    <p>Payable to: <strong>Bharath Cares Life Line Foundation</strong></p>
-                                    <p>Send to our registered office address.</p>
-                                </div>
-                            </div>
-                            <div className="method-card">
-                                <h3><FaBuilding /> CSR / Institutional</h3>
-                                <div className="method-details">
-                                    <p>For CSR partnerships or bulk donations, please contact:</p>
-                                    <p><strong>info@bcllf.org</strong></p>
                                 </div>
                             </div>
                         </div>
