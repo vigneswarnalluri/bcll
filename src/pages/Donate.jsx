@@ -34,15 +34,14 @@ const Donate = () => {
             return;
         }
 
-        // Standard UPI params: pa (vpa), pn (payee name), am (amount), cu (currency), tn (transaction note)
+        // Added mc=8398 (Social Services) and mode=02 (to mimic QR scan behavior)
         const payeeAddress = 'bclftrust@indianbk';
-        const payeeName = 'Bharath Cares Life Line Foundation';
-        const transactionNote = 'Donation to BCLLF';
-
+        const payeeName = 'BHARATH CARES LIFE LINE FOUNDATION';
         const formattedAmount = parseFloat(amount).toFixed(2);
-        const upiLink = `upi://pay?pa=${payeeAddress}&pn=${encodeURIComponent(payeeName)}&tn=${encodeURIComponent(transactionNote)}&am=${formattedAmount}&cu=INR`;
 
-        // Deep link redirection
+        // Simplified link to match high-authority QR scan structures
+        const upiLink = `upi://pay?pa=${payeeAddress}&pn=${encodeURIComponent(payeeName)}&am=${formattedAmount}&cu=INR&mc=8398&mode=02&purpose=00`;
+
         window.location.href = upiLink;
 
         // Show the post-donation info screen
