@@ -3,9 +3,12 @@
     background: #001f3f;
     /* Deep Navy */
     color: #f8fafc;
-    padding: 8px 0;
-    position: relative;
-    z-index: 2005;
+    padding: 10px 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 2500;
     overflow: hidden;
     border-bottom: 2px solid #fbbf24;
     /* Golden Accent */
@@ -13,6 +16,9 @@
     font-family: 'Outfit', sans-serif;
     font-size: 0.85rem;
     letter-spacing: 0.5px;
+    height: 40px;
+    display: flex;
+    align-items: center;
 }
 
 .banner-track {
@@ -83,12 +89,24 @@
     display: none !important;
 }
 
+#main-content {
+    padding-top: 160px;
+    /* Offset for Banner (40px) + Top Bar (35px) + Navbar (85px) */
+}
+
+/* On Home Page, we want the Hero to be under the header */
+#main-content:has(.home-page) {
+    padding-top: 0;
+}
+
 .app-header {
     position: absolute;
-    top: 0;
+    top: 40px;
+    /* Height of the fixed banner */
     left: 0;
     width: 100%;
-    z-index: 1000;
+    z-index: 2100;
+    transition: all 0.3s ease;
 }
 
 /* Top Bar styles */
@@ -181,11 +199,12 @@
 
 .navbar.scrolled {
     background: rgba(255, 255, 255, 0.98);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     height: 70px;
     border-bottom: none;
     position: fixed;
-    top: 0;
+    top: 40px;
+    /* Stick below the fixed banner */
     animation: slideDown 0.3s ease;
 }
 

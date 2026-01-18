@@ -60,12 +60,12 @@ const Navbar = () => {
         <div className="banner-track">
           <div className="banner-content">
             <span className="banner-badge">OFFICIAL NOTICE</span>
-            <p><strong>GOVERNMENT OF ANDHRA PRADESH CO-ALIGNMENT:</strong> Viksit Bharat Fellowship (2026 Batch) Enrollment Phase ends in <strong>24 Hours</strong>. <Link to="/fellowship" className="banner-link">Apply via State Portal <FaArrowRight /></Link></p>
+            <p><strong>GOVERNMENT OF ANDHRA PRADESH CO-ALIGNMENT:</strong> Viksit Bharat Fellowship (2026 Batch) Enrollments are <strong>ONGOING</strong>. <Link to="/fellowship" className="banner-link">Apply via State Portal <FaArrowRight /></Link></p>
           </div>
           {/* Duplicated for seamless sliding */}
           <div className="banner-content" aria-hidden="true">
             <span className="banner-badge">OFFICIAL NOTICE</span>
-            <p><strong>GOVERNMENT OF ANDHRA PRADESH CO-ALIGNMENT:</strong> Viksit Bharat Fellowship (2026 Batch) Enrollment Phase ends in <strong>24 Hours</strong>. <Link to="/fellowship" className="banner-link">Apply via State Portal <FaArrowRight /></Link></p>
+            <p><strong>GOVERNMENT OF ANDHRA PRADESH CO-ALIGNMENT:</strong> Viksit Bharat Fellowship (2026 Batch) Enrollments are <strong>ONGOING</strong>. <Link to="/fellowship" className="banner-link">Apply via State Portal <FaArrowRight /></Link></p>
           </div>
         </div>
       </div>
