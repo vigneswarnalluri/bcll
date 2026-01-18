@@ -223,11 +223,11 @@ const Home = () => {
                 <div className="container">
                     <h2 className="section-title text-center text-white">Real Impact</h2>
                     <div className="impact-grid">
-                        <ImpactStat number="250,000+" label="Meals Served" desc="Preventing Hunger Daily" />
-                        <ImpactStat number="450+" label="People Rehabilitated" desc="Lives Transformed" />
-                        <ImpactStat number="1,200+" label="Students Supported" desc="Scholarships Awarded" />
-                        <ImpactStat number="300+" label="Volunteers Active" desc="Changemakers" />
-                        <ImpactStat number="12" label="Districts Covered" desc="Expanding Reach" />
+                        <ImpactStat icon={<FaUtensils />} number="250,000+" label="Meals Served" desc="Preventing Hunger Daily" />
+                        <ImpactStat icon={<FaUsers />} number="450+" label="People Rehabilitated" desc="Lives Transformed" />
+                        <ImpactStat icon={<FaGraduationCap />} number="1,200+" label="Students Supported" desc="Scholarships Awarded" />
+                        <ImpactStat icon={<FaUsers />} number="300+" label="Volunteers Active" desc="Changemakers" />
+                        <ImpactStat icon={<FaGlobe />} number="12" label="Districts Covered" desc="Expanding Reach" />
                     </div>
                 </div>
             </section>
@@ -266,24 +266,39 @@ const Home = () => {
                                     <span className="badge">Tax Exempt</span>
                                 </div>
                                 <div className="bank-details">
-                                    <div className="detail-row">
-                                        <span className="label">Account Name:</span>
+                                    <div className="detail-row" onClick={() => { navigator.clipboard.writeText('Bharath Cares Life Line Foundation'); alert('Name Copied!'); }} title="Click to copy">
+                                        <div className="label-with-icon">
+                                            <FaUsers className="detail-icon" />
+                                            <span className="label">Account Name:</span>
+                                        </div>
                                         <span className="value">Bharath Cares Life Line Foundation</span>
                                     </div>
-                                    <div className="detail-row">
-                                        <span className="label">Bank Name:</span>
+                                    <div className="detail-row" onClick={() => { navigator.clipboard.writeText('INDIAN BANK'); alert('Bank Name Copied!'); }} title="Click to copy">
+                                        <div className="label-with-icon">
+                                            <FaHome className="detail-icon" />
+                                            <span className="label">Bank Name:</span>
+                                        </div>
                                         <span className="value">INDIAN BANK</span>
                                     </div>
-                                    <div className="detail-row">
-                                        <span className="label">Account No:</span>
+                                    <div className="detail-row" onClick={() => { navigator.clipboard.writeText('8139736308'); alert('Account No Copied!'); }} title="Click to copy">
+                                        <div className="label-with-icon">
+                                            <FaShieldAlt className="detail-icon" />
+                                            <span className="label">Account No:</span>
+                                        </div>
                                         <span className="value">8139736308</span>
                                     </div>
-                                    <div className="detail-row">
-                                        <span className="label">IFSC Code:</span>
+                                    <div className="detail-row" onClick={() => { navigator.clipboard.writeText('IDIB000M604'); alert('IFSC Code Copied!'); }} title="Click to copy">
+                                        <div className="label-with-icon">
+                                            <FaCertificate className="detail-icon" />
+                                            <span className="label">IFSC Code:</span>
+                                        </div>
                                         <span className="value">IDIB000M604</span>
                                     </div>
                                     <div className="detail-row">
-                                        <span className="label">Branch:</span>
+                                        <div className="label-with-icon">
+                                            <FaGlobe className="detail-icon" />
+                                            <span className="label">Branch:</span>
+                                        </div>
                                         <span className="value">Mangalagiri, Guntur</span>
                                     </div>
                                 </div>
@@ -581,8 +596,9 @@ const JoinCard = ({ image, title, desc, btnText, link, btnClass }) => (
     </div>
 );
 
-const ImpactStat = ({ number, label, desc }) => (
+const ImpactStat = ({ icon, number, label, desc }) => (
     <div className="impact-stat">
+        <div className="stat-icon-wrapper">{icon}</div>
         <h3 className="stat-number">{number}</h3>
         <p className="stat-label">{label}</p>
         <p className="stat-desc">{desc}</p>
