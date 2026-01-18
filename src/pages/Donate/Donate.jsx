@@ -67,7 +67,7 @@ const Donate = () => {
                         <h1>Thank You for Your Support!</h1>
                         <p>Your contribution helps us continue our mission of rehabilitation and dignity.</p>
                         <div style={{ marginTop: '30px' }}>
-                            <p style={{ marginBottom: '20px', color: '#ffffff', opacity: 0.8 }}>Please share the transaction ID with info@bcllf.org for your 80G receipt.</p>
+                            <p style={{ marginBottom: '20px', color: '#ffffff', opacity: 0.8 }}>Please share the transaction ID with donations@bharathcaresindia.org for your 80G receipt.</p>
                             <button className="btn btn-primary" onClick={() => { setIsSubmitted(false); window.scrollTo(0, 0); }}>Back to Donate</button>
                         </div>
                     </div>
@@ -116,7 +116,7 @@ const Donate = () => {
                                 <h3><FaBuilding /> CSR / Institutional</h3>
                                 <div className="method-details">
                                     <p>For CSR partnerships or bulk donations, please contact:</p>
-                                    <p><strong>info@bcllf.org</strong></p>
+                                    <p><strong>donations@bharathcaresindia.org</strong></p>
                                 </div>
                             </div>
                         </div>

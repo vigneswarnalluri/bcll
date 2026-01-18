@@ -91,7 +91,7 @@ const Login = () => {
                             type="email"
                             value={credentials.email}
                             onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
-                            placeholder="your.name@bcllf.org"
+                            placeholder="administration@bharathcaresindia.org"
                             required
                         />
                     </div>

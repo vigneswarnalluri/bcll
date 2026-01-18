@@ -60,7 +60,7 @@ const Footer = () => {
                         </div>
                         <div className="contact-item">
                             <FaEnvelope className="contact-icon" />
-                            <span>info@bcllf.org</span>
+                            <a href="mailto:info@bharathcaresindia.org" style={{ color: 'inherit', textDecoration: 'none' }}>info@bharathcaresindia.org</a>
                         </div>
                     </div>
                 </div>

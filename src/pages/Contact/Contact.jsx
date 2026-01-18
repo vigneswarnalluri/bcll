@@ -72,8 +72,8 @@ const Contact = () => {
                             <div className="icon-box"><FaEnvelope /></div>
                             <div className="info">
                                 <h3>Email Address</h3>
-                                <p>info@bcllf.org</p>
-                                <p>support@bcllf.org</p>
+                                <p><a href="mailto:info@bharathcaresindia.org" style={{ color: 'inherit', textDecoration: 'none' }}>info@bharathcaresindia.org</a></p>
+                                <p><a href="mailto:volunteer@bharathcaresindia.org" style={{ color: 'inherit', textDecoration: 'none' }}>volunteer@bharathcaresindia.org</a></p>
                             </div>
                         </div>
 

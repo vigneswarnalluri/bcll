@@ -77,7 +77,7 @@ const Navbar = () => {
             <a href="https://wa.me/917382321315" target="_blank" rel="noopener noreferrer" className="top-phone-link">
               <FaPhone /> +91 73823 21315
             </a>
-            <span style={{ marginLeft: '25px' }}><FaEnvelope /> info@bcllf.org</span>
+            <a href="mailto:info@bharathcaresindia.org" style={{ marginLeft: '25px', color: 'inherit', textDecoration: 'none' }}><FaEnvelope /> info@bharathcaresindia.org</a>
           </div>
           <div className="top-socials">
             <a href="#" aria-label="Facebook"><FaFacebook /></a>
@@ -127,7 +127,7 @@ const Navbar = () => {
             <li className="mobile-menu-footer" style={{ "--index": navLinks.length + 1 }}>
               <div className="mobile-contact">
                 <p><FaPhone /> +91 73823 21315</p>
-                <p><FaEnvelope /> info@bcllf.org</p>
+                <p><FaEnvelope /> <a href="mailto:info@bharathcaresindia.org" style={{ color: 'inherit', textDecoration: 'none' }}>info@bharathcaresindia.org</a></p>
               </div>
               <div className="mobile-socials">
                 <a href="#" aria-label="Facebook"><FaFacebook /></a>
