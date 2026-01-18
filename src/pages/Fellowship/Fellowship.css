@@ -133,15 +133,17 @@
     min-height: 750px;
     display: flex;
     align-items: center;
+    justify-content: center;
     color: white;
     background: var(--f-dark) url('/src/assets/viksit_bharat_fellowship_hero_1768564664062.png') center/cover no-repeat;
-    clip-path: ellipse(150% 100% at 50% 0%);
+    text-align: center;
 }
 
 .hero-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(to right, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 100%);
+    background: rgba(0, 0, 0, 0.65);
+    /* More uniform blackish overlay */
     z-index: 1;
 }
 
@@ -157,6 +159,9 @@
     flex-wrap: wrap;
     gap: 12px;
     margin-bottom: 32px;
+    margin-top: 40px;
+    /* Moved down slightly as requested */
+    justify-content: center;
 }
 
 .hero-badge {
@@ -211,13 +216,15 @@
 .hero-subtitle {
     font-size: 1.25rem;
     opacity: 0.9;
-    margin-bottom: 48px;
+    margin: 0 auto 48px;
     max-width: 700px;
+    text-align: center;
 }
 
 .hero-actions {
     display: flex;
     gap: 24px;
+    justify-content: center;
 }
 
 /* Highlights Stack */
@@ -1353,25 +1360,51 @@
 
     .fellowship-hero {
         height: auto;
-        min-height: 600px;
+        min-height: 500px;
         clip-path: none;
-        padding: 120px 0 60px;
+        padding: 160px 0 40px;
+        /* Increased padding to clear navbar */
         display: flex;
-        align-items: flex-start;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+    }
+
+    .hero-content {
+        text-align: center;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        width: 100%;
+        padding: 0 20px;
+    }
+
+    .hero-badge-group {
+        justify-content: center !important;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
     }
 
     .hero-title {
-        font-size: 2.5rem;
+        font-size: 2rem;
+        text-align: center;
+        width: 100%;
     }
 
     .hero-subtitle {
         font-size: 1rem;
-        margin-bottom: 30px;
+        margin: 0 auto 30px;
+        text-align: center;
+        width: 100%;
     }
 
     .hero-actions {
-        flex-direction: column;
+        flex-direction: column !important;
         gap: 15px;
+        width: 100%;
+        align-items: center !important;
+        display: flex;
     }
 
     /* Stipend & Exposure Mobile Fixes */

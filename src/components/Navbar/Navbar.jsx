@@ -13,7 +13,7 @@ const Navbar = () => {
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 40);
+      setScrolled(window.scrollY > 100);
     };
     window.addEventListener('scroll', handleScroll);
 
@@ -50,8 +50,9 @@ const Navbar = () => {
   ];
 
   /* Pages with light backgrounds where navbar needs to be dark/scrolled by default */
+  const isProgramDetail = location.pathname.startsWith('/programs/') && location.pathname !== '/programs';
   const lightPages = [];
-  const isLightPage = lightPages.includes(location.pathname);
+  const isLightPage = lightPages.includes(location.pathname) || isProgramDetail;
 
   return (
     <header className="app-header">

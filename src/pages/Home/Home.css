@@ -36,7 +36,7 @@
 .hero-content {
     position: relative;
     z-index: 2;
-    padding-top: 60px;
+    padding-top: 200px;
 }
 
 .hero-title {
@@ -2328,6 +2328,10 @@
 
 /* MOBILE ONLY OVERRIDES - Strictly isolated */
 @media screen and (max-width: 768px) {
+    .hero-content {
+        padding-top: 100px !important;
+    }
+
     .container {
         width: 100% !important;
         max-width: 100% !important;

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FaArrowLeft } from 'react-icons/fa';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import './Login.css';
 
 const Login = () => {

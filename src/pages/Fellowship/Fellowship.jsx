@@ -16,13 +16,13 @@ import {
     HiOutlineBadgeCheck
 } from 'react-icons/hi';
 import './Fellowship.css';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 
 // Import Assets
-import heroImg from '../assets/viksit_bharat_fellowship_hero_1768564664062.png';
-import quantumImg from '../assets/quantum_computing_track_1768564684280.png';
-import cloudImg from '../assets/cloud_computing_track_1768564703263.png';
-import mobileImg from '../assets/mobile_app_dev_track_1768564724458.png';
+import heroImg from '../../assets/viksit_bharat_fellowship_hero_1768564664062.png';
+import quantumImg from '../../assets/quantum_computing_track_1768564684280.png';
+import cloudImg from '../../assets/cloud_computing_track_1768564703263.png';
+import mobileImg from '../../assets/mobile_app_dev_track_1768564724458.png';
 
 const colleges = [...new Set([
     "A V S Engineering College",

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import {
     FaCalendarCheck, FaMoneyBillWave, FaTasks, FaSignOutAlt,
     FaClock, FaCheckCircle, FaExclamationCircle, FaDownload, FaFileUpload, FaPlus,
@@ -8,7 +8,7 @@ import {
     FaHeartbeat, FaBalanceScale, FaUserShield
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import './Dashboard.css';
+import '../Dashboard/Dashboard.css';
 
 const EmployeeDashboard = () => {
     const navigate = useNavigate();

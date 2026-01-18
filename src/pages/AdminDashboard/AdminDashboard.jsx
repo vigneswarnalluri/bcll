@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import {
     FaUsers, FaUserShield, FaHandHoldingUsd, FaFileAlt, FaSignOutAlt,
     FaUserPlus, FaCheckCircle, FaGraduationCap, FaFileInvoiceDollar,
@@ -10,8 +10,8 @@ import {
     FaBuilding, FaGavel, FaUserTimes, FaClock, FaFingerprint, FaSearch
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import { PROGRAM_TRACKS, COLLEGES } from '../data/fellowshipOptions';
-import './Dashboard.css';
+import { PROGRAM_TRACKS, COLLEGES } from '../../data/fellowshipOptions';
+import '../Dashboard/Dashboard.css';
 
 const AdminDashboard = () => {
     const navigate = useNavigate();

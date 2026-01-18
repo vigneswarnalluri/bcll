@@ -91,11 +91,26 @@
 
 #main-content {
     padding-top: 160px;
-    /* Offset for Banner (40px) + Top Bar (35px) + Navbar (85px) */
+    /* Default offset */
+    min-height: calc(100vh - 160px);
 }
 
-/* On Home Page, we want the Hero to be under the header */
-#main-content:has(.home-page) {
+/* Dashboards and Login shouldn't have any padding */
+#main-content:not(:has(.navbar)) {
+    padding-top: 0;
+}
+
+/* Pages where the Hero should go UNDER the header - Comprehensive list */
+#main-content:has(.home-page),
+#main-content:has(.about-page),
+#main-content:has(.programs-page-v2),
+#main-content:has(.fellowship-page),
+#main-content:has(.gallery-page),
+#main-content:has(.volunteer-page),
+#main-content:has(.contact-page),
+#main-content:has(.reports-page),
+#main-content:has(.program-detail-page),
+#main-content:has(.donate-page) {
     padding-top: 0;
 }
 
@@ -316,7 +331,7 @@
 .navbar.scrolled .nav-links,
 .navbar.navbar-light-mode .nav-links {
     color: var(--text);
-    font-weight: 600;
+    font-weight: 500;
 }
 
 .navbar.scrolled .nav-links:hover,
@@ -336,7 +351,7 @@
     padding: 10px 30px;
     border-radius: 4px;
     text-decoration: none;
-    font-weight: 700;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 1px;
     font-size: 0.85rem;

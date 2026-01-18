@@ -7,7 +7,7 @@
     background-repeat: no-repeat;
     color: white !important;
     text-align: center;
-    padding: 140px 20px 80px;
+    padding: 200px 20px 100px;
 }
 
 .volunteer-header h1 {
@@ -429,16 +429,140 @@ textarea {
 }
 
 @media (max-width: 768px) {
-    .form-row {
-        flex-direction: column;
-        gap: 0;
+    .volunteer-header {
+        padding: 160px 20px 40px;
+        text-align: center;
     }
 
     .volunteer-header h1 {
         font-size: 2.2rem;
     }
 
+    .volunteer-header p {
+        font-size: 1.1rem;
+    }
+
+    .volunteer-layout {
+        gap: 30px;
+    }
+
+    .v-section {
+        margin-bottom: 35px;
+        padding-bottom: 20px;
+    }
+
+    .v-section h2 {
+        font-size: 1.6rem;
+        text-align: center;
+    }
+
+    .bg-light {
+        padding: 25px 15px;
+    }
+
+    .v-grid-2 {
+        gap: 15px;
+    }
+
+    .v-card-icon {
+        padding: 20px;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .v-list-check {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .v-list-check li {
+        padding: 20px;
+        font-size: 1.1rem;
+        gap: 15px;
+    }
+
+    .v-list-check li svg {
+        font-size: 1.8rem;
+    }
+
+    .v-list-dot {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .v-list-dot li {
+        padding: 15px 15px 15px 50px;
+        font-size: 0.95rem;
+    }
+
+    .task-icon {
+        left: 15px;
+    }
+
     .v-roles-grid {
+        grid-template-columns: 1fr;
         grid-auto-rows: auto;
+    }
+
+    .role-card {
+        padding: 30px 20px;
+        text-align: center;
+        align-items: center;
+    }
+
+    .role-icon {
+        font-size: 3rem;
+        margin-bottom: 20px;
+    }
+
+    .role-card h4 {
+        font-size: 1.25rem;
+    }
+
+    .process-steps {
+        gap: 10px;
+    }
+
+    .step {
+        padding: 15px;
+        font-size: 0.95rem;
+    }
+
+    .v-cta-bottom {
+        padding: 30px 15px;
+    }
+
+    .v-cta-bottom h3 {
+        font-size: 1.4rem;
+    }
+
+    .flex-gap {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .flex-gap .btn {
+        width: 100%;
+    }
+
+    .volunteer-form-container {
+        padding: 25px 15px;
+    }
+
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .form-title {
+        font-size: 1.4rem;
+    }
+
+    input,
+    select,
+    textarea {
+        font-size: 1rem;
+        padding: 12px;
     }
 }

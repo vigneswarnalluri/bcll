@@ -9,12 +9,13 @@
 
 /* 1. About Hero - Simple */
 .about-hero-simple {
-    padding: 140px 20px 80px;
+    padding: 200px 20px 100px;
     background: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.75)), url('https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') center/cover;
     text-align: center;
     color: white;
     position: relative;
 }
+
 
 .about-hero-simple h1 {
     font-size: 3rem;
@@ -665,7 +666,8 @@
 /* Responsive Updates */
 @media (max-width: 900px) {
     .about-hero-simple {
-        padding: 100px 20px 60px;
+        padding: 160px 20px 40px;
+        text-align: center;
     }
 
     .about-hero-simple h1 {

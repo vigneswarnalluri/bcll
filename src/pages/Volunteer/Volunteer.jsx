@@ -9,7 +9,7 @@ import {
     FaGavel, FaBan, FaHandshake, FaUserShield, FaMoneyBillWave
 } from 'react-icons/fa';
 import './Volunteer.css';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 
 const Volunteer = () => {
     const [formData, setFormData] = useState({

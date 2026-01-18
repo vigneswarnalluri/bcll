@@ -1,23 +1,23 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import Navbar from './components/Navbar';
-import Footer from './components/Footer';
-import Home from './pages/Home';
-import About from './pages/About';
-import Programs from './pages/Programs';
-import Fellowship from './pages/Fellowship';
-import Volunteer from './pages/Volunteer';
-import Contact from './pages/Contact';
-import Gallery from './pages/Gallery';
-import Reports from './pages/Reports';
-import Donate from './pages/Donate';
-import Login from './pages/Login';
-import AdminDashboard from './pages/AdminDashboard';
-import EmployeeDashboard from './pages/EmployeeDashboard';
-import ProgramDetail from './pages/ProgramDetail';
+import Navbar from './components/Navbar/Navbar';
+import Footer from './components/Footer/Footer';
+import Home from './pages/Home/Home';
+import About from './pages/About/About';
+import Programs from './pages/Programs/Programs';
+import Fellowship from './pages/Fellowship/Fellowship';
+import Volunteer from './pages/Volunteer/Volunteer';
+import Contact from './pages/Contact/Contact';
+import Gallery from './pages/Gallery/Gallery';
+import Reports from './pages/Reports/Reports';
+import Donate from './pages/Donate/Donate';
+import Login from './pages/Login/Login';
+import AdminDashboard from './pages/AdminDashboard/AdminDashboard';
+import EmployeeDashboard from './pages/EmployeeDashboard/EmployeeDashboard';
+import ProgramDetail from './pages/ProgramDetail/ProgramDetail';
 
-import ScrollToTop from './components/ScrollToTop';
-import ScrollToTopButton from './components/ScrollToTopButton';
+import ScrollToTop from './components/ScrollToTop/ScrollToTop';
+import ScrollToTopButton from './components/ScrollToTop/ScrollToTopButton';
 
 const Layout = ({ children }) => {
   const location = useLocation();
