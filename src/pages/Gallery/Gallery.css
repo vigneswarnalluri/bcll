@@ -378,7 +378,7 @@
     }
 
     .gallery-hero {
-        padding: 160px 20px 60px;
+        padding: 110px 20px 60px;
         text-align: center;
     }
 
@@ -425,7 +425,7 @@
 
 @media (max-width: 480px) {
     .hero-content {
-        padding: 160px 20px 40px;
+        padding: 110px 20px 40px;
     }
 
     .gallery-hero h1 {

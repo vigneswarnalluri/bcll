@@ -871,17 +871,26 @@
 }
 
 /* Modal Enhancement */
+body.modal-open {
+    overflow: hidden !important;
+    height: 100vh !important;
+    position: fixed;
+    width: 100%;
+}
+
 .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(15, 23, 42, 0.95);
-    backdrop-filter: blur(12px);
+    background: #ffffff;
+    /* Solid white background to hide everything else */
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    z-index: 2000;
+    z-index: 10000;
+    /* Increased to be above navbar and banner */
     padding: 20px;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .modal-container {
@@ -899,13 +908,14 @@
 }
 
 .modal-header {
-    padding: 12px 24px;
-    /* Shaved off more padding */
+    padding: 16px 20px;
     border-bottom: 1px solid var(--f-border);
     display: flex;
     justify-content: space-between;
     align-items: center;
     background: #fff;
+    gap: 16px;
+    min-height: 70px;
 }
 
 .modal-header h2 {
@@ -916,20 +926,27 @@
 }
 
 .close-btn {
-    width: 32px;
-    height: 32px;
-    font-size: 1.5rem;
-    border: 1px solid var(--f-border);
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+    font-size: 2rem;
+    border: 2px solid #cbd5e1;
     background: white;
     cursor: pointer;
-    color: var(--f-text-muted);
+    color: #1e293b;
     line-height: 1;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
+    font-weight: 300;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 100;
 }
+
 
 .close-btn:hover {
     background: #fee2e2;
@@ -937,6 +954,39 @@
     border-color: #fecaca;
     transform: rotate(90deg);
 }
+
+.close-btn svg {
+    width: 1.5rem;
+    height: 1.5rem;
+    color: #1e293b;
+}
+
+
+.back-arrow-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 1.5rem;
+    border: 2px solid #cbd5e1;
+    background: white;
+    cursor: pointer;
+    color: var(--f-primary);
+    line-height: 1;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+}
+
+.back-arrow-btn:hover {
+    background: #dbeafe;
+    color: var(--f-primary-dark);
+    border-color: #93c5fd;
+    transform: translateX(-4px);
+}
+
 
 .modal-body {
     padding: 16px 20px;
@@ -1052,6 +1102,16 @@
     display: flex;
     gap: 16px;
     margin-top: 24px;
+    position: sticky;
+    bottom: 0;
+    background: white;
+    padding: 16px 0;
+    z-index: 10;
+    border-top: 1px solid var(--f-border);
+    margin-left: -20px;
+    margin-right: -20px;
+    padding-left: 20px;
+    padding-right: 20px;
 }
 
 .animate-slide {
@@ -1089,7 +1149,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 3000;
+    z-index: 10001;
+    /* Even higher than modal */
 }
 
 .success-card {
@@ -1360,10 +1421,11 @@
 
     .fellowship-hero {
         height: auto;
-        min-height: 500px;
+        min-height: 400px;
+        /* Reduced min-height to help move content up */
         clip-path: none;
-        padding: 160px 0 40px;
-        /* Increased padding to clear navbar */
+        padding: 10px 0 40px;
+        /* Significantly reduced top padding */
         display: flex;
         align-items: center;
         justify-content: center;

@@ -67,6 +67,9 @@ const Footer = () => {
 
                 <div className="footer-bottom">
                     <p>&copy; {new Date().getFullYear()} Bharath Cares Life Line Foundation. All rights reserved.</p>
+                    <p className="developer-credit">
+                        Designed & Developed by <a href="https://fraylontech.com" target="_blank" rel="noopener noreferrer">Fraylon Technologies</a>
+                    </p>
                 </div>
             </div>
         </footer>

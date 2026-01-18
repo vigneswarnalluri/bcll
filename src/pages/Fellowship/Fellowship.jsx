@@ -13,7 +13,8 @@ import {
     HiOutlineDeviceMobile,
     HiOutlinePresentationChartLine,
     HiOutlineChatAlt2,
-    HiOutlineBadgeCheck
+    HiOutlineBadgeCheck,
+    HiX
 } from 'react-icons/hi';
 import './Fellowship.css';
 import { supabase } from '../../lib/supabase';
@@ -646,6 +647,22 @@ const Fellowship = () => {
         localStorage.setItem('fellowship_utr_verified', isUtrVerified.toString());
     }, [formData, formStep, isModalOpen, isUtrVerified]);
 
+    // Lock body scroll when modal is open
+    useEffect(() => {
+        if (isModalOpen) {
+            document.body.style.overflow = 'hidden';
+            document.body.classList.add('modal-open');
+        } else {
+            document.body.style.overflow = '';
+            document.body.classList.remove('modal-open');
+        }
+
+        return () => {
+            document.body.style.overflow = '';
+            document.body.classList.remove('modal-open');
+        };
+    }, [isModalOpen]);
+
     const years = Array.from({ length: 47 }, (_, i) => 2012 - i);
     const months = [
         "January", "February", "March", "April", "May", "June",
@@ -1118,6 +1135,16 @@ const Fellowship = () => {
                 }}>
                     <div className="modal-container" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
+                            {formStep > 1 && (
+                                <button
+                                    type="button"
+                                    className="back-arrow-btn"
+                                    onClick={handleBack}
+                                    title="Go Back"
+                                >
+                                    <HiOutlineArrowNarrowRight style={{ transform: 'rotate(180deg)' }} />
+                                </button>
+                            )}
                             <div>
                                 <h2>Fellowship Application</h2>
                                 <div className="step-dots">
@@ -1328,7 +1355,7 @@ const Fellowship = () => {
                                         disabled={isSubmitting || (formStep === 4 && !isUtrVerified)}
                                         className="f-btn f-btn-primary"
                                     >
-                                        {isSubmitting ? 'Processing...' : (formStep === 4 ? 'Confirm & Submit Application' : 'Continue to Next Step')}
+                                        {isSubmitting ? 'Processing...' : (formStep === 4 ? 'Submit Application' : 'Continue to Next Step')}
                                     </button>
                                 </div>
                             </form>

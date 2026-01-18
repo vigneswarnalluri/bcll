@@ -123,6 +123,28 @@
     font-size: 0.85rem;
 }
 
+.footer-bottom p {
+    margin: 8px 0;
+}
+
+.developer-credit {
+    font-size: 0.8rem;
+    opacity: 0.8;
+}
+
+.developer-credit a {
+    color: var(--secondary);
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.developer-credit a:hover {
+    color: var(--white);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
 @media (max-width: 768px) {
     .footer {
         padding: 40px 0 20px;
