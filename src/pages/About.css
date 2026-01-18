@@ -664,12 +664,36 @@
 
 /* Responsive Updates */
 @media (max-width: 900px) {
+    .about-hero-simple {
+        padding: 100px 20px 60px;
+    }
+
+    .about-hero-simple h1 {
+        font-size: 2rem;
+    }
+
+    .hero-subtitle {
+        font-size: 1.1rem;
+    }
+
+    .about-who-section,
+    .about-philosophy-section,
+    .about-vmv-section,
+    .about-what-we-do-section,
+    .about-founders-section,
+    .about-commitment-section {
+        padding: 60px 0;
+    }
 
     .who-grid,
     .philosophy-grid,
     .founders-grid {
         grid-template-columns: 1fr;
-        gap: 50px;
+        gap: 40px;
+    }
+
+    .who-text .section-title {
+        font-size: 1.8rem;
     }
 
     .vmv-grid {
@@ -679,39 +703,38 @@
 
     .vmv-card:nth-child(1) {
         padding: 40px 20px;
+        min-height: 300px;
     }
 
     .vmv-card:nth-child(1) h3 {
-        font-size: 2rem;
+        font-size: 1.8rem;
     }
 
     .vmv-card:nth-child(1) p {
-        font-size: 1.3rem;
+        font-size: 1.2rem;
     }
 
-    .who-image::before {
-        right: 10px;
-        top: 10px;
+    .vmv-card:nth-child(2),
+    .vmv-card:nth-child(3) {
+        padding: 30px 20px;
     }
 
     .founder-img img {
-        height: 300px;
-        /* Smaller on mobile */
+        height: 280px;
     }
 
-    .about-hero-simple h1 {
-        font-size: 2.2rem;
-    }
-
-    .problem-statement {
-        font-size: 1.5rem;
+    .about-commitment-section h2 {
+        font-size: 1.8rem;
     }
 
     .commitment-statements {
-        font-size: 1.3rem;
+        font-size: 1.2rem;
+        gap: 15px;
     }
 
-    .what-we-do-list {
-        grid-template-columns: 1fr;
+    .commitment-actions {
+        flex-direction: column;
+        gap: 15px;
+        padding: 0 40px;
     }
 }

@@ -103,13 +103,18 @@ const Navbar = () => {
             </div>
           </Link>
 
-          <div className="menu-icon" onClick={() => setIsOpen(!isOpen)} aria-label="Toggle Menu" role="button" aria-expanded={isOpen}>
-            {isOpen ? <FaTimes /> : <FaBars />}
+          <div className={`menu-icon ${isOpen ? 'active' : ''}`} onClick={() => setIsOpen(!isOpen)} aria-label="Toggle Menu" role="button" aria-expanded={isOpen}>
+            <span></span>
+            <span></span>
+            <span></span>
           </div>
 
           <ul className={`nav-menu ${isOpen ? 'active' : ''}`}>
+            <li className="mobile-menu-header">
+              <h3>Navigation</h3>
+            </li>
             {navLinks.map((link, index) => (
-              <li key={index} className="nav-item">
+              <li key={index} className="nav-item" style={{ "--index": index }}>
                 <Link
                   to={link.path}
                   className={`nav-links ${location.pathname === link.path ? 'active-link' : ''}`}
@@ -119,66 +124,25 @@ const Navbar = () => {
                 </Link>
               </li>
             ))}
-            <li className="nav-item search-trigger-item">
-              <button
-                className="nav-search-btn"
-                onClick={() => setIsSearchOpen(true)}
-                aria-label="Open Search"
-              >
-                <FaSearch />
-              </button>
+            <li className="nav-item donate-nav-item" style={{ "--index": navLinks.length }}>
+              <Link to="/donate" className="donate-btn-nav" onClick={() => setIsOpen(false)}>Donate Now</Link>
             </li>
-            <li className="nav-item">
-              <Link to="/donate" className="donate-btn-nav" onClick={() => setIsOpen(false)}>Donate</Link>
+
+            <li className="mobile-menu-footer" style={{ "--index": navLinks.length + 1 }}>
+              <div className="mobile-contact">
+                <p><FaPhone /> +91 73823 21315</p>
+                <p><FaEnvelope /> info@bcllf.org</p>
+              </div>
+              <div className="mobile-socials">
+                <a href="#" aria-label="Facebook"><FaFacebook /></a>
+                <a href="https://www.instagram.com/bharathcaresindia?igsh=cWFxa3JqbTFtMDBo" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><FaInstagram /></a>
+                <a href="https://youtube.com/@bharathcaresindia?si=hAh-xCJVMXOgTX8Q" target="_blank" rel="noopener noreferrer" aria-label="YouTube"><FaYoutube /></a>
+                <a href="#" aria-label="LinkedIn"><FaLinkedin /></a>
+              </div>
             </li>
           </ul>
         </div>
       </nav>
-
-      {/* SEARCH OVERLAY */}
-      {isSearchOpen && (
-        <div className="search-overlay" onClick={() => setIsSearchOpen(false)}>
-          <div className="search-modal" onClick={e => e.stopPropagation()}>
-            <div className="search-input-group">
-              <FaSearch className="modal-search-icon" />
-              <input
-                type="text"
-                placeholder="What are you looking for?"
-                autoFocus
-                value={navSearchQuery}
-                onChange={e => setNavSearchQuery(e.target.value)}
-              />
-              <button className="close-search" onClick={() => setIsSearchOpen(false)} aria-label="Close search">
-                <FaTimes />
-              </button>
-            </div>
-            <div className="search-results">
-              {navSearchQuery && filteredSearch.length > 0 ? (
-                <ul>
-                  {filteredSearch.map((item, idx) => (
-                    <li key={idx}>
-                      <Link to={item.path} onClick={() => { setIsSearchOpen(false); setNavSearchQuery(''); }}>
-                        {item.name}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              ) : navSearchQuery ? (
-                <p className="no-search-results">No matches found for "{navSearchQuery}"</p>
-              ) : (
-                <div className="search-suggestions">
-                  <p>Recent Searches:</p>
-                  <div className="tags">
-                    <span onClick={() => setNavSearchQuery('Scholar')}>Scholarship</span>
-                    <span onClick={() => setNavSearchQuery('Rehab')}>Rehabilitation</span>
-                    <span onClick={() => setNavSearchQuery('Help')}>Donate</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </header>
   );
 };

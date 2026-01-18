@@ -600,30 +600,51 @@ const colleges = [...new Set([
 
 
 const Fellowship = () => {
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isSubmitted, setIsSubmitted] = useState(false);
-    const [formStep, setFormStep] = useState(1);
+    const [formData, setFormData] = useState(() => {
+        const saved = localStorage.getItem('fellowship_form_data');
+        return saved ? JSON.parse(saved) : {
+            student_name: '',
+            aadhaar_no: '',
+            dobDay: '',
+            dobMonth: '',
+            dobYear: '',
+            email: '',
+            phone: '',
+            college_org: '',
+            register_id: '',
+            year: '',
+            program: '',
+            acc_holder: '',
+            bank_name: '',
+            acc_no: '',
+            ifsc_code: '',
+            utr_number: ''
+        };
+    });
+
+    const [isModalOpen, setIsModalOpen] = useState(() => {
+        return localStorage.getItem('fellowship_modal_open') === 'true';
+    });
+
+    const [formStep, setFormStep] = useState(() => {
+        const savedStep = localStorage.getItem('fellowship_form_step');
+        return savedStep ? parseInt(savedStep) : 1;
+    });
+
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isVerifyingUtr, setIsVerifyingUtr] = useState(false);
-    const [isUtrVerified, setIsUtrVerified] = useState(false);
-    const [formData, setFormData] = useState({
-        student_name: '',
-        aadhaar_no: '',
-        dobDay: '',
-        dobMonth: '',
-        dobYear: '',
-        email: '',
-        phone: '',
-        college_org: '',
-        register_id: '',
-        year: '',
-        program: '',
-        acc_holder: '',
-        bank_name: '',
-        acc_no: '',
-        ifsc_code: '',
-        utr_number: ''
+    const [isUtrVerified, setIsUtrVerified] = useState(() => {
+        return localStorage.getItem('fellowship_utr_verified') === 'true';
     });
+    const [isSubmitted, setIsSubmitted] = useState(false);
+
+    // Auto-save form progress to prevent loss when switching apps (like UPI)
+    useEffect(() => {
+        localStorage.setItem('fellowship_form_data', JSON.stringify(formData));
+        localStorage.setItem('fellowship_form_step', formStep.toString());
+        localStorage.setItem('fellowship_modal_open', isModalOpen.toString());
+        localStorage.setItem('fellowship_utr_verified', isUtrVerified.toString());
+    }, [formData, formStep, isModalOpen, isUtrVerified]);
 
     const years = Array.from({ length: 47 }, (_, i) => 2012 - i);
     const months = [
@@ -769,6 +790,11 @@ const Fellowship = () => {
             setIsModalOpen(false);
             setIsSubmitted(true);
             setFormStep(1);
+            // Clear local storage on successful submission
+            localStorage.removeItem('fellowship_form_data');
+            localStorage.removeItem('fellowship_form_step');
+            localStorage.removeItem('fellowship_modal_open');
+            localStorage.removeItem('fellowship_utr_verified');
             window.scrollTo(0, 0);
         } catch (error) {
             console.error('Submission failed:', error);
@@ -1074,7 +1100,19 @@ const Fellowship = () => {
 
             {/* Modal */}
             {isModalOpen && (
-                <div className="modal-overlay" onClick={() => { setIsModalOpen(false); setFormStep(1); }}>
+                <div className="modal-overlay" onClick={() => {
+                    // Prevent accidental closing on overlay tap, especially for payment steps
+                    if (formStep < 4) {
+                        if (window.confirm("Do you want to close the form? Your progress will be saved.")) {
+                            setIsModalOpen(false);
+                        }
+                    } else {
+                        // On step 4, be even more strict
+                        if (window.confirm("Are you sure? You are at the final payment step. Your progress will be saved.")) {
+                            setIsModalOpen(false);
+                        }
+                    }
+                }}>
                     <div className="modal-container" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
                             <div>
@@ -1086,7 +1124,11 @@ const Fellowship = () => {
                                     <span className={formStep >= 4 ? 'active' : ''}></span>
                                 </div>
                             </div>
-                            <button className="close-btn" onClick={() => { setIsModalOpen(false); setFormStep(1); }}>&times;</button>
+                            <button type="button" className="close-btn" onClick={() => {
+                                if (window.confirm("Close registration form? Your data is saved locally.")) {
+                                    setIsModalOpen(false);
+                                }
+                            }}>&times;</button>
                         </div>
                         <div className="modal-body">
                             <form className="formal-form" onSubmit={formStep === 4 ? handleSubmit : handleNext}>
@@ -1236,7 +1278,7 @@ const Fellowship = () => {
                                                 {!isUtrVerified ? (
                                                     <button
                                                         type="button"
-                                                        className="f-btn f-btn-primary"
+                                                        className={`f-btn f-btn-primary ${formData.utr_number.length === 12 && !isVerifyingUtr ? 'pulse-primary' : ''}`}
                                                         onClick={handleVerifyUtr}
                                                         disabled={formData.utr_number.length !== 12 || isVerifyingUtr}
                                                         style={{ padding: '0 20px', fontSize: '0.85rem', minWidth: '100px' }}
@@ -1274,7 +1316,7 @@ const Fellowship = () => {
 
                                 <div className="form-footer-compact">
                                     {formStep > 1 && (
-                                        <button type="button" disabled={isSubmitting} className="f-btn f-btn-outline" onClick={handleBack} style={{ color: 'var(--f-primary)', borderColor: 'var(--f-primary)', padding: '10px 24px' }}>
+                                        <button type="button" disabled={isSubmitting} className="f-btn f-btn-outline-modal" onClick={handleBack}>
                                             Back
                                         </button>
                                     )}
@@ -1282,12 +1324,6 @@ const Fellowship = () => {
                                         type="submit"
                                         disabled={isSubmitting || (formStep === 4 && !isUtrVerified)}
                                         className="f-btn f-btn-primary"
-                                        style={{
-                                            flexGrow: 1,
-                                            padding: '12px 32px',
-                                            opacity: (formStep === 4 && !isUtrVerified) ? 0.6 : 1,
-                                            cursor: (formStep === 4 && !isUtrVerified) ? 'not-allowed' : 'pointer'
-                                        }}
                                     >
                                         {isSubmitting ? 'Processing...' : (formStep === 4 ? 'Confirm & Submit Application' : 'Continue to Next Step')}
                                     </button>

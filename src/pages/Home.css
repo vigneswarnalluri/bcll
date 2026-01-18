@@ -887,32 +887,35 @@
     }
 
     .trust-item {
-        background: var(--white);
-        padding: 40px 30px;
-        border-radius: 20px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
-        border: 1px solid #eee;
-        transition: all 0.3s ease;
+        background: transparent;
+        padding: 20px;
+        border-radius: 0;
+        box-shadow: none;
+        border: none;
+        transition: none;
         display: flex;
         flex-direction: column;
         align-items: center;
+        width: 100%;
+        margin: 0 auto;
     }
 
+    /* Remove hover effects on mobile */
     .trust-item:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
-        border-color: var(--secondary);
+        transform: none;
+        box-shadow: none;
+        border-color: transparent;
     }
 
     .trust-icon {
-        font-size: 3rem;
+        font-size: 3.5rem;
         color: var(--primary);
         margin-bottom: 25px;
-        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        transition: none;
     }
 
     .trust-item:hover .trust-icon {
-        transform: scale(1.1) rotate(10deg);
+        transform: none;
     }
 
     .trust-item h3 {
@@ -1717,9 +1720,13 @@
 }
 
 @media (max-width: 992px) {
+    .donate-now-section {
+        padding: 60px 0;
+    }
+
     .donate-wrapper {
         grid-template-columns: 1fr;
-        gap: 40px;
+        gap: 30px;
     }
 
     .donate-content {
@@ -1729,6 +1736,7 @@
 
     .donate-now-section .section-title {
         text-align: center;
+        font-size: 2.2rem;
     }
 
     .donate-now-section .section-title::after {
@@ -1737,7 +1745,67 @@
     }
 
     .donate-features {
+        flex-direction: row;
+        gap: 10px;
+        margin-bottom: 30px;
         justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .donate-now-section .btn {
+        width: 100%;
+        margin-top: 10px;
+        margin-bottom: 20px;
+        display: block;
+    }
+
+    .feature-item {
+        min-width: 100px;
+        height: 140px;
+        padding: 10px;
+    }
+
+    .feature-text {
+        font-size: 0.85rem;
+    }
+
+    .donate-card {
+        border-radius: 16px;
+    }
+
+    .bank-details {
+        padding: 20px;
+    }
+
+    .detail-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 15px 0;
+    }
+
+    .detail-row .value {
+        width: 100%;
+        text-align: left;
+        font-size: 0.9rem;
+        word-break: break-all;
+    }
+
+    .qr-code-section {
+        padding: 20px;
+    }
+
+    .qr-placeholder img {
+        width: 120px;
+        height: 120px;
+    }
+
+    .payment-apps {
+        gap: 15px !important;
+    }
+
+    .payment-apps img {
+        height: 25px !important;
     }
 }
 
@@ -2204,8 +2272,12 @@
     }
 
     .trust-grid {
-        justify-content: flex-start;
-        padding-bottom: 20px;
+        justify-content: center;
+        padding: 0 20px 40px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 25px;
     }
 
     /* Life on Field */

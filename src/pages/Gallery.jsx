@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { FaTimes } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import { FaTimes, FaFilter, FaCheck } from 'react-icons/fa';
 import './Gallery.css';
 
 const Gallery = () => {
     const [activeCategory, setActiveCategory] = useState('All');
     const [lightboxImage, setLightboxImage] = useState(null);
+    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
     const categories = [
         'All',
@@ -48,6 +49,15 @@ const Gallery = () => {
         ? galleryImages
         : galleryImages.filter(img => img.category === activeCategory);
 
+    // Prevent scroll when drawer is open
+    useEffect(() => {
+        if (isFilterDrawerOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+    }, [isFilterDrawerOpen]);
+
     return (
         <div className="gallery-page">
             {/* 1. HERO SECTION */}
@@ -58,29 +68,36 @@ const Gallery = () => {
                 </div>
             </div>
 
-            {/* 2. MAIN LAYOUT (Sidebar + Grid) */}
+            {/* 2. E-COMMERCE STYLE FILTER UI */}
+            <div className="gallery-control-bar sticky-bar">
+                <div className="container flex-between">
+                    <div className="active-filter-display">
+                        Showing: <strong>{activeCategory}</strong>
+                        <span className="results-count">({filteredImages.length} items)</span>
+                    </div>
+                    <button className="mobile-filter-trigger" onClick={() => setIsFilterDrawerOpen(true)}>
+                        <FaFilter /> Filters
+                    </button>
+                </div>
+            </div>
+
             <div className="container section gallery-container-split">
-
-                {/* SIDEBAR FILTERS */}
-                <aside className="gallery-sidebar">
-                    <h3>Categories</h3>
-                    <div className="gallery-tabs-vertical">
-                        {categories.map(cat => {
-                            const count = cat === 'All'
-                                ? galleryImages.length
-                                : galleryImages.filter(img => img.category === cat).length;
-
-                            return (
+                {/* DESKTOP SIDEBAR */}
+                <aside className="gallery-sidebar-desktop">
+                    <div className="sidebar-inner">
+                        <h3>Filter by Category</h3>
+                        <div className="category-list">
+                            {categories.map(cat => (
                                 <button
                                     key={cat}
-                                    className={`tab-btn-vertical ${activeCategory === cat ? 'active' : ''}`}
+                                    className={`category-item-btn ${activeCategory === cat ? 'active' : ''}`}
                                     onClick={() => setActiveCategory(cat)}
                                 >
-                                    <span>{cat}</span>
-                                    <span className="tab-count-vertical">{count}</span>
+                                    <span className="cat-name">{cat}</span>
+                                    {activeCategory === cat && <FaCheck className="check-icon" />}
                                 </button>
-                            );
-                        })}
+                            ))}
+                        </div>
                     </div>
                 </aside>
 
@@ -105,7 +122,38 @@ const Gallery = () => {
                 </main>
             </div>
 
-            {/* 5. LIGHTBOX */}
+            {/* E-COMMERCE STYLE MOBILE FILTER DRAWER */}
+            <div className={`filter-drawer-overlay ${isFilterDrawerOpen ? 'open' : ''}`} onClick={() => setIsFilterDrawerOpen(false)}>
+                <div className="filter-drawer" onClick={e => e.stopPropagation()}>
+                    <div className="drawer-header">
+                        <h3>Filters</h3>
+                        <button className="drawer-close" onClick={() => setIsFilterDrawerOpen(false)}><FaTimes /></button>
+                    </div>
+                    <div className="drawer-body">
+                        <p className="drawer-section-title">Categories</p>
+                        <div className="drawer-category-list">
+                            {categories.map(cat => (
+                                <button
+                                    key={cat}
+                                    className={`drawer-cat-btn ${activeCategory === cat ? 'active' : ''}`}
+                                    onClick={() => {
+                                        setActiveCategory(cat);
+                                        setIsFilterDrawerOpen(false);
+                                    }}
+                                >
+                                    {cat}
+                                    {activeCategory === cat && <FaCheck className="check-icon" />}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="drawer-footer">
+                        <button className="apply-btn" onClick={() => setIsFilterDrawerOpen(false)}>Show {filteredImages.length} Results</button>
+                    </div>
+                </div>
+            </div>
+
+            {/* LIGHTBOX */}
             {lightboxImage && (
                 <div className="lightbox-overlay" onClick={() => setLightboxImage(null)}>
                     <div className="lightbox-content" onClick={e => e.stopPropagation()}>
@@ -121,15 +169,10 @@ const Gallery = () => {
                 </div>
             )}
 
-            {/* 7. FOOTER NOTE */}
+            {/* FOOTER NOTE */}
             <div className="gallery-footer-note text-center">
                 <div className="container">
                     <p>Images shown are from actual programs and field activities carried out by Bharath Cares Life Line Foundation.</p>
-                    <div className="note-actions">
-                        <a href="/reports" className="note-link">View Reports</a>
-                        <span className="separator">•</span>
-                        <a href="/donate" className="note-link">Support Our Work</a>
-                    </div>
                 </div>
             </div>
         </div>

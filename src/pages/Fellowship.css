@@ -97,6 +97,24 @@
     transform: translateY(-2px);
 }
 
+@keyframes f-pulse-primary {
+    0% {
+        box-shadow: 0 0 0 0 rgba(0, 77, 153, 0.4);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(0, 77, 153, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(0, 77, 153, 0);
+    }
+}
+
+.pulse-primary {
+    animation: f-pulse-primary 1.5s infinite;
+}
+
 .fellowship-page .f-btn-white {
     background: white;
     color: var(--f-primary);
@@ -1204,12 +1222,13 @@
     }
 
     .modal-header h2 {
-        font-size: 0.95rem;
+        font-size: 1.1rem;
+        font-weight: 800;
     }
 
     .step-dots {
-        margin-top: 8px;
-        gap: 4px;
+        margin-top: 10px;
+        gap: 6px;
     }
 
     .step-dots span {
@@ -1231,8 +1250,10 @@
 
     .form-group input,
     .form-group select {
-        padding: 8px 10px;
-        font-size: 0.75rem;
+        padding: 12px 14px;
+        font-size: 0.85rem;
+        height: 48px;
+        /* Matching button height */
     }
 
     .dob-grid {
@@ -1253,8 +1274,68 @@
     }
 
     .form-footer-compact .f-btn {
-        padding: 10px 15px;
-        font-size: 0.85rem;
+        padding: 12px 18px;
+        font-size: 0.9rem;
+        height: 48px;
+        /* Slightly taller for modern mobile feel */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        flex: 1;
+    }
+
+    .f-btn-primary.pulse-primary {
+        box-shadow: 0 0 0 0 rgba(0, 77, 153, 0.4), 0 10px 20px -5px rgba(0, 77, 153, 0.3);
+    }
+
+    .payment-instruction-box {
+        padding: 24px 16px !important;
+    }
+
+    .payment-instruction-box p:first-child {
+        font-size: 1rem !important;
+    }
+
+    .payment-instruction-box p:nth-child(2) {
+        font-size: 1.5rem !important;
+    }
+
+    .f-btn-outline-modal {
+        background: transparent;
+        border: 2px solid var(--f-primary) !important;
+        color: var(--f-primary) !important;
+        flex: 0 0 100px;
+        /* Smaller fixed width for back button */
+    }
+
+    .f-btn-primary:disabled {
+        background: #94a3b8 !important;
+        border-color: #94a3b8 !important;
+        opacity: 0.7 !important;
+    }
+
+    .fellowship-hero {
+        height: auto;
+        min-height: 600px;
+        clip-path: none;
+        padding: 120px 0 60px;
+        display: flex;
+        align-items: flex-start;
+    }
+
+    .hero-title {
+        font-size: 2.5rem;
+    }
+
+    .hero-subtitle {
+        font-size: 1rem;
+        margin-bottom: 30px;
+    }
+
+    .hero-actions {
+        flex-direction: column;
+        gap: 15px;
     }
 
     /* Stipend & Exposure Mobile Fixes */

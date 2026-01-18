@@ -197,3 +197,20 @@
         transform: translateX(4px);
     }
 }
+
+/* RESPONSIVE */
+@media (max-width: 480px) {
+    .login-box {
+        padding: 40px 25px;
+    }
+
+    .login-header h2 {
+        font-size: 1.8rem;
+    }
+
+    .back-btn-top {
+        top: 20px;
+        left: 20px;
+        font-size: 0.85rem;
+    }
+}
