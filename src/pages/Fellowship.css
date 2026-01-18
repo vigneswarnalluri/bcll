@@ -152,6 +152,13 @@
     animation: f-fadeInUp 1s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+.hero-badge-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 32px;
+}
+
 .hero-badge {
     display: inline-block;
     padding: 6px 16px;
@@ -161,7 +168,36 @@
     color: var(--f-secondary);
     font-weight: 700;
     font-size: 0.85rem;
-    margin-bottom: 32px;
+}
+
+.hero-badge-starting {
+    display: inline-block;
+    padding: 6px 16px;
+    background: #ef4444;
+    border: 1px solid #ef4444;
+    border-radius: 20px;
+    color: white;
+    font-weight: 800;
+    font-size: 0.85rem;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    animation: f-pulse-emergency 2s infinite;
+}
+
+@keyframes f-pulse-emergency {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.05);
+        opacity: 0.9;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
 .hero-title {

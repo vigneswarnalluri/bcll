@@ -1,3 +1,81 @@
+/* Official Government Announcement Banner */
+.announcement-banner {
+    background: #001f3f;
+    /* Deep Navy */
+    color: #f8fafc;
+    padding: 8px 0;
+    position: relative;
+    z-index: 2005;
+    overflow: hidden;
+    border-bottom: 2px solid #fbbf24;
+    /* Golden Accent */
+    text-transform: uppercase;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+.banner-track {
+    display: flex;
+    white-space: nowrap;
+    width: max-content;
+    animation: slide-marquee 40s linear infinite;
+}
+
+.banner-track:hover {
+    animation-play-state: paused;
+}
+
+.banner-content {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    padding: 0 100px;
+    flex-shrink: 0;
+}
+
+.announcement-banner p {
+    margin: 0;
+    font-weight: 500;
+}
+
+.banner-badge {
+    background: #fbbf24;
+    color: #001f3f;
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-weight: 900;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    flex-shrink: 0;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.banner-link {
+    color: #fbbf24;
+    text-decoration: underline;
+    font-weight: 800;
+    margin-left: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.3s ease;
+}
+
+.banner-link:hover {
+    color: #ffffff;
+}
+
+@keyframes slide-marquee {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
 /* Main Header Wrapper */
 .mobile-menu-header,
 .mobile-menu-footer,
@@ -10,7 +88,7 @@
     top: 0;
     left: 0;
     width: 100%;
-    z-index: 999;
+    z-index: 1000;
 }
 
 /* Top Bar styles */

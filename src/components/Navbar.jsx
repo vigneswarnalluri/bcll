@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FaBars, FaTimes, FaPhone, FaEnvelope, FaFacebook, FaTwitter, FaInstagram, FaLinkedin, FaYoutube, FaSearch } from 'react-icons/fa';
+import { FaBars, FaTimes, FaPhone, FaEnvelope, FaFacebook, FaTwitter, FaInstagram, FaLinkedin, FaYoutube, FaSearch, FaArrowRight } from 'react-icons/fa';
 import './Navbar.css';
 
 const Navbar = () => {
@@ -49,31 +49,26 @@ const Navbar = () => {
     { name: 'Login', path: '/login' },
   ];
 
-  const searchItems = [
-    { name: 'Home', path: '/' },
-    { name: 'About Us', path: '/about' },
-    { name: 'Programs', path: '/programs' },
-    { name: 'Fellowship', path: '/fellowship' },
-    { name: 'Media Gallery', path: '/gallery' },
-    { name: 'Reports', path: '/reports' },
-    { name: 'Contact', path: '/contact' },
-    { name: 'Donate Now', path: '/donate' },
-    { name: 'Staff Login', path: '/login' },
-    { name: 'Give a Meal', path: '/programs/meal' },
-    { name: 'Scholarships', path: '/programs/scholar' },
-    { name: 'Rehabilitation', path: '/programs/rehab' },
-  ];
-
-  const filteredSearch = searchItems.filter(item =>
-    item.name.toLowerCase().includes(navSearchQuery.toLowerCase())
-  );
-
   /* Pages with light backgrounds where navbar needs to be dark/scrolled by default */
   const lightPages = [];
   const isLightPage = lightPages.includes(location.pathname);
 
   return (
     <header className="app-header">
+      {/* Official Government Announcement Banner */}
+      <div className="announcement-banner">
+        <div className="banner-track">
+          <div className="banner-content">
+            <span className="banner-badge">OFFICIAL NOTICE</span>
+            <p><strong>GOVERNMENT OF ANDHRA PRADESH CO-ALIGNMENT:</strong> Viksit Bharat Fellowship (2026 Batch) Enrollment Phase ends in <strong>24 Hours</strong>. <Link to="/fellowship" className="banner-link">Apply via State Portal <FaArrowRight /></Link></p>
+          </div>
+          {/* Duplicated for seamless sliding */}
+          <div className="banner-content" aria-hidden="true">
+            <span className="banner-badge">OFFICIAL NOTICE</span>
+            <p><strong>GOVERNMENT OF ANDHRA PRADESH CO-ALIGNMENT:</strong> Viksit Bharat Fellowship (2026 Batch) Enrollment Phase ends in <strong>24 Hours</strong>. <Link to="/fellowship" className="banner-link">Apply via State Portal <FaArrowRight /></Link></p>
+          </div>
+        </div>
+      </div>
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <div className={`top-bar ${scrolled ? 'hidden' : ''}`}>
         <div className="container top-bar-content">

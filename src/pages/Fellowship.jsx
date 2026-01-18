@@ -827,7 +827,10 @@ const Fellowship = () => {
             <section className="fellowship-hero">
                 <div className="hero-overlay"></div>
                 <div className="f-container hero-content">
-                    <div className="hero-badge">Official Academic Fellowship – 2026</div>
+                    <div className="hero-badge-group">
+                        <div className="hero-badge">Official Academic Fellowship – 2026</div>
+                        <div className="hero-badge-starting">Batch Starts Tomorrow (Jan 19)</div>
+                    </div>
                     <h1 className="hero-title">Viksit Bharat <br />(Developed India) @ 2047</h1>
                     <p className="hero-subtitle">
                         A flagship digital fellowship designed to empower Computer Science Engineering students in alignment with the national vision and AP Government's P4 Model.
