@@ -149,6 +149,11 @@ body.modal-open .announcement-banner {
     overflow: hidden;
 }
 
+body.modal-open .top-bar {
+    transform: translateY(-100%);
+    visibility: hidden;
+}
+
 .top-bar-content {
     display: flex;
     justify-content: space-between;

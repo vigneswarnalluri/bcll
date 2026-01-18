@@ -91,7 +91,7 @@ const Navbar = () => {
 
       <nav className={`navbar ${scrolled ? 'scrolled' : (isLightPage ? 'navbar-light-mode' : '')}`} aria-label="Main Navigation">
         <div className="container navbar-container">
-          <Link to="/" className="navbar-logo">
+          <Link to="/" className="navbar-logo" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <img src="/logo-CYlp3-fg__1_-removebg-preview.svg" alt="BCLL Logo" className="logo-img" />
             <div className="logo-text-group">
               <span className="logo-main">Bharath Cares</span>
