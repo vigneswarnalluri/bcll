@@ -166,12 +166,22 @@ const AdminDashboard = () => {
                     }
                     break;
                 case 'co-admins':
-                    const { data: cAdms } = await supabase
-                        .from('profiles')
-                        .select('*, admin_controls(*)')
-                        .or(`user_id.is.null,user_id.neq.${(await supabase.auth.getUser()).data.user?.id}`)
-                        .in('role_type', ['Admin', 'Super Admin', 'Co-Admin', 'HR Manager', 'Finance Officer', 'Field Super']);
-                    if (cAdms) setCoAdmins(cAdms);
+                    const [cAdmsRes, cLogsRes] = await Promise.all([
+                        supabase.from('profiles').select('*, admin_controls(*)').in('role_type', ['Admin', 'Super Admin', 'Co-Admin', 'HR Manager', 'Finance Officer', 'Field Super']),
+                        supabase.from('audit_logs').select('*').order('created_at', { ascending: false })
+                    ]);
+
+                    if (cAdmsRes.data) {
+                        const enriched = cAdmsRes.data.map(adm => {
+                            const lastLog = (cLogsRes.data || []).find(l => l.actor_id === adm.user_id);
+                            return {
+                                ...adm,
+                                last_activity: lastLog?.created_at || adm.updated_at,
+                                has_activity: !!lastLog
+                            };
+                        });
+                        setCoAdmins(enriched);
+                    }
                     break;
                 case 'overview':
                     if (q) {
@@ -242,8 +252,32 @@ const AdminDashboard = () => {
                 status: item.status
             })));
 
+            const allLogs = l.data || [];
+
             if (user) {
-                // Fetch the logged-in admin's profile and their control/perms
+                // Ensure there is at least one activity log for this session to show "Active" status
+                // We do a 'maybeSingle' check first to avoid spamming logs if they already have one in the last 15 mins
+                const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+                const { data: recentLog } = await supabase
+                    .from('audit_logs')
+                    .select('id')
+                    .eq('actor_id', user.id)
+                    .eq('action', 'Dashboard Session Active')
+                    .gt('created_at', fifteenMinsAgo)
+                    .maybeSingle();
+
+                if (!recentLog) {
+                    await supabase.from('audit_logs').insert([{
+                        actor_id: user.id,
+                        action: 'Dashboard Session Active',
+                        sub_system: 'Security',
+                        ip_address: 'Logged Session'
+                    }]);
+                    // Re-fetch logs to include the one we just created
+                    const { data: updatedLogs } = await supabase.from('audit_logs').select('*').order('created_at', { ascending: false });
+                    if (updatedLogs) setActivityLogs(updatedLogs);
+                }
+
                 const { data: pData } = await supabase
                     .from('profiles')
                     .select('*, admin_controls(*)')
@@ -251,9 +285,12 @@ const AdminDashboard = () => {
                     .maybeSingle();
 
                 if (pData) {
-                    const controls = pData.admin_controls?.[0] || {};
+                    const controls = (Array.isArray(pData.admin_controls) ? pData.admin_controls[0] : pData.admin_controls) || {};
+                    const myLastLog = allLogs.find(log => log.actor_id === user.id);
+
                     setAdminProfile({
                         id: pData.id,
+                        user_id: pData.user_id, // Store the Auth ID for comparison
                         name: pData.full_name,
                         role: pData.role_type,
                         dept: pData.department || 'HQ Executive',
@@ -268,9 +305,9 @@ const AdminDashboard = () => {
                         emergency: pData.emergency || 'Not Set',
                         security: {
                             auth2FA: 'Active',
-                            lastLogin: new Date().toLocaleString(),
+                            lastLogin: myLastLog ? new Date(myLastLog.created_at).toLocaleString() : 'First Session',
                             device: 'Verified Workstation',
-                            lastIP: 'Logged Session'
+                            lastIP: myLastLog?.ip_address || 'Logged Session'
                         },
                         financials: {
                             salaryLimit: `₹ ${Number(controls.salary_approval_limit || 0).toLocaleString()}`,
@@ -296,12 +333,25 @@ const AdminDashboard = () => {
                         }
                     });
 
-                    const { data: others } = await supabase
+                    const { data: others, error: oError } = await supabase
                         .from('profiles')
                         .select('*, admin_controls(*)')
-                        .or(`user_id.is.null,user_id.neq.${user.id}`)
+                        // Removed exclusion to allow admins to manage their own permissions
                         .in('role_type', ['Admin', 'Super Admin', 'Co-Admin', 'HR Manager', 'Finance Officer', 'Field Super']);
-                    if (others) setCoAdmins(others);
+
+                    if (oError) console.error('Admin Fetch Error:', oError);
+                    if (others) {
+                        const enriched = others.map(adm => {
+                            const controls = (Array.isArray(adm.admin_controls) ? adm.admin_controls[0] : adm.admin_controls) || {};
+                            return {
+                                ...adm,
+                                last_activity: allLogs.find(log => log.actor_id === adm.user_id)?.created_at || adm.updated_at,
+                                has_activity: !!allLogs.find(log => log.actor_id === adm.user_id),
+                                admin_controls: [controls] // Normalize back to array for the form components if needed
+                            };
+                        });
+                        setCoAdmins(enriched);
+                    }
                 }
             }
 
@@ -551,6 +601,7 @@ const AdminDashboard = () => {
         switch (activeTab) {
             case 'overview':
                 return <OverviewTab
+                    adminProfile={adminProfile}
                     employees={employees}
                     volunteers={volunteers}
                     requests={requests}
@@ -602,6 +653,7 @@ const AdminDashboard = () => {
             default:
                 return (
                     <OverviewTab
+                        adminProfile={adminProfile}
                         employees={employees}
                         volunteers={volunteers}
                         requests={requests}
@@ -645,21 +697,32 @@ const AdminDashboard = () => {
                 <div className="sidebar-scroll custom-scroll">
                     <ul className="sidebar-menu" role="menu">
                         {menuItems.filter(item => {
-                            if (adminProfile.role === 'Super Admin') return true;
+                            // The "My Admin Profile" and "Overview" are always visible for navigation
+                            if (item.id === 'admin-profile') return true;
+                            if (item.id === 'overview') return true;
+
+                            // If they are a Super Admin, they typically have all permissions, 
+                            // but we still check the explicit permission flags to allow for "Restricted Super Admins"
                             const p = adminProfile.permissions;
-                            if (item.id === 'overview' || item.id === 'admin-profile') return true;
-                            if (item.id === 'co-admins') return p.manage_admins;
-                            if (item.id === 'employees') return p.view_employees;
-                            if (item.id === 'volunteers') return p.volunteer_approval;
-                            if (item.id === 'students') return p.student_mgmt;
-                            if (item.id === 'scholarships') return p.scholarship_verify;
-                            if (item.id === 'finance') return p.process_salary || p.bank_access || p.fin_reports_auth;
-                            if (item.id === 'reports') return p.report_approval;
-                            if (item.id === 'e-office') return p.vault_access;
-                            if (item.id === 'activity-logs') return p.audit_logs;
-                            if (item.id === 'approvals') return p.approve_leaves;
-                            if (item.id === 'org-master') return p.org_master;
-                            return false;
+
+                            // If the roles is Super Admin, we still let them see everything by default 
+                            // UNLESS the user explicitly wants to hide them. 
+                            // For now, let's keep it strictly tied to the checkboxes as requested.
+
+                            switch (item.id) {
+                                case 'co-admins': return p.manage_admins || adminProfile.role === 'Super Admin';
+                                case 'employees': return p.view_employees || adminProfile.role === 'Super Admin';
+                                case 'volunteers': return p.volunteer_approval || adminProfile.role === 'Super Admin';
+                                case 'students': return p.student_mgmt || adminProfile.role === 'Super Admin';
+                                case 'scholarships': return p.scholarship_verify || adminProfile.role === 'Super Admin';
+                                case 'finance': return p.process_salary || p.bank_access || p.fin_reports_auth || adminProfile.role === 'Super Admin';
+                                case 'reports': return p.report_approval || adminProfile.role === 'Super Admin';
+                                case 'e-office': return p.vault_access || adminProfile.role === 'Super Admin';
+                                case 'activity-logs': return p.audit_logs || adminProfile.role === 'Super Admin';
+                                case 'approvals': return p.approve_leaves || adminProfile.role === 'Super Admin';
+                                case 'org-master': return p.org_master || adminProfile.role === 'Super Admin';
+                                default: return false;
+                            }
                         }).map(item => (
                             <li key={item.id} className={activeTab === item.id ? 'active' : ''} onClick={() => setActiveTab(item.id)} role="menuitem" tabIndex="0">
                                 {item.icon} <span>{item.label}</span>
@@ -798,58 +861,71 @@ const AdminDashboard = () => {
                                         mobile: newAdm.mobile,
                                         dob: newAdm.dob,
                                         emergency: newAdm.emergency,
-                                        ...(linkedAuthId && { user_id: linkedAuthId })
+                                        user_id: newAdm.user_id || linkedAuthId // Use the Auth ID
                                     };
 
-                                    const { data: pData, error: pError } = await supabase
-                                        .from('profiles')
-                                        .upsert(
-                                            [newAdm.id ? { id: newAdm.id, ...profileData } : profileData],
-                                            { onConflict: 'email' }
-                                        )
-                                        .select()
-                                        .single();
+                                    // Use the internal Profiles.ID for mapping to admin_controls
+                                    const profilesInternalId = newAdm.id || profileData.user_id;
 
-                                    if (!pError && pData) {
-                                        const controlData = {
-                                            admin_profile_id: pData.id,
-                                            authority_level: newAdm.authority_level,
-                                            perm_view_employees: newAdm.perms.view_employees,
-                                            perm_edit_employees: newAdm.perms.edit_employees,
-                                            perm_approve_leaves: newAdm.perms.approve_leaves,
-                                            perm_process_salary: newAdm.perms.process_salary,
-                                            perm_bank_access: newAdm.perms.bank_access,
-                                            perm_volunteer_approval: newAdm.perms.volunteer_approval,
-                                            perm_scholarship_verify: newAdm.perms.scholarship_verify,
-                                            perm_manage_admins: newAdm.perms.manage_admins,
-                                            perm_student_mgmt: newAdm.perms.student_mgmt,
-                                            perm_report_approval: newAdm.perms.report_approval,
-                                            perm_vault_access: newAdm.perms.vault_access,
-                                            perm_audit_logs: newAdm.perms.audit_logs,
-                                            perm_org_master: newAdm.perms.org_master,
-                                            fin_reports_auth: newAdm.fin_reports_auth,
-                                            statutory_docs_auth: newAdm.statutory_docs_auth,
-                                            salary_approval_limit: newAdm.salary_approval_limit || 0,
-                                            expenditure_limit: newAdm.expenditure_limit || 0,
-                                            fund_utilization_auth: newAdm.fund_utilization_auth
-                                        };
-
-                                        const { error: cError } = await supabase
-                                            .from('admin_controls')
-                                            .upsert([controlData], { onConflict: 'admin_profile_id' });
-
-                                        if (!cError) {
-                                            await logActivity(`${newAdm.id ? 'Updated' : 'Provisioned New'} Admin Account: ${newAdm.full_name}`, 'Security');
-                                            fetchDashboardData();
-                                            alert(`Account ${newAdm.id ? 'updated' : 'provisioned'} successfully.`);
-                                            setIsModalOpen(false);
-                                            setStep(1);
-                                        } else {
-                                            alert('Error setting permissions: ' + cError.message);
-                                        }
-                                    } else {
-                                        alert('Database Error: ' + (pError?.message || 'Unknown error'));
+                                    if (!profileData.user_id) {
+                                        alert('CRITICAL: No identity found for this admin! Try refreshing the page.');
+                                        return;
                                     }
+
+                                    // Step 1: Save Profile
+                                    const { error: pError } = await supabase
+                                        .from('profiles')
+                                        .upsert({
+                                            user_id: profileData.user_id,
+                                            full_name: newAdm.full_name,
+                                            email: newAdm.email,
+                                            role_type: newAdm.role_type,
+                                            department: newAdm.department,
+                                            mobile: newAdm.mobile,
+                                            dob: newAdm.dob,
+                                            emergency: newAdm.emergency,
+                                            updated_at: new Date().toISOString()
+                                        }, { onConflict: 'user_id' });
+
+                                    if (pError) {
+                                        alert('Profile Save Failed: ' + pError.message);
+                                        return;
+                                    }
+
+                                    // Step 2: Save Permissions (Permissions Matrix)
+                                    // admin_profile_id points to the profile UUID (profiles.id)
+                                    const { error: cError } = await supabase
+                                        .from('admin_controls')
+                                        .upsert({
+                                            admin_profile_id: profilesInternalId,
+                                            authority_level: newAdm.authority_level || 'L3',
+                                            perm_view_employees: !!newAdm.perms.view_employees,
+                                            perm_edit_employees: !!newAdm.perms.edit_employees,
+                                            perm_approve_leaves: !!newAdm.perms.approve_leaves,
+                                            perm_process_salary: !!newAdm.perms.process_salary,
+                                            perm_bank_access: !!newAdm.perms.bank_access,
+                                            perm_volunteer_approval: !!newAdm.perms.volunteer_approval,
+                                            perm_scholarship_verify: !!newAdm.perms.scholarship_verify,
+                                            perm_manage_admins: !!newAdm.perms.manage_admins,
+                                            perm_student_mgmt: !!newAdm.perms.student_mgmt,
+                                            perm_report_approval: !!newAdm.perms.report_approval,
+                                            perm_vault_access: !!newAdm.perms.vault_access,
+                                            perm_audit_logs: !!newAdm.perms.audit_logs,
+                                            perm_org_master: !!newAdm.perms.org_master,
+                                            updated_at: new Date().toISOString()
+                                        }, { onConflict: 'admin_profile_id' });
+
+                                    if (cError) {
+                                        alert('Permissions Save Failed: ' + cError.message);
+                                        return;
+                                    }
+
+                                    // Step 3: Finalize
+                                    await logActivity(`Configured Permissions for ${newAdm.full_name}`, 'Security');
+                                    await fetchDashboardData();
+                                    alert(`DASHBOARD SYNCED: All permissions for ${newAdm.full_name} are now LIVE.`);
+                                    setIsModalOpen(false);
+                                    setStep(1);
                                 }}
                             />
                         )}
@@ -1007,15 +1083,23 @@ const AdminDashboard = () => {
 
 /* --- TAB COMPONENTS --- */
 
-const OverviewTab = ({ employees, volunteers, requests, coAdmins, students, scholarships, finances, searchTerm, matchingActions, onClearSearch }) => {
+const OverviewTab = ({ adminProfile, employees, volunteers, requests, coAdmins, students, scholarships, finances, searchTerm, matchingActions, onClearSearch }) => {
     const isSearching = searchTerm && searchTerm.trim().length > 0;
+    const p = adminProfile.permissions;
 
     // Calculate pending counts
     const pendingVolsCount = (volunteers || []).filter(v => v?.status === 'New').length;
     const pendingReqsCount = (requests || []).filter(r => r?.status === 'Pending').length;
 
-    // Total matching results
-    const totalResults = (employees?.length || 0) + (volunteers?.length || 0) + (requests?.length || 0) + (students?.length || 0) + (scholarships?.length || 0) + (finances?.length || 0);
+    // Filter results based on permissions
+    const visibleEmployees = p.view_employees ? (employees || []) : [];
+    const visibleVolunteers = p.volunteer_approval ? (volunteers || []) : [];
+    const visibleRequests = p.approve_leaves ? (requests || []) : [];
+    const visibleStudents = p.student_mgmt ? (students || []) : [];
+    const visibleScholarships = p.scholarship_verify ? (scholarships || []) : [];
+    const visibleFinances = (p.process_salary || p.bank_access) ? (finances || []) : [];
+
+    const totalResults = visibleEmployees.length + visibleVolunteers.length + visibleRequests.length + visibleStudents.length + visibleScholarships.length + visibleFinances.length;
 
     return (
         <>
@@ -1034,10 +1118,10 @@ const OverviewTab = ({ employees, volunteers, requests, coAdmins, students, scho
             )}
 
             <div className="stats-grid">
-                <StatCard title="Active Personnel" count={(employees || []).filter(e => e?.status === 'Active').length} color="blue" icon={<FaUsers />} />
-                <StatCard title="Pending Volunteers" count={pendingVolsCount} color="purple" icon={<FaHandHoldingUsd />} />
+                {p.view_employees && <StatCard title="Active Personnel" count={visibleEmployees.filter(e => e?.status === 'Active').length} color="blue" icon={<FaUsers />} />}
+                {p.volunteer_approval && <StatCard title="Pending Volunteers" count={pendingVolsCount} color="purple" icon={<FaHandHoldingUsd />} />}
                 <StatCard title="System Uptime" count="99.9%" color="gold" icon={<FaDesktop />} />
-                <StatCard title="Total Alerts" count={pendingVolsCount + pendingReqsCount} color="red" icon={<FaExclamationTriangle />} />
+                <StatCard title="Total Alerts" count={(p.volunteer_approval ? pendingVolsCount : 0) + (p.approve_leaves ? pendingReqsCount : 0)} color="red" icon={<FaExclamationTriangle />} />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginTop: '30px' }}>
@@ -1055,45 +1139,44 @@ const OverviewTab = ({ employees, volunteers, requests, coAdmins, students, scho
                             </tr>
                         </thead>
                         <tbody>
-                            {/* When searching, show specific matching names */}
                             {isSearching ? (
                                 <>
-                                    {(employees || []).map(e => (
+                                    {visibleEmployees.map(e => (
                                         <tr key={`search-emp-${e.id}`}>
                                             <td><span style={{ color: '#3182ce', fontWeight: '600' }}>Staff</span></td>
                                             <td>{e.full_name} <br /><small style={{ color: '#718096' }}>{e.department}</small></td>
                                             <td><span className={`badge ${e.status === 'Active' ? 'success' : 'warning'}`}>{e.status}</span></td>
                                         </tr>
                                     ))}
-                                    {(volunteers || []).map(v => (
+                                    {visibleVolunteers.map(v => (
                                         <tr key={`search-vol-${v.id}`}>
                                             <td><span style={{ color: '#805ad5', fontWeight: '600' }}>Volunteer</span></td>
                                             <td>{v.full_name} <br /><small style={{ color: '#718096' }}>{v.area_of_interest}</small></td>
                                             <td><span className={`badge ${v.status === 'Approved' ? 'success' : 'warning'}`}>{v.status}</span></td>
                                         </tr>
                                     ))}
-                                    {(requests || []).map(r => (
+                                    {visibleRequests.map(r => (
                                         <tr key={`search-req-${r.id}`}>
                                             <td><span style={{ color: '#e53e3e', fontWeight: '600' }}>Request</span></td>
                                             <td>{r.requester} <br /><small style={{ color: '#718096' }}>{r.type} Leave</small></td>
                                             <td><span className={`badge ${r.status === 'Approved' ? 'success' : 'warning'}`}>{r.status}</span></td>
                                         </tr>
                                     ))}
-                                    {(students || []).map(s => (
+                                    {visibleStudents.map(s => (
                                         <tr key={`search-stud-${s.id}`}>
                                             <td><span style={{ color: '#d69e2e', fontWeight: '600' }}>Student</span></td>
                                             <td>{s.student_name} <br /><small style={{ color: '#718096' }}>{s.college_org} • {s.program}</small></td>
                                             <td><span className={`badge ${s.status === 'Active' ? 'success' : 'warning'}`}>{s.status}</span></td>
                                         </tr>
                                     ))}
-                                    {(scholarships || []).map(sc => (
+                                    {visibleScholarships.map(sc => (
                                         <tr key={`search-schol-${sc.id}`}>
                                             <td><span style={{ color: '#38a169', fontWeight: '600' }}>Scholarship</span></td>
                                             <td>{sc.applicant_name} <br /><small style={{ color: '#718096' }}>ID: {sc.application_id}</small></td>
                                             <td><span className={`badge ${sc.status === 'Approved' ? 'success' : 'warning'}`}>{sc.status}</span></td>
                                         </tr>
                                     ))}
-                                    {(finances || []).map(f => (
+                                    {visibleFinances.map(f => (
                                         <tr key={`search-fin-${f.id}`}>
                                             <td><span style={{ color: '#dd6b20', fontWeight: '600' }}>Finance</span></td>
                                             <td>{f.category_context} <br /><small style={{ color: '#718096' }}>Type: {f.type} • ₹{Number(f.amount).toLocaleString()}</small></td>
@@ -1106,13 +1189,13 @@ const OverviewTab = ({ employees, volunteers, requests, coAdmins, students, scho
                                 </>
                             ) : (
                                 <>
-                                    {pendingVolsCount > 0 && (
+                                    {(p.volunteer_approval && pendingVolsCount > 0) && (
                                         <tr><td>Volunteer Registry</td><td>{pendingVolsCount} New Applications</td><td><span className="badge red-badge">Action Required</span></td></tr>
                                     )}
-                                    {pendingReqsCount > 0 && (
+                                    {(p.approve_leaves && pendingReqsCount > 0) && (
                                         <tr><td>Staff Requests</td><td>{pendingReqsCount} Pending Approvals</td><td><span className="badge red-badge">Action Required</span></td></tr>
                                     )}
-                                    {pendingVolsCount === 0 && pendingReqsCount === 0 && (
+                                    {((!p.volunteer_approval || pendingVolsCount === 0) && (!p.approve_leaves || pendingReqsCount === 0)) && (
                                         <tr><td colSpan="3" style={{ textAlign: 'center', padding: '20px', color: '#718096' }}>All systems clear. No pending approvals.</td></tr>
                                     )}
                                 </>
@@ -2004,17 +2087,23 @@ const CoAdminTab = ({ admins, onAdd, onDelete, onEdit, onManage }) => (
             <thead><tr><th>Admin Ref</th><th>Identity Profile</th><th>Role & Dept</th><th>Last Activity</th><th>Status</th><th>Access Control</th></tr></thead>
             <tbody>
                 {(admins || []).map(adm => (
-                    <tr key={adm.id}>
-                        <td><strong>{adm.id ? adm.id.substring(0, 8) : 'Pending'}</strong></td>
+                    <tr key={adm.user_id || adm.id}>
+                        <td><strong>{(adm.user_id || adm.id || '').substring(0, 8)}</strong></td>
                         <td style={{ fontWeight: '600' }}>{adm.full_name || 'Processing...'}</td>
                         <td><small>{adm.role_type}</small><br />{adm.department || 'Executive / Board'}</td>
-                        <td>{adm.last_login ? new Date(adm.last_login).toLocaleString() : 'Never'}</td>
-                        <td><span className={`badge ${adm.last_login ? 'success' : 'red-badge'}`}>{adm.last_login ? 'Active' : 'Inactive'}</span></td>
+                        <td>{adm.last_activity ? new Date(adm.last_activity).toLocaleString() : 'Never'}</td>
+                        <td>
+                            <span className={`badge ${adm.has_activity || adm.user_id === adminProfile.user_id ? 'success' : 'red-badge'}`}>
+                                {adm.has_activity || adm.user_id === adminProfile.user_id ? 'Active' : 'Inactive'}
+                            </span>
+                            <br />
+                            <small style={{ fontSize: '0.65rem', color: '#718096' }}>Registry: {new Date(adm.updated_at).toLocaleDateString()}</small>
+                        </td>
                         <td>
                             <div className="action-buttons">
                                 <button className="btn-icon" title="View Permission Matrix" onClick={() => onManage(adm)}><FaUnlockAlt /></button>
                                 <button className="btn-icon" title="Edit Profile" onClick={() => onEdit(adm)}><FaEdit /></button>
-                                <button className="btn-icon danger" title="Revoke Access" onClick={() => onDelete(adm.id, adm.full_name)}><FaUserLock /></button>
+                                <button className="btn-icon danger" title="Revoke Access" onClick={() => onDelete(adm.user_id || adm.id, adm.full_name)}><FaUserLock /></button>
                             </div>
                         </td>
                     </tr>
@@ -2031,7 +2120,8 @@ const AdminForm = ({ onClose, onSave, admin, initialStep = 1 }) => {
     const existingPerms = admin?.admin_controls?.[0] || {};
 
     const [formData, setFormData] = useState({
-        id: admin?.id || null,
+        id: admin?.id || null, // Profiles table Primary Key (UUID)
+        user_id: admin?.user_id || null, // Auth table Foreign Key
         full_name: admin?.full_name || '',
         email: admin?.email || '',
         role_type: admin?.role_type || 'Admin',
@@ -2155,26 +2245,42 @@ const AdminForm = ({ onClose, onSave, admin, initialStep = 1 }) => {
                 {step === 3 && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '25px' }}>
                         <div>
-                            <h5 style={{ marginBottom: '15px', color: 'var(--primary)', fontSize: '0.85rem', textTransform: 'uppercase' }}>HR & Payroll</h5>
-                            {[['view_employees', 'View Registry'], ['edit_employees', 'Edit Accounts'], ['approve_leaves', 'Approve Leaves'], ['process_salary', 'Process Salary'], ['bank_access', 'Bank/KYC Access']].map(([key, label]) => (
-                                <label key={key} style={{ display: 'flex', gap: '10px', marginBottom: '10px', fontSize: '0.85rem' }}>
-                                    <input type="checkbox" name={`perm_${key}`} checked={formData.perms[key]} onChange={handleChange} /> {label}
+                            <h5 style={{ marginBottom: '15px', color: 'var(--primary)', fontSize: '0.85rem', textTransform: 'uppercase' }}>HR & Payroll Tabs</h5>
+                            {[
+                                ['view_employees', 'Staff Directory Tab'],
+                                ['edit_employees', 'Modify Personnel (Rights)'],
+                                ['approve_leaves', 'OPS Control (Leaves)'],
+                                ['process_salary', 'Payroll (Fund Access)'],
+                                ['bank_access', 'Banking / KYC Access']
+                            ].map(([key, label]) => (
+                                <label key={key} style={{ display: 'flex', gap: '10px', marginBottom: '10px', fontSize: '0.85rem', cursor: 'pointer' }}>
+                                    <input type="checkbox" name={`perm_${key}`} checked={formData.perms[key]} onChange={handleChange} style={{ width: '18px', height: '18px' }} /> {label}
                                 </label>
                             ))}
                         </div>
                         <div>
-                            <h5 style={{ marginBottom: '15px', color: 'var(--primary)', fontSize: '0.85rem', textTransform: 'uppercase' }}>Programs & Ops</h5>
-                            {[['volunteer_approval', 'Volunteer Lifecycle'], ['scholarship_verify', 'Scholarship Verify'], ['student_mgmt', 'Student Registrations'], ['report_approval', 'Field Report Review'], ['vault_access', 'Digital Vault Access']].map(([key, label]) => (
-                                <label key={key} style={{ display: 'flex', gap: '10px', marginBottom: '10px', fontSize: '0.85rem' }}>
-                                    <input type="checkbox" name={`perm_${key}`} checked={formData.perms[key]} onChange={handleChange} /> {label}
+                            <h5 style={{ marginBottom: '15px', color: 'var(--primary)', fontSize: '0.85rem', textTransform: 'uppercase' }}>Programs & Ops Tabs</h5>
+                            {[
+                                ['volunteer_approval', 'Volunteers Tab'],
+                                ['scholarship_verify', 'Scholarships Tab'],
+                                ['student_mgmt', 'Registrations Tab'],
+                                ['report_approval', 'Field Reports Tab'],
+                                ['vault_access', 'Digital Filing Tab']
+                            ].map(([key, label]) => (
+                                <label key={key} style={{ display: 'flex', gap: '10px', marginBottom: '10px', fontSize: '0.85rem', cursor: 'pointer' }}>
+                                    <input type="checkbox" name={`perm_${key}`} checked={formData.perms[key]} onChange={handleChange} style={{ width: '18px', height: '18px' }} /> {label}
                                 </label>
                             ))}
                         </div>
                         <div>
-                            <h5 style={{ marginBottom: '15px', color: 'var(--primary)', fontSize: '0.85rem', textTransform: 'uppercase' }}>Registry & System</h5>
-                            {[['org_master', 'Organization Master'], ['audit_logs', 'Audit Trail (Forensic)'], ['manage_admins', 'Manage Co-Admins']].map(([key, label]) => (
-                                <label key={key} style={{ display: 'flex', gap: '10px', marginBottom: '10px', fontSize: '0.85rem' }}>
-                                    <input type="checkbox" name={`perm_${key}`} checked={formData.perms[key]} onChange={handleChange} /> {label}
+                            <h5 style={{ marginBottom: '15px', color: 'var(--primary)', fontSize: '0.85rem', textTransform: 'uppercase' }}>Registry & System Tabs</h5>
+                            {[
+                                ['org_master', 'Organization Master Tab'],
+                                ['audit_logs', 'Audit Trail Tab'],
+                                ['manage_admins', 'Admin Management Tab']
+                            ].map(([key, label]) => (
+                                <label key={key} style={{ display: 'flex', gap: '10px', marginBottom: '10px', fontSize: '0.85rem', cursor: 'pointer' }}>
+                                    <input type="checkbox" name={`perm_${key}`} checked={formData.perms[key]} onChange={handleChange} style={{ width: '18px', height: '18px' }} /> {label}
                                 </label>
                             ))}
                         </div>

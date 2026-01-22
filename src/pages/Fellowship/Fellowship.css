@@ -1550,3 +1550,27 @@ body.modal-open {
     color: var(--f-primary);
     padding-left: 25px;
 }
+
+/* Form Support Notice */
+.form-support-notice {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px;
+    background: #f0f7ff;
+    border-radius: 8px;
+    margin: 10px 0 20px;
+    font-size: 0.85rem;
+    color: var(--f-primary);
+    border: 1px dashed var(--f-primary);
+}
+
+.support-mini-icon {
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.form-support-notice strong {
+    font-weight: 800;
+}

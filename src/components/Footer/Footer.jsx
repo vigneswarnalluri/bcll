@@ -54,13 +54,17 @@ const Footer = () => {
                         <div className="contact-item">
                             <FaPhone className="contact-icon" />
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                                <a href="https://wa.me/917382321315" target="_blank" rel="noopener noreferrer" className="footer-phone-link">+91 73823 21315</a>
-                                <a href="https://wa.me/918632321315" target="_blank" rel="noopener noreferrer" className="footer-phone-link">+91 86323 21315</a>
+                                <a href="https://wa.me/917382321315?text=Hello!%20I%20would%20like%20to%20know%20more%20about%20Bharath%20Cares." target="_blank" rel="noopener noreferrer" className="footer-phone-link">+91 73823 21315</a>
+                                <a href="https://wa.me/918632321315?text=Hello!%20I%20would%20like%20to%20know%20more%20about%20Bharath%20Cares." target="_blank" rel="noopener noreferrer" className="footer-phone-link">+91 86323 21315</a>
+                                <a href="https://wa.me/919490991752?text=Hello!%20I%20would%20like%20to%20know%20more%20about%20the%20Fellowship%20Program." target="_blank" rel="noopener noreferrer" className="footer-phone-link">+91 94909 91752 (Fellowship)</a>
                             </div>
                         </div>
                         <div className="contact-item">
                             <FaEnvelope className="contact-icon" />
-                            <a href="mailto:info@bharathcaresindia.org" style={{ color: 'inherit', textDecoration: 'none' }}>info@bharathcaresindia.org</a>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                <a href="mailto:info@bharathcaresindia.org" style={{ color: 'inherit', textDecoration: 'none' }}>info@bharathcaresindia.org</a>
+                                <a href="mailto:fellowship@bharathcaresindia.org" style={{ color: 'inherit', textDecoration: 'none' }}>fellowship@bharathcaresindia.org</a>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -63,8 +63,9 @@ const Contact = () => {
                             <div className="icon-box"><FaPhone /></div>
                             <div className="info">
                                 <h3>Phone Numbers</h3>
-                                <p>+91 73823 21315</p>
-                                <p>+91 86323 21315</p>
+                                <p><a href="https://wa.me/917382321315?text=Hello!%20I%20would%20like%20to%20know%20more%20about%20Bharath%20Cares." target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>+91 73823 21315</a></p>
+                                <p><a href="https://wa.me/918632321315?text=Hello!%20I%20would%20like%20to%20know%20more%20about%20Bharath%20Cares." target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>+91 86323 21315</a></p>
+                                <p><strong>Fellowship Helpline:</strong> <a href="https://wa.me/919490991752?text=Hello!%20I%20would%20like%20to%20know%20more%20about%20the%20Fellowship%20Program." target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>+91 94909 91752</a></p>
                             </div>
                         </div>
 
@@ -73,6 +74,7 @@ const Contact = () => {
                             <div className="info">
                                 <h3>Email Address</h3>
                                 <p><a href="mailto:info@bharathcaresindia.org" style={{ color: 'inherit', textDecoration: 'none' }}>info@bharathcaresindia.org</a></p>
+                                <p><a href="mailto:fellowship@bharathcaresindia.org" style={{ color: 'inherit', textDecoration: 'none' }}>fellowship@bharathcaresindia.org</a> (Fellowship Inquiries)</p>
                                 <p><a href="mailto:volunteer@bharathcaresindia.org" style={{ color: 'inherit', textDecoration: 'none' }}>volunteer@bharathcaresindia.org</a></p>
                             </div>
                         </div>

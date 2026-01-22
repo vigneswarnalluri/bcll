@@ -33,6 +33,12 @@ const Login = () => {
 
             if (profileError) throw profileError;
 
+            if (!profile) {
+                setError("Account activated but Profile not found. Please contact the administrator.");
+                setLoading(false);
+                return;
+            }
+
             // Secure Redirect based on verified DB role (including new specialized roles)
             const adminRoles = ['Super Admin', 'Admin', 'Co-Admin', 'HR Manager', 'Finance Officer', 'Field Super'];
             if (adminRoles.includes(profile.role_type)) {
@@ -42,15 +48,8 @@ const Login = () => {
             }
 
         } catch (error) {
-            // Filter out the generic PostgREST schema error to prevent it from blocking the UI
-            const msg = error.message || '';
-            if (msg.toLowerCase().includes('querying schema') || msg.toLowerCase().includes('internal server error')) {
-                console.warn('Backend is refreshing, retrying...');
-                // If it's the 500 error, we show a friendlier message
-                setError("System is synchronizing. Please wait 2 seconds and try again.");
-            } else {
-                setError(msg || 'Authentication Failed');
-            }
+            console.error('Login error detail:', error);
+            setError(error.message || 'Authentication Failed');
         } finally {
             setLoading(false);
         }

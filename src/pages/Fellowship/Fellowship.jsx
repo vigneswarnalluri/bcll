@@ -14,6 +14,8 @@ import {
     HiOutlinePresentationChartLine,
     HiOutlineChatAlt2,
     HiOutlineBadgeCheck,
+    HiOutlinePhone,
+    HiOutlineMail,
     HiX
 } from 'react-icons/hi';
 import './Fellowship.css';
@@ -548,6 +550,30 @@ const Fellowship = () => {
                 </div>
             </section>
 
+            {/* Fellowship Helpline */}
+            <section className="f-section f-bg-light">
+                <div className="f-container">
+                    <div className="f-section-header center">
+                        <span className="f-section-tag">Support</span>
+                        <h2 className="f-section-title">Fellowship Helpline & Inquiries</h2>
+                        <p style={{ color: 'var(--f-text-muted)' }}>Have questions about the fellowship? Our dedicated team is here to help you.</p>
+                        <div className="f-title-divider"></div>
+                    </div>
+                    <div className="institutional-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', justifyContent: 'center' }}>
+                        <div className="institutional-card" style={{ textAlign: 'center' }}>
+                            <div className="inst-icon"><HiOutlinePhone /></div>
+                            <h4 style={{ fontWeight: 800 }}>Call / WhatsApp</h4>
+                            <p><a href="https://wa.me/919490991752?text=Hello!%20I%20have%20an%20inquiry%20regarding%20the%20Fellowship%20Program." target="_blank" rel="noopener noreferrer" style={{ color: 'var(--f-primary)', textDecoration: 'none', fontSize: '1.25rem', fontWeight: 700 }}>+91 94909 91752</a></p>
+                        </div>
+                        <div className="institutional-card" style={{ textAlign: 'center' }}>
+                            <div className="inst-icon"><HiOutlineMail /></div>
+                            <h4 style={{ fontWeight: 800 }}>Email Us</h4>
+                            <p><a href="mailto:fellowship@bharathcaresindia.org" style={{ color: 'var(--f-primary)', textDecoration: 'none', fontSize: '1.1rem', fontWeight: 600 }}>fellowship@bharathcaresindia.org</a></p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             {/* Modal */}
             {isModalOpen && (
                 <div className="modal-overlay" onClick={() => {
@@ -773,6 +799,11 @@ const Fellowship = () => {
                                         </div>
                                     </div>
                                 )}
+
+                                <div className="form-support-notice">
+                                    <HiOutlinePhone className="support-mini-icon" />
+                                    <span>Fellowship Helpline: <strong>+91 94909 91752</strong> (Call/WhatsApp)</span>
+                                </div>
 
                                 <div className="form-footer-compact">
                                     {formStep > 1 && (

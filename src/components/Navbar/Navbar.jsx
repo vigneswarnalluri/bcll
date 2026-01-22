@@ -74,7 +74,7 @@ const Navbar = () => {
       <div className={`top-bar ${scrolled ? 'hidden' : ''}`}>
         <div className="container top-bar-content">
           <div className="top-info">
-            <a href="https://wa.me/917382321315" target="_blank" rel="noopener noreferrer" className="top-phone-link">
+            <a href="https://wa.me/917382321315?text=Hello!%20I%20would%20like%20to%20know%20more%20about%20Bharath%20Cares." target="_blank" rel="noopener noreferrer" className="top-phone-link">
               <FaPhone /> +91 73823 21315
             </a>
             <a href="mailto:info@bharathcaresindia.org" style={{ marginLeft: '25px', color: 'inherit', textDecoration: 'none' }}><FaEnvelope /> info@bharathcaresindia.org</a>
@@ -126,7 +126,7 @@ const Navbar = () => {
 
             <li className="mobile-menu-footer" style={{ "--index": navLinks.length + 1 }}>
               <div className="mobile-contact">
-                <p><FaPhone /> +91 73823 21315</p>
+                <p><FaPhone /> <a href="https://wa.me/917382321315?text=Hello!%20I%20would%20like%20to%20know%20more%20about%20Bharath%20Cares." target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>+91 73823 21315</a></p>
                 <p><FaEnvelope /> <a href="mailto:info@bharathcaresindia.org" style={{ color: 'inherit', textDecoration: 'none' }}>info@bharathcaresindia.org</a></p>
               </div>
               <div className="mobile-socials">
