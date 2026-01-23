@@ -550,12 +550,63 @@
 
 .founder-text p {
     font-style: normal;
-    /* Remove italic */
     font-size: 1.1rem;
     color: #555;
     line-height: 1.8;
     border-left: 3px solid var(--secondary);
     padding-left: 20px;
+}
+
+.specialization {
+    display: block;
+    font-size: 0.95rem;
+    color: #666;
+    margin-top: -10px;
+    margin-bottom: 25px;
+    font-weight: 500;
+}
+
+.bio-content {
+    border-left: 3px solid var(--secondary);
+    padding-left: 20px;
+    margin-top: 20px;
+}
+
+.bio-content p {
+    border-left: none;
+    padding-left: 0;
+    margin-bottom: 15px;
+    font-size: 1rem;
+    line-height: 1.7;
+    color: #444;
+}
+
+.bio-content ul {
+    list-style: none;
+    padding: 0;
+    margin: 15px 0;
+}
+
+.bio-content ul li {
+    font-size: 0.95rem;
+    color: #555;
+    margin-bottom: 8px;
+    padding-left: 20px;
+    position: relative;
+}
+
+.bio-content ul li::before {
+    content: "●";
+    color: var(--secondary);
+    position: absolute;
+    left: 0;
+    font-size: 0.8rem;
+}
+
+.closing-statement {
+    font-weight: 600;
+    color: var(--primary-dark) !important;
+    margin-top: 20px;
 }
 
 /* 8. Legal */

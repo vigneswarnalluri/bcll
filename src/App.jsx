@@ -16,13 +16,16 @@ import AdminDashboard from './pages/AdminDashboard/AdminDashboard';
 import EmployeeDashboard from './pages/EmployeeDashboard/EmployeeDashboard';
 import ProgramDetail from './pages/ProgramDetail/ProgramDetail';
 
+import FellowDashboard from './pages/Fellowship/FellowDashboard';
+import VolunteerDashboard from './pages/Volunteer/VolunteerDashboard';
+
 import ScrollToTop from './components/ScrollToTop/ScrollToTop';
 import ScrollToTopButton from './components/ScrollToTop/ScrollToTopButton';
 
 const Layout = ({ children }) => {
   const location = useLocation();
   // Hide Navbar/Footer for dashboard and login routes
-  const hideNavFooter = ['/login', '/admin-dashboard', '/employee-dashboard'].includes(location.pathname);
+  const hideNavFooter = ['/login', '/admin-dashboard', '/employee-dashboard', '/fellow-dashboard', '/volunteer-dashboard'].includes(location.pathname);
 
   return (
     <>
@@ -58,6 +61,8 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/admin-dashboard" element={<AdminDashboard />} />
             <Route path="/employee-dashboard" element={<EmployeeDashboard />} />
+            <Route path="/fellow-dashboard" element={<FellowDashboard />} />
+            <Route path="/volunteer-dashboard" element={<VolunteerDashboard />} />
           </Routes>
         </Layout>
       </div>

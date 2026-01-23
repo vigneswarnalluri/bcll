@@ -7,7 +7,8 @@ import {
     FaIdCard, FaUniversity, FaBriefcase, FaUserLock, FaExclamationTriangle, FaHeartbeat, FaFileSignature,
     FaMapMarkerAlt, FaPhone, FaUserCheck, FaBalanceScale, FaHistory, FaShieldAlt, FaDesktop, FaUnlockAlt,
     FaDownload, FaUserTie, FaFileContract, FaHandshake, FaRegIdCard, FaEnvelope,
-    FaBuilding, FaGavel, FaUserTimes, FaClock, FaFingerprint, FaSearch
+    FaBuilding, FaGavel, FaUserTimes, FaClock, FaFingerprint, FaSearch,
+    FaBalanceScaleLeft, FaCalendarAlt, FaHistory as FaAuditIcon, FaCheckDouble, FaSignature
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { PROGRAM_TRACKS, COLLEGES } from '../../data/fellowshipOptions';
@@ -33,6 +34,10 @@ const AdminDashboard = () => {
     const [efiles, setEfiles] = useState([]);
     const [orgMaster, setOrgMaster] = useState(null);
     const [matchingActions, setMatchingActions] = useState([]);
+    const [policies, setPolicies] = useState([]);
+    const [boardMembers, setBoardMembers] = useState([]);
+    const [boardMeetings, setBoardMeetings] = useState([]);
+    const [approvalRequests, setApprovalRequests] = useState([]);
 
     const [isQuickActionOpen, setIsQuickActionOpen] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -65,6 +70,8 @@ const AdminDashboard = () => {
         { label: 'Create Folder', id: 'create-folder', keywords: 'folder, new, category, storage, organization', icon: <FaFolderOpen />, action: () => { setModalType('create-folder'); setIsModalOpen(true); } },
         { label: 'Post Field Report', id: 'report', keywords: 'report, new, field, activity, update, post', icon: <FaFileAlt />, action: () => { setModalType('report'); setIsModalOpen(true); } },
         { label: 'Security Logout', id: 'logout', keywords: 'logout, signout, exit, leave, session', icon: <FaSignOutAlt />, action: () => { navigate('/login'); } },
+        { label: 'Create Governance Policy', id: 'policy', keywords: 'policy, governance, rule, SOP, internal', icon: <FaGavel />, action: () => { setModalType('policy'); setIsModalOpen(true); } },
+        { label: 'Schedule Board Meeting', id: 'board-meeting', keywords: 'board, meeting, agenda, resolution', icon: <FaCalendarAlt />, action: () => { setModalType('board-meeting'); setIsModalOpen(true); } },
     ];
 
     useEffect(() => {
@@ -149,6 +156,18 @@ const AdminDashboard = () => {
                 case 'org-master':
                     const { data: orgData } = await supabase.from('org_master').select('*').maybeSingle();
                     if (orgData) setOrgMaster(orgData);
+                    break;
+                case 'governance':
+                    const [pol, bm, bmt, apr] = await Promise.all([
+                        supabase.from('policies').select('*').order('created_at', { ascending: false }),
+                        supabase.from('board_members').select('*').order('full_name'),
+                        supabase.from('board_meetings').select('*').order('meeting_date', { ascending: false }),
+                        supabase.from('approval_requests').select('*, profiles!initiated_by(full_name)').order('created_at', { ascending: false })
+                    ]);
+                    if (pol.data) setPolicies(pol.data);
+                    if (bm.data) setBoardMembers(bm.data);
+                    if (bmt.data) setBoardMeetings(bmt.data);
+                    if (apr.data) setApprovalRequests(apr.data);
                     break;
                 case 'approvals':
                     let leaveReq = supabase.from('leave_requests').select('*, employees(full_name, designation)').order('created_at', { ascending: false });
@@ -329,7 +348,8 @@ const AdminDashboard = () => {
                             vault_access: controls.perm_vault_access,
                             audit_logs: controls.perm_audit_logs,
                             org_master: controls.perm_org_master,
-                            fin_reports_auth: controls.fin_reports_auth
+                            fin_reports_auth: controls.fin_reports_auth,
+                            perm_governance: controls.perm_governance ?? (controls.authority_level === 'L1')
                         }
                     });
 
@@ -366,6 +386,9 @@ const AdminDashboard = () => {
             // Fetch e-Files
             const { data: ef } = await supabase.from('efiles').select('*').order('file_number');
             if (ef) setEfiles(ef);
+
+            // Fetch Governance Core if tab active or super admin
+            fetchTabData('governance');
         } catch (error) {
             console.error('Core Refresh Failed:', error);
         } finally {
@@ -397,14 +420,16 @@ const AdminDashboard = () => {
 
 
     // --- HELPERS ---
-    const logActivity = async (action, type = 'System') => {
+    const logActivity = async (action, type = 'System', oldValue = null, newValue = null) => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             await supabase.from('audit_logs').insert([{
                 actor_id: user?.id,
                 action,
                 sub_system: type,
-                ip_address: 'Logged Session'
+                ip_address: 'Logged Session',
+                old_value: oldValue,
+                new_value: newValue
             }]);
             fetchDashboardData(); // Refresh UI
         } catch (e) { console.error('Logging failed', e); }
@@ -441,26 +466,38 @@ const AdminDashboard = () => {
     };
 
     // --- HANDLERS ---
-    const handleAction = async (type, id, action) => {
+    const handleAction = async (type, id, action, reason = '') => {
         let table = '';
         let updateData = {};
 
         // STANDARD APPROVAL FLOWS
         if (type === 'volunteer') {
             table = 'volunteers';
-            updateData = { status: action === 'approve' ? 'Approved' : 'Rejected' };
+            updateData = {
+                status: action === 'approve' ? 'Approved' : 'Rejected',
+                decline_reason: action === 'reject' ? reason : null
+            };
             setVolunteers(prev => prev.map(v => v.id === id ? { ...v, status: updateData.status } : v));
         } else if (type === 'scholarship') {
             table = 'scholarships';
-            updateData = { status: action === 'approve' ? 'Approved' : 'Rejected' };
+            updateData = {
+                status: action === 'approve' ? 'Approved' : 'Rejected',
+                decline_reason: action === 'reject' ? reason : null
+            };
             setScholarships(prev => prev.map(s => s.id === id ? { ...s, status: updateData.status } : s));
         } else if (type === 'student') {
             table = 'students';
-            updateData = { status: action === 'approve' ? 'Approved' : 'Rejected' };
+            updateData = {
+                status: action === 'approve' ? 'Approved' : 'Rejected',
+                decline_reason: action === 'reject' ? reason : null
+            };
             setStudents(prev => prev.map(s => s.id === id ? { ...s, status: updateData.status } : s));
         } else if (type === 'request') { // Leave Request
             table = 'leave_requests';
-            updateData = { status: action === 'approve' ? 'Approved' : 'Rejected' };
+            updateData = {
+                status: action === 'approve' ? 'Approved' : 'Rejected',
+                decline_reason: action === 'reject' ? reason : null
+            };
             setRequests(prev => prev.map(r => r.id === id ? { ...r, status: updateData.status } : r));
         }
 
@@ -485,6 +522,64 @@ const AdminDashboard = () => {
                 alert('Database update failed. Check console.');
             }
         }
+    };
+
+    const handleApprovalRequest = async (id, action, remarks = '') => {
+        const req = approvalRequests.find(r => r.id === id);
+        if (!req) return;
+
+        const authLevel = adminProfile.authority_level; // L1, L2, L3, L4
+        const { data: { user } } = await supabase.auth.getUser();
+        let updateData = {};
+
+        // Level 1 Approval (Operational) - Typically L3 or L2
+        if (req.level_1_status === 'Pending') {
+            if (authLevel === 'L4') {
+                alert('You do not have Level 1 approval authority.');
+                return;
+            }
+            updateData = {
+                level_1_status: action === 'approve' ? 'Approved' : 'Declined',
+                level_1_approver: user.id
+            };
+        }
+        // Final Approval (Command) - Typically L1 or L2
+        else if (req.final_status === 'Pending' && req.level_1_status === 'Approved') {
+            if (authLevel !== 'L1' && authLevel !== 'L2') {
+                alert('Only Command level admins (L1/L2) can perform Final Approval.');
+                return;
+            }
+            updateData = {
+                final_status: action === 'approve' ? 'Approved' : 'Declined',
+                final_approver: user.id,
+                decline_reason: remarks
+            };
+        }
+
+        const { error } = await supabase.from('approval_requests').update(updateData).eq('id', id);
+        if (!error) {
+            logActivity(`Approval Request ${id} ${action}ed (${authLevel})`, 'Operations');
+
+            // If fully approved, trigger the actual action in the target table
+            if (action === 'approve' && updateData.final_status === 'Approved') {
+                await synchronizeApprovalAction(req);
+            }
+
+            fetchTabData('governance');
+        } else {
+            alert('Approval action failed: ' + error.message);
+        }
+    };
+
+    const synchronizeApprovalAction = async (req) => {
+        // Logic to sync with students/volunteers/finance tables based on type
+        const { type, requester_id, details } = req;
+        if (type === 'Student Registration') {
+            await supabase.from('students').update({ status: 'Approved' }).eq('id', requester_id);
+        } else if (type === 'Volunteer Registration') {
+            await supabase.from('volunteers').update({ status: 'Approved' }).eq('id', requester_id);
+        }
+        // Add more sync logic as needed
     };
 
     const toggleEmployeeStatus = async (emp) => {
@@ -581,6 +676,36 @@ const AdminDashboard = () => {
         }
     };
 
+    const deletePolicy = async (id, title) => {
+        if (window.confirm(`Delete policy: ${title}?`)) {
+            const { error } = await supabase.from('policies').delete().eq('id', id);
+            if (!error) {
+                logActivity(`Deleted Policy: ${title}`, 'Governance');
+                fetchTabData('governance');
+            }
+        }
+    };
+
+    const deleteBoardMember = async (id, name) => {
+        if (window.confirm(`Remove board member: ${name}?`)) {
+            const { error } = await supabase.from('board_members').delete().eq('id', id);
+            if (!error) {
+                logActivity(`Removed Board Member: ${name}`, 'Governance');
+                fetchTabData('governance');
+            }
+        }
+    };
+
+    const deleteBoardMeeting = async (id, date) => {
+        if (window.confirm(`Cancel board meeting scheduled for: ${date}?`)) {
+            const { error } = await supabase.from('board_meetings').delete().eq('id', id);
+            if (!error) {
+                logActivity(`Cancelled Board Meeting: ${date}`, 'Governance');
+                fetchTabData('governance');
+            }
+        }
+    };
+
     const menuItems = [
         { id: 'overview', icon: <FaChartLine />, label: 'Overview' },
         { id: 'admin-profile', icon: <FaShieldAlt />, label: 'My Admin Profile' },
@@ -593,7 +718,8 @@ const AdminDashboard = () => {
         { id: 'reports', icon: <FaFileAlt />, label: 'Field Reports' },
         { id: 'e-office', icon: <FaFolderOpen />, label: 'Digital Filing' },
         { id: 'activity-logs', icon: <FaHistory />, label: 'Audit Trail' },
-        { id: 'approvals', icon: <FaCheckCircle />, label: 'OPS Control' },
+        { id: 'approvals', icon: <FaCheckDouble />, label: 'Approval Registry' },
+        { id: 'governance', icon: <FaBalanceScaleLeft />, label: 'Internal Governance' },
         { id: 'org-master', icon: <FaBuilding />, label: 'Organization Master' },
     ];
 
@@ -638,7 +764,7 @@ const AdminDashboard = () => {
                     />
                 );
             case 'approvals':
-                return <ApprovalsTab requests={requests} handleAction={handleAction} />;
+                return <ApprovalsTab requests={approvalRequests} handleAction={handleApprovalRequest} />;
             case 'co-admins':
                 return (
                     <CoAdminTab
@@ -650,6 +776,19 @@ const AdminDashboard = () => {
                     />
                 );
             case 'org-master': return <OrgMasterTab org={orgMaster} refreshData={fetchDashboardData} />;
+            case 'governance': return <GovernanceTab
+                policies={policies}
+                boardMembers={boardMembers}
+                meetings={boardMeetings}
+                onAddPolicy={() => { setModalType('policy'); setIsModalOpen(true); }}
+                onAddMeeting={() => { setModalType('board-meeting'); setIsModalOpen(true); }}
+                onAddMember={() => { setModalType('board-member'); setIsModalOpen(true); }}
+                onDeletePolicy={deletePolicy}
+                onDeleteMember={deleteBoardMember}
+                onDeleteMeeting={deleteBoardMeeting}
+                refreshData={() => fetchTabData('governance')}
+            />;
+
             default:
                 return (
                     <OverviewTab
@@ -720,6 +859,7 @@ const AdminDashboard = () => {
                                 case 'e-office': return p.vault_access || adminProfile.role === 'Super Admin';
                                 case 'activity-logs': return p.audit_logs || adminProfile.role === 'Super Admin';
                                 case 'approvals': return p.approve_leaves || adminProfile.role === 'Super Admin';
+                                case 'governance': return p.perm_governance || adminProfile.role === 'Super Admin';
                                 case 'org-master': return p.org_master || adminProfile.role === 'Super Admin';
                                 default: return false;
                             }
@@ -1048,6 +1188,7 @@ const AdminDashboard = () => {
                                 admin={adminProfile}
                                 onClose={() => setIsModalOpen(false)}
                                 onSave={async (updatedProfile) => {
+                                    const { data: oldData } = await supabase.from('profiles').select('*').eq('id', adminProfile.id).single();
                                     const dbProfile = {
                                         full_name: updatedProfile.full_name,
                                         email: updatedProfile.email,
@@ -1065,11 +1206,50 @@ const AdminDashboard = () => {
                                         .eq('id', adminProfile.id);
 
                                     if (!error) {
-                                        logActivity('Updated personal admin profile details', 'Security');
+                                        logActivity('Updated personal admin profile details', 'Security', oldData, dbProfile);
                                         fetchDashboardData();
                                         setIsModalOpen(false);
                                     } else {
                                         alert('Update failed: ' + error.message);
+                                    }
+                                }}
+                            />
+                        )}
+                        {modalType === 'policy' && (
+                            <PolicyForm
+                                onClose={() => setIsModalOpen(false)}
+                                onSave={async (p) => {
+                                    const { error } = await supabase.from('policies').insert([p]);
+                                    if (!error) {
+                                        logActivity(`Created Policy: ${p.title}`, 'Governance');
+                                        fetchTabData('governance');
+                                        setIsModalOpen(false);
+                                    }
+                                }}
+                            />
+                        )}
+                        {modalType === 'board-meeting' && (
+                            <MeetingForm
+                                onClose={() => setIsModalOpen(false)}
+                                onSave={async (m) => {
+                                    const { error } = await supabase.from('board_meetings').insert([m]);
+                                    if (!error) {
+                                        logActivity(`Scheduled Board Meeting: ${m.meeting_date}`, 'Governance');
+                                        fetchTabData('governance');
+                                        setIsModalOpen(false);
+                                    }
+                                }}
+                            />
+                        )}
+                        {modalType === 'board-member' && (
+                            <MemberForm
+                                onClose={() => setIsModalOpen(false)}
+                                onSave={async (m) => {
+                                    const { error } = await supabase.from('board_members').insert([m]);
+                                    if (!error) {
+                                        logActivity(`Added Board Member: ${m.full_name}`, 'Governance');
+                                        fetchTabData('governance');
+                                        setIsModalOpen(false);
                                     }
                                 }}
                             />
@@ -1458,7 +1638,10 @@ const VolunteerTab = ({ volunteers, handleAction, onDelete, onView, onViewID, on
                                 {v.status === 'New' && (
                                     <>
                                         <button className="btn-small success-btn" onClick={() => handleAction('volunteer', v.id, 'approve')}>Approve</button>
-                                        <button className="btn-small danger-btn" onClick={() => handleAction('volunteer', v.id, 'reject')} style={{ marginLeft: '5px' }}>Reject</button>
+                                        <button className="btn-small danger-btn" onClick={() => {
+                                            const reason = prompt('Enter rejection reason for volunteer:');
+                                            if (reason) handleAction('volunteer', v.id, 'reject', reason);
+                                        }} style={{ marginLeft: '5px' }}>Reject</button>
                                     </>
                                 )}
                                 {v.status === 'Approved' && (
@@ -1581,7 +1764,10 @@ const StudentTab = ({ students, onView, onDelete, handleAction, onExport }) => {
                                         {(s.status === 'Pending' || s.status === 'Active') && (
                                             <>
                                                 <button className="btn-icon success" style={{ background: '#ecfdf5', color: '#059669' }} onClick={() => handleAction('student', s.id, 'approve')} title="Approve Student" aria-label={`Approve ${s.student_name}`}><FaCheckCircle /></button>
-                                                <button className="btn-icon danger" style={{ background: '#fef2f2', color: '#dc2626' }} onClick={() => handleAction('student', s.id, 'reject')} title="Reject Student" aria-label={`Reject ${s.student_name}`}><FaUserTimes /></button>
+                                                <button className="btn-icon danger" style={{ background: '#fef2f2', color: '#dc2626' }} onClick={() => {
+                                                    const reason = prompt(`Enter rejection reason for ${s.student_name}:`);
+                                                    if (reason) handleAction('student', s.id, 'reject', reason);
+                                                }} title="Reject Student" aria-label={`Reject ${s.student_name}`}><FaUserTimes /></button>
                                             </>
                                         )}
                                         <button className="btn-icon danger" onClick={() => onDelete(s.id, s.student_name)} title="Remove Record" aria-label={`Delete registration for ${s.student_name}`}><FaTrash /></button>
@@ -2054,21 +2240,41 @@ const ApprovalsTab = ({ requests, handleAction }) => (
     <div className="content-panel">
         <h3>Operational Desktop (Real-time Approvals)</h3>
         <table className="data-table">
-            <thead><tr><th>Req Type</th><th>From Staff</th><th>Context</th><th>Date</th><th>Decisive Action</th></tr></thead>
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Requester</th>
+                    <th>Details</th>
+                    <th>L1 Status</th>
+                    <th>Final Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
             <tbody>
                 {(requests || []).map(r => (
                     <tr key={r.id}>
                         <td><strong>{r.type}</strong></td>
-                        <td>{r.requester}</td>
-                        <td>{r.details}</td>
-                        <td>{r.date}</td>
+                        <td>{r.requester_name || 'System'}</td>
                         <td>
-                            {r.status === 'Pending' ? (
-                                <>
-                                    <button className="btn-small success-btn" onClick={() => handleAction('request', r.id, 'approve')}>Digitally Sign</button>
-                                    <button className="btn-small danger-btn" onClick={() => handleAction('request', r.id, 'reject')} style={{ marginLeft: '5px' }}>Decline</button>
-                                </>
-                            ) : <span className={`badge ${r.status === 'Approved' ? 'success' : 'red'}`}>{r.status}</span>}
+                            <div style={{ fontSize: '0.85rem' }}>
+                                {r.amount && <div><strong>Amount:</strong> ₹{r.amount}</div>}
+                                {r.details && Object.entries(r.details).map(([k, v]) => (
+                                    <div key={k}><strong>{k}:</strong> {String(v)}</div>
+                                ))}
+                            </div>
+                        </td>
+                        <td><span className={`badge ${r.level_1_status === 'Approved' ? 'success' : r.level_1_status === 'Pending' ? 'blue' : 'red'}`}>{r.level_1_status}</span></td>
+                        <td><span className={`badge ${r.final_status === 'Approved' ? 'success' : r.final_status === 'Pending' ? 'blue' : 'red'}`}>{r.final_status}</span></td>
+                        <td>
+                            {(r.level_1_status === 'Pending' || (r.level_1_status === 'Approved' && r.final_status === 'Pending')) ? (
+                                <div style={{ display: 'flex', gap: '5px' }}>
+                                    <button className="btn-small success-btn" onClick={() => handleAction(r.id, 'approve')}>Approve</button>
+                                    <button className="btn-small danger-btn" onClick={() => {
+                                        const reason = prompt('Enter reason for decline:');
+                                        if (reason) handleAction(r.id, 'decline', reason);
+                                    }}>Decline</button>
+                                </div>
+                            ) : <span style={{ color: '#718096', fontSize: '0.8rem' }}>Processed</span>}
                         </td>
                     </tr>
                 ))}
@@ -3099,6 +3305,162 @@ const StudentDetailsView = ({ student, onClose, onApprove, onReject }) => {
                         </div>
                     )}
                 </div>
+            </div>
+        </div>
+    );
+};
+
+const GovernanceTab = ({ policies, boardMembers, meetings, onAddPolicy, onAddMeeting, onAddMember, onDeletePolicy, onDeleteMember, onDeleteMeeting, refreshData }) => {
+    const [subTab, setSubTab] = useState('policies');
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', gap: '15px' }}>
+                <button
+                    className="btn-small"
+                    style={subTab === 'policies' ? { backgroundColor: 'var(--primary)', color: 'white' } : {}}
+                    onClick={() => setSubTab('policies')}
+                >
+                    Policies & SOPs
+                </button>
+                <button
+                    className="btn-small"
+                    style={subTab === 'board' ? { backgroundColor: 'var(--primary)', color: 'white' } : {}}
+                    onClick={() => setSubTab('board')}
+                >
+                    Board & Resolutions
+                </button>
+                <button
+                    className="btn-small"
+                    style={subTab === 'members' ? { backgroundColor: 'var(--primary)', color: 'white' } : {}}
+                    onClick={() => setSubTab('members')}
+                >
+                    Board Members
+                </button>
+            </div>
+
+            {subTab === 'policies' && (
+                <div className="content-panel">
+                    <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+                        <h3>Organization Policies</h3>
+                        <button className="btn-add" onClick={onAddPolicy}><FaPlus /> New Policy</button>
+                    </div>
+                    <table className="data-table">
+                        <thead><tr><th>Title</th><th>Version</th><th>Category</th><th>Status</th><th>Updated</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            {(policies || []).map(p => (
+                                <tr key={p.id}>
+                                    <td><strong>{p.title}</strong></td>
+                                    <td>{p.version}</td>
+                                    <td><span className="badge">{p.category}</span></td>
+                                    <td><span className={`badge ${p.status === 'Active' ? 'success' : 'warning'}`}>{p.status}</span></td>
+                                    <td>{new Date(p.updated_at).toLocaleDateString()}</td>
+                                    <td>
+                                        <button className="btn-icon danger" onClick={() => onDeletePolicy(p.id, p.title)}><FaTrash /></button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {subTab === 'board' && (
+                <div className="content-panel">
+                    <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+                        <h3>Board Meetings & Resolutions</h3>
+                        <button className="btn-add" onClick={onAddMeeting}><FaCalendarAlt /> Schedule Meeting</button>
+                    </div>
+                    <table className="data-table">
+                        <thead><tr><th>Meeting Date</th><th>Status</th><th>Agenda</th><th>Resolution</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            {(meetings || []).map(m => (
+                                <tr key={m.id}>
+                                    <td>{new Date(m.meeting_date).toLocaleString()}</td>
+                                    <td><span className={`badge ${m.status === 'Finalized' ? 'success' : 'blue'}`}>{m.status}</span></td>
+                                    <td>{m.agenda}</td>
+                                    <td>{m.resolution_text || 'Pending'}</td>
+                                    <td>
+                                        <button className="btn-icon danger" onClick={() => onDeleteMeeting(m.id, new Date(m.meeting_date).toLocaleString())}><FaTrash /></button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {subTab === 'members' && (
+                <div className="content-panel">
+                    <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+                        <h3>Board of Directors / Trustees</h3>
+                        <button className="btn-add" onClick={onAddMember}><FaPlus /> Add Member</button>
+                    </div>
+                    <table className="data-table">
+                        <thead><tr><th>Name</th><th>Designation</th><th>Organization</th><th>Term Start</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            {(boardMembers || []).map(m => (
+                                <tr key={m.id}>
+                                    <td><strong>{m.full_name}</strong></td>
+                                    <td>{m.designation}</td>
+                                    <td>{m.organization || 'BCLL Foundation'}</td>
+                                    <td>{m.term_start ? new Date(m.term_start).toLocaleDateString() : 'N/A'}</td>
+                                    <td>
+                                        <button className="btn-icon danger" onClick={() => onDeleteMember(m.id, m.full_name)}><FaTrash /></button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const PolicyForm = ({ onClose, onSave }) => {
+    const [p, setP] = useState({ title: '', version: '1.0', category: 'HR', content: '', status: 'Draft' });
+    return (
+        <div style={{ padding: '30px' }}>
+            <h3>Create Internal Policy / SOP</h3>
+            <div className="form-group"><label>Policy Title</label><input className="form-control" value={p.title} onChange={e => setP({ ...p, title: e.target.value })} /></div>
+            <div className="form-group"><label>Category</label><select className="form-control" value={p.category} onChange={e => setP({ ...p, category: e.target.value })}><option>HR</option><option>Salary</option><option>Fellowship</option><option>Finance</option></select></div>
+            <div className="form-group"><label>Content (Markdown)</label><textarea className="form-control" rows="5" value={p.content} onChange={e => setP({ ...p, content: e.target.value })} /></div>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                <button className="btn-small" onClick={onClose}>Cancel</button>
+                <button className="btn-add" onClick={() => onSave(p)}>Save Policy</button>
+            </div>
+        </div>
+    );
+};
+
+const MeetingForm = ({ onClose, onSave }) => {
+    const [m, setM] = useState({ meeting_date: '', agenda: '', status: 'Scheduled' });
+    return (
+        <div style={{ padding: '30px' }}>
+            <h3>Schedule Board Meeting</h3>
+            <div className="form-group"><label>Meeting Date</label><input type="datetime-local" className="form-control" value={m.meeting_date} onChange={e => setM({ ...m, meeting_date: e.target.value })} /></div>
+            <div className="form-group"><label>Initial Agenda</label><textarea className="form-control" value={m.agenda} onChange={e => setM({ ...m, agenda: e.target.value })} /></div>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                <button className="btn-small" onClick={onClose}>Cancel</button>
+                <button className="btn-add" onClick={() => onSave(m)}>Schedule</button>
+            </div>
+        </div>
+    );
+};
+
+const MemberForm = ({ onClose, onSave }) => {
+    const [m, setM] = useState({ full_name: '', designation: 'Trustee', organization: '', term_start: '' });
+    return (
+        <div style={{ padding: '30px' }}>
+            <h3>Add Board Member</h3>
+            <div className="form-group"><label>Full Name</label><input className="form-control" value={m.full_name} onChange={e => setM({ ...m, full_name: e.target.value })} /></div>
+            <div className="form-group"><label>Designation</label><input className="form-control" value={m.designation} onChange={e => setM({ ...m, designation: e.target.value })} /></div>
+            <div className="form-group"><label>Organization</label><input className="form-control" value={m.organization} onChange={e => setM({ ...m, organization: e.target.value })} /></div>
+            <div className="form-group"><label>Term Start Date</label><input type="date" className="form-control" value={m.term_start} onChange={e => setM({ ...m, term_start: e.target.value })} /></div>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                <button className="btn-small" onClick={onClose}>Cancel</button>
+                <button className="btn-add" onClick={() => onSave(m)}>Add Member</button>
             </div>
         </div>
     );

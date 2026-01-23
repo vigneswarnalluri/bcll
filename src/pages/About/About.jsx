@@ -1,6 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import './About.css';
+import vamsiImg from '../../assets/vamsi-reddy.jpg';
+import ajayImg from '../../assets/ajay-p.jpg';
+
+
 
 const About = () => {
     return (
@@ -134,26 +138,96 @@ const About = () => {
                     <div className="founders-grid">
                         <div className="founder-card">
                             <div className="founder-img">
-                                <img src="https://via.placeholder.com/150" alt="Mr. Akkala Vamsi Reddy" />
+                                <img src={vamsiImg} alt="Shri Vamsi Reddy Akkala" />
                             </div>
                             <div className="founder-text">
-                                <h3>Mr. Akkala Vamsi Reddy</h3>
+                                <h3>Shri Vamsi Reddy Akkala</h3>
                                 <span className="role">Founder & Director</span>
-                                <p>
-                                    "Begging is not a choice; it is the result of opportunity gaps. My vision is to restore dignity to every life we touch."
-                                </p>
+                                <span className="specialization">Community-Based Beggar Rehabilitation & Social Welfare Initiatives</span>
+                                <div className="bio-content">
+                                    <p>
+                                        Shri Vamsi Reddy Akkala is a committed social reformer and development professional, widely recognized
+                                        for his grassroots leadership in community-based beggar rehabilitation, poverty eradication, and
+                                        inclusive social welfare programs. He is the Founder and Director of Bharat Cares Life Line Foundation,
+                                        a registered non-profit organization dedicated to building a beggar-free, dignified, and self-reliant society.
+                                    </p>
+                                    <p>
+                                        With a strong vision rooted in social justice and human dignity, Shri Vamsi Reddy Akkala has pioneered
+                                        expense-efficient, sustainable, and impact-oriented rehabilitation models for marginalized and destitute
+                                        communities. His work focuses on identification, rescue, counselling, skill development, livelihood
+                                        generation, and long-term rehabilitation of persons involved in begging.
+                                    </p>
+                                    <p>
+                                        Under his leadership, the Foundation actively collaborates with government departments, local administrations,
+                                        police, urban bodies, NGOs, volunteers, and community stakeholders to implement structured rehabilitation
+                                        programs aligned with national and state welfare schemes. His approach emphasizes community participation,
+                                        transparency, accountability, and measurable social outcomes.
+                                    </p>
+                                    <p>
+                                        Shri Vamsi Reddy Akkala has been instrumental in designing and executing initiatives such as:
+                                    </p>
+                                    <ul>
+                                        <li>Beggar Identification & Rehabilitation Programs</li>
+                                        <li>Skill Training & MSME-based Livelihood Support</li>
+                                        <li>Shelter, Food, Health & Counselling Services</li>
+                                        <li>Scholarships for Orphans and Single-Parent Children</li>
+                                        <li>Volunteer Mobilization & Youth Leadership Programs</li>
+                                        <li>Digital Governance and NGO Management Systems</li>
+                                    </ul>
+                                    <p className="closing-statement">
+                                        Known for his ethical leadership, administrative clarity, and hands-on involvement, he strongly believes
+                                        that rehabilitation is not charity but empowerment. His mission is to transform vulnerable lives into
+                                        productive, independent, and respected members of society.
+                                    </p>
+                                    <p>
+                                        Shri Vamsi Reddy Akkala continues to work relentlessly toward building inclusive communities, strengthening
+                                        social protection systems, and contributing meaningfully to nation-building and social development.
+                                    </p>
+                                </div>
                             </div>
                         </div>
                         <div className="founder-card">
                             <div className="founder-img">
-                                <img src="https://via.placeholder.com/150" alt="Mr. Ajay P" />
+                                <img src={ajayImg} alt="Shri Ajay Puchakayala" />
                             </div>
                             <div className="founder-text">
-                                <h3>Mr. Ajay P</h3>
-                                <span className="role">Co-Founder & CEO</span>
-                                <p>
-                                    "Compassion needs structure. We are building sustainable systems that turn survival into success."
-                                </p>
+                                <h3>Shri Ajay Puchakayala</h3>
+                                <span className="role">Co-Founder & Chief Executive Officer (CEO)</span>
+                                <span className="specialization">Program Management, Design, Development & Government Liaison</span>
+                                <div className="bio-content">
+                                    <p>
+                                        Shri Ajay Puchakayala is the Co-Founder and Chief Executive Officer (CEO) of Bharat Cares Life Line Foundation,
+                                        playing a pivotal role in the strategic planning, design, development, funding, and execution of all foundation programs.
+                                        He is responsible for the overall management and coordination of operations, ensuring that each initiative
+                                        aligns with the Foundation’s mission and statutory objectives.
+                                    </p>
+                                    <p>
+                                        As the chief architect of program frameworks, Shri Ajay Puchakayala leads the design and development of social welfare,
+                                        rehabilitation, education, livelihood, and community development projects. He oversees funding strategies,
+                                        CSR partnerships, donor engagement, and resource mobilization, ensuring sustainable financial support for long-term impact.
+                                    </p>
+                                    <p>
+                                        Shri Ajay Puchakayala also manages government scheme integration and coordination, working closely with central and state
+                                        government departments, urban and rural local bodies, and statutory authorities. His expertise includes
+                                        aligning foundation initiatives with government programs and welfare schemes, enabling effective implementation and compliance.
+                                    </p>
+                                    <p>
+                                        In addition, he supervises the entire backend operations of the Foundation, including:
+                                    </p>
+                                    <ul>
+                                        <li>Program planning & execution</li>
+                                        <li>Funding, CSR & donor management</li>
+                                        <li>Government scheme convergence</li>
+                                        <li>Monitoring, evaluation & reporting</li>
+                                        <li>Systems, documentation & compliance</li>
+                                        <li>Inter-departmental coordination</li>
+                                    </ul>
+                                    <p className="closing-statement">
+                                        Known for his strategic insight, operational discipline, and results-driven leadership,
+                                        Shri Ajay Puchakayala ensures that the Foundation functions with efficiency, transparency, and accountability,
+                                        translating vision into measurable social outcomes.
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>

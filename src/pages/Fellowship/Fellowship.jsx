@@ -216,7 +216,7 @@ const Fellowship = () => {
 
         try {
             const finalDob = `${formData.dobDay} ${formData.dobMonth}, ${formData.dobYear}`;
-            const { error } = await supabase.from('students').insert([{
+            const { data: newS, error } = await supabase.from('students').insert([{
                 student_name: formData.student_name,
                 aadhaar_no: formData.aadhaar_no,
                 email: formData.email,
@@ -232,9 +232,22 @@ const Fellowship = () => {
                 ifsc_code: formData.ifsc_code,
                 utr_number: formData.utr_number,
                 status: 'Pending'
-            }]);
+            }]).select().single();
 
             if (error) throw error;
+
+            // Create entry in centralized approval registry
+            await supabase.from('approval_requests').insert([{
+                type: 'Student Registration',
+                requester_name: formData.student_name,
+                requester_id: newS.id,
+                amount: 500, // Registration Fee
+                details: {
+                    program: formData.program,
+                    college: formData.college_org,
+                    utr: formData.utr_number
+                }
+            }]);
 
             setIsModalOpen(false);
             setIsSubmitted(true);

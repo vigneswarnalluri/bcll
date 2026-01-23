@@ -31,7 +31,7 @@ const Volunteer = () => {
         e.preventDefault();
 
         try {
-            const { error } = await supabase.from('volunteers').insert([{
+            const { data: newV, error } = await supabase.from('volunteers').insert([{
                 full_name: formData.name,
                 email: formData.email,
                 phone: formData.mobile,
@@ -40,9 +40,22 @@ const Volunteer = () => {
                 address: formData.address,
                 area_of_interest: formData.interest,
                 status: 'New'
-            }]);
+            }]).select().single();
 
             if (error) throw error;
+
+            // Create entry in centralized approval registry
+            await supabase.from('approval_requests').insert([{
+                type: 'Volunteer Registration',
+                requester_name: formData.name,
+                requester_id: newV.id,
+                details: {
+                    interest: formData.interest,
+                    mobile: formData.mobile,
+                    email: formData.email
+                }
+            }]);
+
             setIsSubmitted(true);
         } catch (error) {
             console.error('Submission failed:', error);
