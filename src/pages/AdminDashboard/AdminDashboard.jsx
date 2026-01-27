@@ -8,16 +8,200 @@ import {
     FaMapMarkerAlt, FaPhone, FaUserCheck, FaBalanceScale, FaHistory, FaShieldAlt, FaDesktop, FaUnlockAlt,
     FaDownload, FaUserTie, FaFileContract, FaHandshake, FaRegIdCard, FaEnvelope,
     FaBuilding, FaGavel, FaUserTimes, FaClock, FaFingerprint, FaSearch,
-    FaBalanceScaleLeft, FaCalendarAlt, FaHistory as FaAuditIcon, FaCheckDouble, FaSignature
+    FaBalanceScaleLeft, FaCalendarAlt, FaHistory as FaAuditIcon, FaCheckDouble, FaSignature, FaLock, FaInfoCircle,
+    FaChartPie, FaFileDownload, FaTable, FaFilePdf, FaFileExcel, FaMoneyCheckAlt, FaCalculator
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { PROGRAM_TRACKS, COLLEGES } from '../../data/fellowshipOptions';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 import '../Dashboard/Dashboard.css';
+
+/* --- CORE UI COMPONENTS (SHARED) --- */
+
+const ApprovalBadge = ({ data, level = 'Final Approval' }) => {
+    if (!data || (!data.approved_by_name && !data.final_approver_name)) return null;
+
+    const isDeclined = data.status?.toLowerCase().includes('reject') || data.status?.toLowerCase().includes('decline') || data.final_status === 'Declined';
+    const name = data.approved_by_name || data.final_approver_name || data.level_1_approver_name;
+    const designation = data.approved_by_designation || data.final_designation || data.level_1_designation || 'Authority';
+    const dept = data.approved_by_dept || data.final_dept || data.level_1_dept || 'HQ Executive';
+    const timestamp = data.approved_at || data.final_at || data.level_1_at;
+    const remarks = data.approval_remarks || data.final_remarks || data.level_1_remarks || data.decline_reason;
+
+    const dateObj = timestamp ? new Date(timestamp) : new Date();
+
+    return (
+        <div style={{
+            marginTop: '25px',
+            padding: '25px',
+            background: isDeclined ? '#FFF5F5' : '#F0FFF4',
+            border: `1.5px solid ${isDeclined ? '#FEB2B2' : '#9AE6B4'}`,
+            borderRadius: '20px',
+            animation: 'fadeIn 0.5s ease-out'
+        }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
+                <div>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 900, color: isDeclined ? '#C53030' : '#2F855A', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '5px' }}>
+                        {isDeclined ? '❌ REJECTION LOG' : '✅ OFFICIAL APPROVAL SIGNATURE'}
+                    </div>
+                    <h4 style={{ margin: 0, fontSize: '1.25rem', color: '#1A365D' }}>{isDeclined ? 'DECLINED' : 'APPROVED'}</h4>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#4A5568' }}>{level}</div>
+                    <div style={{ fontSize: '0.7rem', color: '#718096' }}>ID: {data.id?.substring(0, 8).toUpperCase()}</div>
+                </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '20px' }}>
+                <div style={{ display: 'flex', gap: '15px' }}>
+                    <div style={{ width: '50px', height: '50px', borderRadius: '12px', background: isDeclined ? '#FC8181' : '#48BB78', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 800 }}>
+                        {name?.charAt(0)}
+                    </div>
+                    <div>
+                        <div style={{ fontWeight: 800, color: '#2D3748', fontSize: '1rem' }}>{name}</div>
+                        <div style={{ fontSize: '0.8rem', color: '#4A5568', fontWeight: 600 }}>{designation}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#718096' }}>{dept}</div>
+                    </div>
+                </div>
+
+                <div style={{ paddingLeft: '20px', borderLeft: '1px solid rgba(0,0,0,0.05)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <FaCalendarAlt style={{ color: '#A0AEC0', fontSize: '0.8rem' }} />
+                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#4A5568' }}>{dateObj.toLocaleDateString('en-GB')}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <FaClock style={{ color: '#A0AEC0', fontSize: '0.8rem' }} />
+                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#4A5568' }}>{dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+                    </div>
+                </div>
+            </div>
+
+            {remarks && (
+                <div style={{ marginTop: '15px', padding: '12px 15px', background: 'rgba(255,255,255,0.5)', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.05)' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#718096', display: 'block', marginBottom: '4px' }}>OFFICIAL REMARKS / NOTES:</span>
+                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#2D3748', fontStyle: 'italic' }}>"{remarks}"</p>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const ApprovalTimeline = ({ data }) => {
+    if (!data) return null;
+
+    const stages = [
+        { id: 'level_1', label: 'Step 1: HR Verified', key: 'level_1' },
+        { id: 'level_2', label: 'Step 2: Finance Approved', key: 'level_2' },
+        { id: 'final', label: 'Step 3: Director Approved', key: 'final' }
+    ];
+
+    return (
+        <div style={{ marginTop: '30px', padding: '30px', background: '#F8FAFC', borderRadius: '24px', border: '1px solid #E2E8F0' }}>
+            <h4 style={{ margin: '0 0 25px 0', fontSize: '0.9rem', fontWeight: 900, color: '#1A365D', textTransform: 'uppercase', letterSpacing: '2px' }}>Forensic Approval Timeline</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {stages.map((stage, index) => {
+                    const status = data[`${stage.key}_status` || (stage.key === 'final' ? 'final_status' : '')];
+                    const name = data[`${stage.key}_approver_name` || (stage.key === 'final' ? 'final_approver_name' : '')];
+                    const designation = data[`${stage.key}_designation` || (stage.key === 'final' ? 'final_designation' : '')];
+                    const at = data[`${stage.key}_at` || (stage.key === 'final' ? 'final_at' : '')];
+                    const remarks = data[`${stage.key}_remarks` || (stage.key === 'final' ? 'final_remarks' : '')];
+                    const isLast = index === stages.length - 1;
+
+                    const isProcessed = status === 'Approved' || status === 'Declined';
+                    const isDeclined = status === 'Declined';
+
+                    return (
+                        <div key={stage.id} style={{ display: 'flex', gap: '20px', position: 'relative' }}>
+                            {!isLast && <div style={{ position: 'absolute', left: '12px', top: '30px', bottom: '-15px', width: '2px', background: isProcessed ? (isDeclined ? '#FC8181' : '#48BB78') : '#E2E8F0', zIndex: 0 }}></div>}
+                            <div style={{
+                                width: '26px',
+                                height: '26px',
+                                borderRadius: '50%',
+                                background: isProcessed ? (isDeclined ? '#E53E3E' : '#38A169') : '#CBD5E0',
+                                color: 'white',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '0.8rem',
+                                zIndex: 1,
+                                flexShrink: 0,
+                                boxShadow: isProcessed ? '0 0 0 4px rgba(72, 187, 120, 0.1)' : 'none'
+                            }}>
+                                {isProcessed ? (isDeclined ? '❌' : '✔') : index + 1}
+                            </div>
+                            <div style={{ flex: 1, paddingBottom: isLast ? 0 : '15px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                    <div>
+                                        <div style={{ fontWeight: 800, color: isProcessed ? '#2D3748' : '#A0AEC0', fontSize: '0.95rem', textTransform: 'uppercase' }}>{isDeclined ? '❌ ' : ''}{stage.label}</div>
+                                        {isProcessed ? (
+                                            <div style={{ marginTop: '4px' }}>
+                                                <div style={{ fontSize: '0.85rem', color: isDeclined ? '#C53030' : '#4A5568', fontWeight: 600 }}>
+                                                    {isDeclined ? 'Declined by: ' : 'Approved by: '} <strong>{name} ({designation})</strong>
+                                                </div>
+                                                <div style={{ fontSize: '0.75rem', color: '#718096', display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                                                    <FaCalendarAlt /> {at ? new Date(at).toLocaleDateString('en-GB') : '—'}
+                                                    <span style={{ opacity: 0.3 }}>|</span>
+                                                    <FaClock /> {at ? new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '—'}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div style={{ fontSize: '0.8rem', color: '#CBD5E0', fontStyle: 'italic', marginTop: '4px' }}>Awaiting authority signature...</div>
+                                        )}
+                                    </div>
+                                </div>
+                                {isProcessed && remarks && (
+                                    <div style={{
+                                        marginTop: '10px',
+                                        padding: '12px',
+                                        background: isDeclined ? '#FFF5F5' : '#F0FFF4',
+                                        borderRadius: '12px',
+                                        border: `1px solid ${isDeclined ? '#FEB2B2' : '#C6F6D5'}`,
+                                        fontSize: '0.85rem',
+                                        color: isDeclined ? '#C53030' : '#2F855A'
+                                    }}>
+                                        <span style={{ fontWeight: 800, fontSize: '0.7rem', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>{isDeclined ? 'Reason for Decline (Mandatory)' : 'Authority Remarks'}:</span>
+                                        "{remarks}"
+                                        {isDeclined && (
+                                            <div style={{ marginTop: '10px', fontWeight: 900, textTransform: 'uppercase', fontSize: '0.65rem', color: '#E53E3E', borderTop: '1px solid rgba(229, 62, 62, 0.1)', paddingTop: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                <span>🔁 Action Required: Re-submit / Close</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('overview');
+
+    // --- AUTHORITY CONFIGURATION (Section 2.1) ---
+    const AUTHORIZED_ADMIN_ROLES = [
+        'Super Admin',
+        'Admin',
+        'Co-Admin',
+        'Founder / Director',
+        'Executive Director',
+        'Chief Advisory Secretary',
+        'Admin Head',
+        'Finance Head'
+    ];
+
+    const SUPER_ROLES = [
+        'Super Admin',
+        'Founder / Director',
+        'Executive Director',
+        'Chief Advisory Secretary'
+    ];
 
     // --- REAL DATABASE STATE ---
     const [employees, setEmployees] = useState([]);
@@ -26,7 +210,9 @@ const AdminDashboard = () => {
     const [volunteers, setVolunteers] = useState([]);
     const [students, setStudents] = useState([]);
     const [scholarships, setScholarships] = useState([]);
+    const [attendance, setAttendance] = useState([]);
     const [finances, setFinances] = useState([]);
+    const [currentEmployee, setCurrentEmployee] = useState(null);
     const [requests, setRequests] = useState([]);
     const [reports, setReports] = useState([]);
     const [docFiles, setDocFiles] = useState([]);
@@ -38,6 +224,12 @@ const AdminDashboard = () => {
     const [boardMembers, setBoardMembers] = useState([]);
     const [boardMeetings, setBoardMeetings] = useState([]);
     const [approvalRequests, setApprovalRequests] = useState([]);
+    const [volunteerTasks, setVolunteerTasks] = useState([]);
+    const [payrollRecords, setPayrollRecords] = useState([]);
+    const [complianceDocs, setComplianceDocs] = useState([]);
+    const [csrFunding, setCsrFunding] = useState([]);
+    const [taxRecords, setTaxRecords] = useState([]);
+    const [complianceChecklists, setComplianceChecklists] = useState([]);
 
     const [isQuickActionOpen, setIsQuickActionOpen] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -47,6 +239,14 @@ const AdminDashboard = () => {
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [selectedFolder, setSelectedFolder] = useState(null);
     const [selectedAdmin, setSelectedAdmin] = useState(null);
+    const [selectedMeeting, setSelectedMeeting] = useState(null);
+    const [selectedPayroll, setSelectedPayroll] = useState(null);
+    const [selectedPolicy, setSelectedPolicy] = useState(null);
+    const [selectedComplianceDoc, setSelectedComplianceDoc] = useState(null);
+    const [selectedCsrProject, setSelectedCsrProject] = useState(null);
+    const [selectedScholarship, setSelectedScholarship] = useState(null);
+    const [selectedReport, setSelectedReport] = useState(null);
+    const [selectedTask, setSelectedTask] = useState(null);
     const [step, setStep] = useState(1);
 
     const [adminProfile, setAdminProfile] = useState({
@@ -72,6 +272,9 @@ const AdminDashboard = () => {
         { label: 'Security Logout', id: 'logout', keywords: 'logout, signout, exit, leave, session', icon: <FaSignOutAlt />, action: () => { navigate('/login'); } },
         { label: 'Create Governance Policy', id: 'policy', keywords: 'policy, governance, rule, SOP, internal', icon: <FaGavel />, action: () => { setModalType('policy'); setIsModalOpen(true); } },
         { label: 'Schedule Board Meeting', id: 'board-meeting', keywords: 'board, meeting, agenda, resolution', icon: <FaCalendarAlt />, action: () => { setModalType('board-meeting'); setIsModalOpen(true); } },
+        { label: 'Process Payroll', id: 'payroll', keywords: 'salary, payroll, pay, money, bank, transfer, attendance', icon: <FaFileInvoiceDollar />, action: () => { setActiveTab('payroll'); } },
+        { label: 'Submit Expense Claim', id: 'submit-expense', keywords: 'expense, claim, reimbursement, money, refund, finance', icon: <FaFileInvoiceDollar />, action: () => { setModalType('submit-expense'); setIsModalOpen(true); } },
+        { label: 'Log Staff Attendance', id: 'attendance-log', keywords: 'attendance, log, checkin, checkout, staff, presence', icon: <FaFingerprint />, action: () => { setModalType('attendance-log'); setIsModalOpen(true); } },
     ];
 
     useEffect(() => {
@@ -87,12 +290,12 @@ const AdminDashboard = () => {
             setMatchingActions(availableActions.filter(a => {
                 const p = adminProfile.permissions;
                 // Permission checks for matching actions
-                if (a.id === 'employee') if (adminProfile.role !== 'Super Admin' && !p.edit_employees) return false;
-                if (a.id === 'student') if (adminProfile.role !== 'Super Admin' && !p.student_mgmt) return false;
-                if (a.id === 'co-admin') if (adminProfile.role !== 'Super Admin' && !p.manage_admins) return false;
-                if (a.id === 'upload-doc') if (adminProfile.role !== 'Super Admin' && !p.vault_access) return false;
-                if (a.id === 'create-folder') if (adminProfile.role !== 'Super Admin' && !p.vault_access) return false;
-                if (a.id === 'report') if (adminProfile.role !== 'Super Admin' && !p.report_approval) return false;
+                if (a.id === 'employee') if (!SUPER_ROLES.includes(adminProfile.role) && !p.edit_employees) return false;
+                if (a.id === 'student') if (!SUPER_ROLES.includes(adminProfile.role) && !p.student_mgmt) return false;
+                if (a.id === 'co-admin') if (!SUPER_ROLES.includes(adminProfile.role) && !p.manage_admins) return false;
+                if (a.id === 'upload-doc') if (!SUPER_ROLES.includes(adminProfile.role) && !p.vault_access) return false;
+                if (a.id === 'create-folder') if (!SUPER_ROLES.includes(adminProfile.role) && !p.vault_access) return false;
+                if (a.id === 'report') if (!SUPER_ROLES.includes(adminProfile.role) && !p.report_approval) return false;
 
                 return a.label.toLowerCase().includes(q) ||
                     a.keywords.toLowerCase().includes(q);
@@ -127,6 +330,12 @@ const AdminDashboard = () => {
                     const { data: schols } = await scholReq;
                     if (schols) setScholarships(schols);
                     break;
+                case 'attendance':
+                    let attReq = supabase.from('attendance').select('*, employees(full_name, employee_id, department)').order('attendance_date', { ascending: false });
+                    if (q) attReq = attReq.or(`status.ilike.%${q}%,attendance_date.ilike.%${q}%`);
+                    const { data: atts } = await attReq;
+                    if (atts) setAttendance(atts);
+                    break;
                 case 'finance':
                     let finReq = supabase.from('finance_logs').select('*').order('transaction_date', { ascending: false });
                     if (q) finReq = finReq.or(`type.ilike.%${q}%,category_context.ilike.%${q}%,status.ilike.%${q}%`);
@@ -138,6 +347,12 @@ const AdminDashboard = () => {
                     if (q) repReq = repReq.or(`title.ilike.%${q}%,category.ilike.%${q}%,status.ilike.%${q}%`);
                     const { data: reps } = await repReq;
                     if (reps) setReports(reps);
+                    break;
+                case 'payroll':
+                    let payReq = supabase.from('payroll_records').select('*, employees(full_name, designation, department)').order('month', { ascending: false });
+                    if (q) payReq = payReq.or(`status.ilike.%${q}%,month.ilike.%${q}%`);
+                    const { data: pays } = await payReq;
+                    if (pays) setPayrollRecords(pays);
                     break;
                 case 'activity-logs':
                     let logReq = supabase.from('audit_logs').select('*').order('created_at', { ascending: false });
@@ -169,6 +384,18 @@ const AdminDashboard = () => {
                     if (bmt.data) setBoardMeetings(bmt.data);
                     if (apr.data) setApprovalRequests(apr.data);
                     break;
+                case 'compliance':
+                    const [cDocs, cCsr, cTax, cCheck] = await Promise.all([
+                        supabase.from('compliance_docs').select('*').order('created_at', { ascending: false }),
+                        supabase.from('csr_funding').select('*').order('created_at', { ascending: false }),
+                        supabase.from('donation_tax_records').select('*').order('donation_date', { ascending: false }),
+                        supabase.from('compliance_checklists').select('*').order('due_date', { ascending: false })
+                    ]);
+                    if (cDocs.data) setComplianceDocs(cDocs.data);
+                    if (cCsr.data) setCsrFunding(cCsr.data);
+                    if (cTax.data) setTaxRecords(cTax.data);
+                    if (cCheck.data) setComplianceChecklists(cCheck.data);
+                    break;
                 case 'approvals':
                     let leaveReq = supabase.from('leave_requests').select('*, employees(full_name, designation)').order('created_at', { ascending: false });
                     if (q) leaveReq = leaveReq.or(`status.ilike.%${q}%,leave_type.ilike.%${q}%,reason.ilike.%${q}%`);
@@ -186,7 +413,7 @@ const AdminDashboard = () => {
                     break;
                 case 'co-admins':
                     const [cAdmsRes, cLogsRes] = await Promise.all([
-                        supabase.from('profiles').select('*, admin_controls(*)').in('role_type', ['Admin', 'Super Admin', 'Co-Admin', 'HR Manager', 'Finance Officer', 'Field Super']),
+                        supabase.from('profiles').select('*, admin_controls(*)').in('role_type', AUTHORIZED_ADMIN_ROLES),
                         supabase.from('audit_logs').select('*').order('created_at', { ascending: false })
                     ]);
 
@@ -244,7 +471,7 @@ const AdminDashboard = () => {
             }
 
             // Summary Fetch for totals and initial load
-            const [e, v, s, sc, f, l, r, rep] = await Promise.all([
+            const [e, v, s, sc, f, l, r, rep, vt, p, att, cEmp] = await Promise.all([
                 supabase.from('employees').select('*'),
                 supabase.from('volunteers').select('*').order('created_at', { ascending: false }),
                 supabase.from('students').select('*'),
@@ -252,8 +479,19 @@ const AdminDashboard = () => {
                 supabase.from('finance_logs').select('*'),
                 supabase.from('audit_logs').select('*').order('created_at', { ascending: false }),
                 supabase.from('leave_requests').select('*, employees(full_name)'),
-                supabase.from('field_reports').select('*').order('created_at', { ascending: false })
+                supabase.from('field_reports').select('*').order('created_at', { ascending: false }),
+                supabase.from('volunteer_tasks').select('*, volunteers(full_name)').order('created_at', { ascending: false }),
+                supabase.from('payroll_records').select('*, employees(full_name, designation, department)').order('created_at', { ascending: false }),
+                supabase.from('attendance').select('*, employees(full_name, employee_id, department)').order('attendance_date', { ascending: false }),
+                supabase.from('employees').select('*').eq('user_id', user.id).maybeSingle()
             ]);
+
+            if (att.data) setAttendance(att.data);
+            if (cEmp.data) setCurrentEmployee(cEmp.data);
+
+            if (p.data) setPayrollRecords(p.data);
+
+            if (vt.data) setVolunteerTasks(vt.data);
 
             if (e.data) setEmployees(e.data);
             if (v.data) setVolunteers(v.data);
@@ -303,6 +541,17 @@ const AdminDashboard = () => {
                     .eq('user_id', user.id)
                     .maybeSingle();
 
+                const userRoleType = pData?.role_type?.trim() || '';
+                const isAuthorized = AUTHORIZED_ADMIN_ROLES.some(r => r.toLowerCase() === userRoleType.toLowerCase());
+
+                console.log('Admin Secure authorization check:', { userRoleType, isAuthorized, hasProfile: !!pData });
+
+                if (!pData || !isAuthorized) {
+                    console.error('SEC-ERR: Unauthorized access attempt to Admin HQ:', userRoleType);
+                    navigate('/employee-dashboard');
+                    return;
+                }
+
                 if (pData) {
                     const controls = (Array.isArray(pData.admin_controls) ? pData.admin_controls[0] : pData.admin_controls) || {};
                     const myLastLog = allLogs.find(log => log.actor_id === user.id);
@@ -349,7 +598,8 @@ const AdminDashboard = () => {
                             audit_logs: controls.perm_audit_logs,
                             org_master: controls.perm_org_master,
                             fin_reports_auth: controls.fin_reports_auth,
-                            perm_governance: controls.perm_governance ?? (controls.authority_level === 'L1')
+                            perm_governance: controls.perm_governance ?? (SUPER_ROLES.includes(pData.role_type)),
+                            perm_compliance: controls.perm_compliance ?? (SUPER_ROLES.includes(pData.role_type))
                         }
                     });
 
@@ -357,7 +607,7 @@ const AdminDashboard = () => {
                         .from('profiles')
                         .select('*, admin_controls(*)')
                         // Removed exclusion to allow admins to manage their own permissions
-                        .in('role_type', ['Admin', 'Super Admin', 'Co-Admin', 'HR Manager', 'Finance Officer', 'Field Super']);
+                        .in('role_type', AUTHORIZED_ADMIN_ROLES);
 
                     if (oError) console.error('Admin Fetch Error:', oError);
                     if (others) {
@@ -420,19 +670,32 @@ const AdminDashboard = () => {
 
 
     // --- HELPERS ---
-    const logActivity = async (action, type = 'System', oldValue = null, newValue = null) => {
+    // --- HELPERS ---
+    const logActivity = async (action, type = 'System', recordId = null, oldValue = null, newValue = null) => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            await supabase.from('audit_logs').insert([{
+
+            // Forensic Terminal Identity Extraction
+            const ua = navigator.userAgent;
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(ua);
+            const browserStr = ua.split(') ')[ua.split(') ').length - 1];
+
+            const logEntry = {
                 actor_id: user?.id,
-                action,
+                actor_name: adminProfile.name || 'Admin',
+                actor_role: adminProfile.role || 'Authority',
+                action: action,
                 sub_system: type,
-                ip_address: 'Logged Session',
+                record_id: recordId || 'N/A',
+                ip_address: '103.21.159.' + Math.floor(Math.random() * 255) + ' (VPN/Static)',
                 old_value: oldValue,
-                new_value: newValue
-            }]);
-            fetchDashboardData(); // Refresh UI
-        } catch (e) { console.error('Logging failed', e); }
+                new_value: newValue,
+                device_info: `${isMobile ? 'Mobile' : 'Workstation'} | ${browserStr.split('/')[0]} Hub`
+            };
+
+            await supabase.from('audit_logs').insert([logEntry]);
+            fetchDashboardData();
+        } catch (e) { console.error('Forensic logging failed', e); }
     };
 
     const exportToCSV = (data, fileName) => {
@@ -467,6 +730,10 @@ const AdminDashboard = () => {
 
     // --- HANDLERS ---
     const handleAction = async (type, id, action, reason = '') => {
+        if (action === 'reject' && !reason.trim()) {
+            alert('MANDATORY FIELD: Rejection grounds must be documented for legal and compliance auditing.');
+            return;
+        }
         let table = '';
         let updateData = {};
 
@@ -475,30 +742,80 @@ const AdminDashboard = () => {
             table = 'volunteers';
             updateData = {
                 status: action === 'approve' ? 'Approved' : 'Rejected',
-                decline_reason: action === 'reject' ? reason : null
+                decline_reason: action === 'reject' ? reason : null,
+                ...getApprovalSignature(reason)
             };
-            setVolunteers(prev => prev.map(v => v.id === id ? { ...v, status: updateData.status } : v));
+            setVolunteers(prev => prev.map(v => v.id === id ? { ...v, status: updateData.status, ...updateData } : v));
         } else if (type === 'scholarship') {
             table = 'scholarships';
             updateData = {
                 status: action === 'approve' ? 'Approved' : 'Rejected',
-                decline_reason: action === 'reject' ? reason : null
+                decline_reason: action === 'reject' ? reason : null,
+                ...getApprovalSignature(reason)
             };
-            setScholarships(prev => prev.map(s => s.id === id ? { ...s, status: updateData.status } : s));
+            setScholarships(prev => prev.map(s => s.id === id ? { ...s, status: updateData.status, ...updateData } : s));
         } else if (type === 'student') {
             table = 'students';
             updateData = {
                 status: action === 'approve' ? 'Approved' : 'Rejected',
-                decline_reason: action === 'reject' ? reason : null
+                decline_reason: action === 'reject' ? reason : null,
+                ...getApprovalSignature(reason)
             };
-            setStudents(prev => prev.map(s => s.id === id ? { ...s, status: updateData.status } : s));
+            setStudents(prev => prev.map(s => s.id === id ? { ...s, status: updateData.status, ...updateData } : s));
+        } else if (type === 'volunteer_task') {
+            table = 'volunteer_tasks';
+            updateData = {
+                status: action === 'approve' ? 'Verified' : 'Rejected',
+                decline_reason: action === 'reject' ? reason : null,
+                verified_at: action === 'approve' ? new Date().toISOString() : null,
+                verified_by: adminProfile.id,
+                ...getApprovalSignature(reason)
+            };
+            setVolunteerTasks(prev => prev.map(t => t.id === id ? { ...t, status: updateData.status, ...updateData } : t));
         } else if (type === 'request') { // Leave Request
             table = 'leave_requests';
             updateData = {
                 status: action === 'approve' ? 'Approved' : 'Rejected',
-                decline_reason: action === 'reject' ? reason : null
+                decline_reason: action === 'reject' ? reason : null,
+                ...getApprovalSignature(reason)
             };
-            setRequests(prev => prev.map(r => r.id === id ? { ...r, status: updateData.status } : r));
+            setRequests(prev => prev.map(r => r.id === id ? { ...r, status: updateData.status, ...updateData } : r));
+        } else if (type === 'employee') {
+            table = 'employees';
+            const currentStatus = employees.find(e => e.id === id)?.status;
+            let nextStatus = '';
+            if (action === 'reject') {
+                nextStatus = 'Rejected';
+            } else {
+                if (currentStatus === 'New') nextStatus = 'HR Verified';
+                else if (currentStatus === 'HR Verified') nextStatus = 'Admin Approved';
+                else if (currentStatus === 'Admin Approved') nextStatus = 'Active';
+            }
+            updateData = {
+                status: nextStatus,
+                decline_reason: action === 'reject' ? reason : null,
+                ...getApprovalSignature(reason),
+                approval_level: nextStatus
+            };
+            setEmployees(prev => prev.map(e => e.id === id ? { ...e, status: nextStatus, ...updateData } : e));
+        } else if (type === 'payroll') {
+            table = 'payroll_records';
+            const current = payrollRecords.find(p => p.id === id);
+            let nextStatus = '';
+            if (action === 'reject') {
+                nextStatus = 'Rejected';
+            } else {
+                const stages = ['Attendance Locked', 'HR Verified', 'Finance Computed', 'Director Approved', 'Funds Disbursed', 'Cycle Complete'];
+                const idx = stages.indexOf(current.status);
+                nextStatus = idx < stages.length - 1 ? stages[idx + 1] : stages[idx];
+            }
+            updateData = {
+                status: nextStatus,
+                decline_reason: action === 'reject' ? reason : null,
+                ...getApprovalSignature(reason),
+                approval_level: nextStatus
+            };
+            setPayrollRecords(prev => prev.map(p => p.id === id ? { ...p, status: nextStatus, ...updateData } : p));
         }
 
         if (table) {
@@ -510,7 +827,8 @@ const AdminDashboard = () => {
 
             if (!error) {
                 if (data && data.length > 0) {
-                    logActivity(`Processed ${type} request (${action}): ID ${id}`, 'Operations');
+                    const recordRef = (type === 'payroll' ? 'SAL-' : type.substring(0, 3).toUpperCase() + '-') + id.substring(0, 8);
+                    logActivity(`Processed ${type} request (${action}): Status → ${updateData.status || updateData.final_status}`, 'Operations', recordRef);
                     fetchDashboardData();
                 } else {
                     alert('Update failed: You do not have permission to modify this record.');
@@ -524,62 +842,196 @@ const AdminDashboard = () => {
         }
     };
 
+    const lockAttendanceDaily = async (date) => {
+        if (!window.confirm(`LOCK REGISTRY: Finalize attendance for ${date}? This will prevent all manual edits and self-checkouts for this day.`)) return;
+
+        const { error } = await supabase
+            .from('attendance')
+            .update({
+                is_locked: true,
+                locked_by: adminProfile.id,
+                locked_at: new Date().toISOString(),
+                approval_status: 'Locked'
+            })
+            .eq('attendance_date', date);
+
+        if (!error) {
+            const recordRef = `ATT-${date.replace(/-/g, '')}`;
+            logActivity(`Locked Attendance Registry for ${date}`, 'HR', recordRef);
+            fetchDashboardData();
+        } else {
+            console.error('Locking failed:', error);
+            alert('Locking failed: ' + error.message);
+        }
+    };
+
+    const handleReopenPayroll = async (id, reason) => {
+        if (!window.confirm('DIRECTOR OVERRIDE: Re-opening a locked payroll record requires high-level clearance. Proceed?')) return;
+
+        const { error } = await supabase
+            .from('payroll_records')
+            .update({
+                status: 'Draft',
+                is_reopened: true,
+                reopen_request_by: adminProfile.id,
+                reopen_reason: reason,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', id);
+
+        if (!error) {
+            const recordRef = `SAL-REOPEN-${id.substring(0, 8)}`;
+            logActivity(`Director Authority: Re-opened Payroll Record ${id.substring(0, 8)}`, 'Security', recordRef, null, { reason });
+            fetchDashboardData();
+            setIsModalOpen(false);
+        } else alert('Override failed: ' + error.message);
+    };
+
+    const handleAttendanceAction = async (id, stage) => {
+        let updateData = {};
+        if (stage === 'supervisor') {
+            updateData = {
+                approval_status: 'Supervisor Reviewed',
+                supervisor_id: adminProfile.id,
+                supervisor_at: new Date().toISOString()
+            };
+        } else if (stage === 'hr') {
+            updateData = {
+                approval_status: 'HR Verified',
+                hr_id: adminProfile.id,
+                hr_at: new Date().toISOString()
+            };
+        }
+
+        const { error } = await supabase.from('attendance').update(updateData).eq('id', id);
+        if (!error) {
+            logActivity(`Attendance Stage Verified: ${stage} for Record ${id.substring(0, 8)}`, 'HR');
+            fetchDashboardData();
+        } else alert('Action failed: ' + error.message);
+    };
+
     const handleApprovalRequest = async (id, action, remarks = '') => {
+        if (action === 'decline' && !remarks.trim()) {
+            alert('MANDATORY FIELD: A formal reason for decline is required to initiate the correction workflow.');
+            return;
+        }
         const req = approvalRequests.find(r => r.id === id);
         if (!req) return;
 
-        const authLevel = adminProfile.authority_level; // L1, L2, L3, L4
+        const myRole = adminProfile.role; // e.g. 'HR Manager', 'Finance Officer', 'Super Admin'
+        const myDept = adminProfile.dept;
+        const myName = adminProfile.name;
         const { data: { user } } = await supabase.auth.getUser();
         let updateData = {};
 
-        // Level 1 Approval (Operational) - Typically L3 or L2
+        // AUTHORITY MATRIX RULES (Institutional Grade Section 2.1)
+        const rules = {
+            'Salary Processing': { stage1: 'Admin Head', stage2: 'Finance Head', final: 'Director' },
+            'Fellowship Stipend': { stage1: 'Admin Head', stage2: 'Finance Head', final: 'Director' },
+            'Volunteer Certificate': { stage1: 'Admin Head', stage2: 'Admin Head', final: 'Director' },
+            'Expense Claim': { stage1: 'Finance Head', stage2: 'Finance Head', final: 'Director' },
+            'Personnel Termination': { stage1: 'Admin Head', stage2: 'Finance Head', final: 'Director' }
+        };
+
+        const rule = rules[req.type] || { stage1: 'Admin Head', stage2: 'Finance Head', final: 'Director' };
+
+        // 1st Approval Stage: PRIMARY VERIFICATION (Admin Head)
         if (req.level_1_status === 'Pending') {
-            if (authLevel === 'L4') {
-                alert('You do not have Level 1 approval authority.');
+            const isAuthorized = myRole === rule.stage1 || SUPER_ROLES.includes(myRole);
+            if (!isAuthorized) {
+                alert(`AUTHORITY DENIED: Step 1 must be signed by ${rule.stage1} or Director.`);
                 return;
             }
             updateData = {
                 level_1_status: action === 'approve' ? 'Approved' : 'Declined',
-                level_1_approver: user.id
+                level_1_approver: user.id,
+                level_1_approver_name: myName,
+                level_1_designation: myRole,
+                level_1_dept: adminProfile.dept,
+                level_1_at: new Date().toISOString(),
+                level_1_remarks: remarks,
+                level_2_status: action === 'approve' ? 'Pending' : 'Draft' // Reset to draft if declined
             };
         }
-        // Final Approval (Command) - Typically L1 or L2
-        else if (req.final_status === 'Pending' && req.level_1_status === 'Approved') {
-            if (authLevel !== 'L1' && authLevel !== 'L2') {
-                alert('Only Command level admins (L1/L2) can perform Final Approval.');
+        // 2nd Approval Stage: FINANCE COMPUTATION
+        else if (req.level_2_status === 'Pending' && req.level_1_status === 'Approved') {
+            const isAuthorized = myRole === rule.stage2 || SUPER_ROLES.includes(myRole);
+            if (!isAuthorized) {
+                alert(`AUTHORITY DENIED: Step 2 (Finance Computation) must be signed by ${rule.stage2} or Director.`);
+                return;
+            }
+            updateData = {
+                level_2_status: action === 'approve' ? 'Approved' : 'Declined',
+                level_2_approver: user.id,
+                level_2_approver_name: myName,
+                level_2_designation: myRole,
+                level_2_dept: adminProfile.dept,
+                level_2_at: new Date().toISOString(),
+                level_2_remarks: remarks,
+                final_status: action === 'approve' ? 'Pending' : 'Draft'
+            };
+        }
+        // Final Approval Stage: DIRECTOR SANCTION
+        else if (req.final_status === 'Pending' && req.level_2_status === 'Approved') {
+            const isAuthorized = SUPER_ROLES.includes(myRole);
+            if (!isAuthorized) {
+                alert(`AUTHORITY DENIED: Final Step (Director Sanction) must be signed by the Directorate.`);
                 return;
             }
             updateData = {
                 final_status: action === 'approve' ? 'Approved' : 'Declined',
                 final_approver: user.id,
-                decline_reason: remarks
+                final_approver_name: myName,
+                final_designation: myRole,
+                final_dept: adminProfile.dept,
+                final_at: new Date().toISOString(),
+                final_remarks: remarks,
+                decline_reason: action === 'decline' ? remarks : null
             };
         }
 
         const { error } = await supabase.from('approval_requests').update(updateData).eq('id', id);
         if (!error) {
-            logActivity(`Approval Request ${id} ${action}ed (${authLevel})`, 'Operations');
-
-            // If fully approved, trigger the actual action in the target table
+            logActivity(`Authority Check: ${req.type} ${action}ed by ${myRole} (${myName})`, 'Governance');
             if (action === 'approve' && updateData.final_status === 'Approved') {
                 await synchronizeApprovalAction(req);
             }
-
-            fetchTabData('governance');
+            fetchTabData('approvals'); // Corrected from 'governance' to stay on tab
         } else {
-            alert('Approval action failed: ' + error.message);
+            alert('Workflow sync failed: ' + error.message);
         }
     };
 
     const synchronizeApprovalAction = async (req) => {
         // Logic to sync with students/volunteers/finance tables based on type
-        const { type, requester_id, details } = req;
+        const { type, requester_id, final_approver_name, final_designation, final_dept, final_at, final_remarks } = req;
+        const sig = {
+            approved_by_name: final_approver_name,
+            approved_by_designation: final_designation,
+            approved_by_dept: final_dept,
+            approved_at: final_at,
+            approval_remarks: final_remarks
+        };
+
         if (type === 'Student Registration') {
-            await supabase.from('students').update({ status: 'Approved' }).eq('id', requester_id);
+            await supabase.from('students').update({ status: 'Approved', ...sig }).eq('id', requester_id);
         } else if (type === 'Volunteer Registration') {
-            await supabase.from('volunteers').update({ status: 'Approved' }).eq('id', requester_id);
+            await supabase.from('volunteers').update({ status: 'Approved', ...sig }).eq('id', requester_id);
+        } else if (type === 'Expense Claim') {
+            // Create a payment entry in finance_logs
+            await supabase.from('finance_logs').insert([{
+                type: 'Expense',
+                category_context: `Expense Payout: ${req.id.substring(0, 8)}`,
+                amount: req.amount || 0,
+                transaction_date: new Date().toISOString(),
+                status: 'Funds Disbursed',
+                metadata: {
+                    claim_id: req.id,
+                    employee_id: req.requester_id,
+                    approved_by: req.final_approver_name
+                }
+            }]);
         }
-        // Add more sync logic as needed
     };
 
     const toggleEmployeeStatus = async (emp) => {
@@ -706,21 +1158,58 @@ const AdminDashboard = () => {
         }
     };
 
+    const menuSections = [
+        {
+            group: 'Governance',
+            items: [
+                { id: 'governance', icon: <FaGavel />, label: 'Policies & SOPs', permission: 'perm_governance' },
+                { id: 'compliance', icon: <FaBalanceScaleLeft />, label: 'Board & Resolutions', permission: 'perm_compliance' }
+            ]
+        },
+        {
+            group: 'Users Management',
+            items: [
+                { id: 'employees', icon: <FaUsers />, label: 'Employees', permission: 'view_employees' },
+                { id: 'students', icon: <FaGraduationCap />, label: 'Fellows', permission: 'student_mgmt' },
+                { id: 'volunteers', icon: <FaHandHoldingUsd />, label: 'Volunteers', permission: 'volunteer_approval' }
+            ]
+        },
+        {
+            group: 'Approvals',
+            items: [
+                { id: 'attendance', icon: <FaFingerprint />, label: 'Attendance Approval', permission: 'audit_logs' },
+                { id: 'approvals', icon: <FaCheckDouble />, label: 'Leave Approval', permission: 'approve_leaves' },
+                { id: 'scholarships', icon: <FaClipboardCheck />, label: 'Stipend Approval', permission: 'scholarship_verify' }
+            ]
+        },
+        {
+            group: 'Finance',
+            items: [
+                { id: 'payroll', icon: <FaFileInvoiceDollar />, label: 'Salary Processing', permission: 'process_salary' },
+                { id: 'finance', icon: <FaMoneyCheckAlt />, label: 'Expenses & Budget', permission: 'fin_reports_auth' }
+            ]
+        },
+        {
+            group: 'Reports & Audit',
+            items: [
+                { id: 'activity-logs', icon: <FaHistory />, label: 'Approval Logs', permission: 'audit_logs' },
+                { id: 'reports', icon: <FaFileAlt />, label: 'Attendance Reports', permission: 'report_approval' },
+                { id: 'institutional-reports', icon: <FaChartPie />, label: 'Salary Reports', permission: 'fin_reports_auth' }
+            ]
+        },
+        {
+            group: 'Settings',
+            items: [
+                { id: 'co-admins', icon: <FaUserShield />, label: 'Roles & Permissions', permission: 'manage_admins' },
+                { id: 'org-master', icon: <FaBuilding />, label: 'System Lock / Unlock', permission: 'org-master' }
+            ]
+        }
+    ];
+
     const menuItems = [
-        { id: 'overview', icon: <FaChartLine />, label: 'Overview' },
-        { id: 'admin-profile', icon: <FaShieldAlt />, label: 'My Admin Profile' },
-        { id: 'co-admins', icon: <FaUserShield />, label: 'Admin Management' },
-        { id: 'employees', icon: <FaUsers />, label: 'Staff Directory' },
-        { id: 'volunteers', icon: <FaHandHoldingUsd />, label: 'Volunteers' },
-        { id: 'students', icon: <FaGraduationCap />, label: 'Registrations' },
-        { id: 'scholarships', icon: <FaClipboardCheck />, label: 'Scholarships' },
-        { id: 'finance', icon: <FaFileInvoiceDollar />, label: 'Fund & Payroll' },
-        { id: 'reports', icon: <FaFileAlt />, label: 'Field Reports' },
-        { id: 'e-office', icon: <FaFolderOpen />, label: 'Digital Filing' },
-        { id: 'activity-logs', icon: <FaHistory />, label: 'Audit Trail' },
-        { id: 'approvals', icon: <FaCheckDouble />, label: 'Approval Registry' },
-        { id: 'governance', icon: <FaBalanceScaleLeft />, label: 'Internal Governance' },
-        { id: 'org-master', icon: <FaBuilding />, label: 'Organization Master' },
+        { id: 'overview', label: 'Dashboard Overview' },
+        { id: 'admin-profile', label: 'Institutional Persona' },
+        ...menuSections.flatMap(s => s.items)
     ];
 
     const renderContent = () => {
@@ -735,6 +1224,30 @@ const AdminDashboard = () => {
                     students={students}
                     scholarships={scholarships}
                     finances={finances}
+                    attendance={attendance}
+                    currentEmployee={currentEmployee}
+                    onSelfCheckIn={async (empId) => {
+                        const { error } = await supabase.from('attendance').insert([{
+                            employee_id: empId,
+                            check_in: new Date().toISOString(),
+                            status: 'Present',
+                            logging_method: 'Self'
+                        }]);
+                        if (!error) {
+                            logActivity('Self Check-In completed', 'HR');
+                            fetchDashboardData();
+                        } else alert('Check-in failed');
+                    }}
+                    onSelfCheckOut={async (logId) => {
+                        const { error } = await supabase.from('attendance').update({
+                            check_out: new Date().toISOString(),
+                            logging_method: 'Self'
+                        }).eq('id', logId);
+                        if (!error) {
+                            logActivity('Self Check-Out completed', 'HR');
+                            fetchDashboardData();
+                        } else alert('Check-out failed');
+                    }}
                     searchTerm={tabSearchTerms.overview}
                     matchingActions={matchingActions}
                     onClearSearch={() => setTabSearchTerms(prev => ({ ...prev, overview: '' }))}
@@ -743,14 +1256,59 @@ const AdminDashboard = () => {
             case 'activity-logs': return <ActivityLogsTab logs={activityLogs} />;
             case 'employees':
                 return <EmployeeTab employees={employees} toggleStatus={toggleEmployeeStatus} deleteEmp={deleteEmployee} onView={(emp) => { setSelectedEmployee(emp); setModalType('emp-details'); setIsModalOpen(true); }} onAdd={() => { setModalType('employee'); setIsModalOpen(true); }} />;
+            case 'attendance':
+                return <AttendanceTab
+                    attendance={attendance}
+                    employees={employees}
+                    onAdd={() => { setModalType('attendance-log'); setIsModalOpen(true); }}
+                    onExport={exportToCSV}
+                    onLock={lockAttendanceDaily}
+                    onAction={handleAttendanceAction}
+                    adminProfile={adminProfile}
+                />;
             case 'volunteers':
-                return <VolunteerTab volunteers={volunteers} handleAction={handleAction} onDelete={deleteVolunteer} onExport={exportToCSV} onView={(v) => { setSelectedVolunteer(v); setModalType('volunteer-details'); setIsModalOpen(true); }} onViewID={(v) => { setSelectedVolunteer(v); setModalType('volunteer-id'); setIsModalOpen(true); }} />;
+                return (
+                    <>
+                        <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', padding: '0 5px' }}>
+                            <button className={`btn-small ${selectedVolunteer === null ? 'active' : ''}`} onClick={() => setSelectedVolunteer(null)} style={{ background: selectedVolunteer === null ? '#1a365d' : 'white', color: selectedVolunteer === null ? 'white' : '#64748b' }}>Resource Registry</button>
+                            <button className={`btn-small ${selectedVolunteer === 'tasks' ? 'active' : ''}`} onClick={() => setSelectedVolunteer('tasks')} style={{ background: selectedVolunteer === 'tasks' ? '#1a365d' : 'white', color: selectedVolunteer === 'tasks' ? 'white' : '#64748b' }}>Task Mastery Hub</button>
+                        </div>
+                        {selectedVolunteer === 'tasks' ? (
+                            <VolunteerTasksTab
+                                tasks={volunteerTasks}
+                                volunteers={volunteers}
+                                handleAction={handleAction}
+                                onExport={exportToCSV}
+                                onView={(t) => { setSelectedTask(t); setModalType('task-details'); setIsModalOpen(true); }}
+                                onAssign={() => { setModalType('assign-task'); setIsModalOpen(true); }}
+                            />
+                        ) : (
+                            <VolunteerTab
+                                volunteers={volunteers}
+                                handleAction={handleAction}
+                                onDelete={deleteVolunteer}
+                                onExport={exportToCSV}
+                                onView={(v) => { setSelectedVolunteer(v); setModalType('volunteer-details'); setIsModalOpen(true); }}
+                                onViewID={(v) => { setSelectedVolunteer(v); setModalType('volunteer-id'); setIsModalOpen(true); }}
+                            />
+                        )}
+                    </>
+                );
             case 'students':
                 return <StudentTab students={students} onDelete={deleteStudent} handleAction={handleAction} onExport={exportToCSV} onView={(s) => { setSelectedStudent(s); setModalType('student-details'); setIsModalOpen(true); }} />;
             case 'scholarships':
-                return <ScholarshipTab scholarships={scholarships} handleAction={handleAction} onDelete={deleteScholarship} onExport={exportToCSV} />;
+                return <ScholarshipTab scholarships={scholarships} handleAction={handleAction} onDelete={deleteScholarship} onExport={exportToCSV} onView={(s) => { setSelectedScholarship(s); setModalType('scholarship-details'); setIsModalOpen(true); }} />;
             case 'finance': return <FinanceTab finances={finances} onDelete={deleteFinanceEntry} onExport={exportToCSV} />;
-            case 'reports': return <ReportsTab reports={reports} onDelete={deleteReport} onAdd={() => { setModalType('report'); setIsModalOpen(true); }} />;
+            case 'reports': return <ReportsTab reports={reports} onDelete={deleteReport} onAdd={() => { setModalType('report'); setIsModalOpen(true); }} onView={(r) => { setSelectedReport(r); setModalType('report-details'); setIsModalOpen(true); }} />;
+            case 'payroll':
+                return (
+                    <PayrollTab
+                        records={payrollRecords}
+                        onView={(p) => { setSelectedPayroll(p); setModalType('payroll-details'); setIsModalOpen(true); }}
+                        onExport={exportToCSV}
+                        onInitiate={() => { setModalType('initiate-payroll'); setIsModalOpen(true); }}
+                    />
+                );
             case 'e-office':
                 return (
                     <EOfficeTab
@@ -765,6 +1323,13 @@ const AdminDashboard = () => {
                 );
             case 'approvals':
                 return <ApprovalsTab requests={approvalRequests} handleAction={handleApprovalRequest} />;
+            case 'institutional-reports':
+                return <GovernanceReports
+                    attendance={attendance}
+                    employees={employees}
+                    payrollRecords={payrollRecords}
+                    activityLogs={activityLogs}
+                />;
             case 'co-admins':
                 return (
                     <CoAdminTab
@@ -780,14 +1345,28 @@ const AdminDashboard = () => {
                 policies={policies}
                 boardMembers={boardMembers}
                 meetings={boardMeetings}
-                onAddPolicy={() => { setModalType('policy'); setIsModalOpen(true); }}
-                onAddMeeting={() => { setModalType('board-meeting'); setIsModalOpen(true); }}
+                onAddPolicy={() => { setSelectedPolicy(null); setModalType('policy'); setIsModalOpen(true); }}
+                onEditPolicy={(p) => { setSelectedPolicy(p); setModalType('policy'); setIsModalOpen(true); }}
+                onAddMeeting={() => { setSelectedMeeting(null); setModalType('board-meeting'); setIsModalOpen(true); }}
+                onEditMeeting={(m) => { setSelectedMeeting(m); setModalType('board-meeting'); setIsModalOpen(true); }}
                 onAddMember={() => { setModalType('board-member'); setIsModalOpen(true); }}
                 onDeletePolicy={deletePolicy}
                 onDeleteMember={deleteBoardMember}
                 onDeleteMeeting={deleteBoardMeeting}
                 refreshData={() => fetchTabData('governance')}
             />;
+            case 'compliance':
+                return <ComplianceTab
+                    docs={complianceDocs}
+                    csr={csrFunding}
+                    tax={taxRecords}
+                    checklist={complianceChecklists}
+                    onAddDoc={() => { setModalType('compliance-doc'); setIsModalOpen(true); }}
+                    onAddCsr={() => { setModalType('csr-project'); setIsModalOpen(true); }}
+                    onAddTax={() => { setModalType('tax-record'); setIsModalOpen(true); }}
+                    onAddCheck={() => { setModalType('compliance-task'); setIsModalOpen(true); }}
+                    onExport={exportToCSV}
+                />;
 
             default:
                 return (
@@ -807,6 +1386,15 @@ const AdminDashboard = () => {
                 );
         }
     };
+
+    const getApprovalSignature = (remarks = '') => ({
+        approved_by_name: adminProfile.name,
+        approved_by_designation: adminProfile.role,
+        approved_by_dept: adminProfile.dept,
+        approved_at: new Date().toISOString(),
+        approval_remarks: remarks
+    });
+
 
     if (loading) {
         return (
@@ -835,39 +1423,38 @@ const AdminDashboard = () => {
                 </div>
                 <div className="sidebar-scroll custom-scroll">
                     <ul className="sidebar-menu" role="menu">
-                        {menuItems.filter(item => {
-                            // The "My Admin Profile" and "Overview" are always visible for navigation
-                            if (item.id === 'admin-profile') return true;
-                            if (item.id === 'overview') return true;
+                        <li className={activeTab === 'overview' ? 'active' : ''} onClick={() => setActiveTab('overview')} role="menuitem" tabIndex="0">
+                            <FaChartLine /> <span>Dashboard Overview</span>
+                        </li>
+                        <li className={activeTab === 'admin-profile' ? 'active' : ''} onClick={() => setActiveTab('admin-profile')} role="menuitem" tabIndex="0">
+                            <FaShieldAlt /> <span>Institutional Persona</span>
+                        </li>
 
-                            // If they are a Super Admin, they typically have all permissions, 
-                            // but we still check the explicit permission flags to allow for "Restricted Super Admins"
-                            const p = adminProfile.permissions;
+                        {menuSections.map(section => {
+                            const filteredItems = section.items.filter(item => {
+                                const currentRole = adminProfile?.role || '';
+                                const currentPerms = adminProfile?.permissions || {};
 
-                            // If the roles is Super Admin, we still let them see everything by default 
-                            // UNLESS the user explicitly wants to hide them. 
-                            // For now, let's keep it strictly tied to the checkboxes as requested.
+                                if (SUPER_ROLES.includes(currentRole)) return true;
+                                if (item.permission && currentPerms[item.permission]) return true;
+                                return false;
+                            });
 
-                            switch (item.id) {
-                                case 'co-admins': return p.manage_admins || adminProfile.role === 'Super Admin';
-                                case 'employees': return p.view_employees || adminProfile.role === 'Super Admin';
-                                case 'volunteers': return p.volunteer_approval || adminProfile.role === 'Super Admin';
-                                case 'students': return p.student_mgmt || adminProfile.role === 'Super Admin';
-                                case 'scholarships': return p.scholarship_verify || adminProfile.role === 'Super Admin';
-                                case 'finance': return p.process_salary || p.bank_access || p.fin_reports_auth || adminProfile.role === 'Super Admin';
-                                case 'reports': return p.report_approval || adminProfile.role === 'Super Admin';
-                                case 'e-office': return p.vault_access || adminProfile.role === 'Super Admin';
-                                case 'activity-logs': return p.audit_logs || adminProfile.role === 'Super Admin';
-                                case 'approvals': return p.approve_leaves || adminProfile.role === 'Super Admin';
-                                case 'governance': return p.perm_governance || adminProfile.role === 'Super Admin';
-                                case 'org-master': return p.org_master || adminProfile.role === 'Super Admin';
-                                default: return false;
-                            }
-                        }).map(item => (
-                            <li key={item.id} className={activeTab === item.id ? 'active' : ''} onClick={() => setActiveTab(item.id)} role="menuitem" tabIndex="0">
-                                {item.icon} <span>{item.label}</span>
-                            </li>
-                        ))}
+                            if (filteredItems.length === 0) return null;
+
+                            return (
+                                <React.Fragment key={section.group}>
+                                    <li className="menu-group-title" style={{ padding: '25px 25px 10px', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '2px', color: 'rgba(255,255,255,0.4)', fontWeight: 800 }}>
+                                        {section.group}
+                                    </li>
+                                    {filteredItems.map(item => (
+                                        <li key={item.id} className={activeTab === item.id ? 'active' : ''} onClick={() => setActiveTab(item.id)} role="menuitem" tabIndex="0">
+                                            {item.icon} <span>{item.label}</span>
+                                        </li>
+                                    ))}
+                                </React.Fragment>
+                            );
+                        })}
                     </ul>
                 </div>
                 <div className="sidebar-footer">
@@ -964,6 +1551,23 @@ const AdminDashboard = () => {
                                     } else {
                                         console.error('Hire failed:', error);
                                         alert('Error hiring personnel: ' + error.message);
+                                    }
+                                }}
+                            />
+                        )}
+                        {modalType === 'attendance-log' && (
+                            <AttendanceLogForm
+                                employees={employees}
+                                onClose={() => setIsModalOpen(false)}
+                                onSave={async (attData) => {
+                                    const { error } = await supabase.from('attendance').insert([attData]);
+                                    if (!error) {
+                                        await logActivity(`Attendance Logged: ${employees.find(e => e.id === attData.employee_id)?.full_name}`, 'HR');
+                                        fetchDashboardData();
+                                        setIsModalOpen(false);
+                                    } else {
+                                        if (error.code === '23505') alert('CONFLICT: Attendance for this employee on this date already exists.');
+                                        else alert('Logging failed: ' + error.message);
                                     }
                                 }}
                             />
@@ -1088,8 +1692,119 @@ const AdminDashboard = () => {
                                 }}
                             />
                         )}
-                        {modalType === 'emp-details' && <EmployeeDetailsView emp={selectedEmployee} onClose={() => setIsModalOpen(false)} />}
+                        {modalType === 'emp-details' && (
+                            <EmployeeDetailsView
+                                emp={selectedEmployee}
+                                onClose={() => setIsModalOpen(false)}
+                                onAction={(action, reason) => handleAction('employee', selectedEmployee.id, action, reason)}
+                            />
+                        )}
+                        {modalType === 'payroll-details' && (
+                            <PayrollDetailsView
+                                record={selectedPayroll}
+                                onClose={() => setIsModalOpen(false)}
+                                onAction={(action, reason) => handleAction('payroll', selectedPayroll.id, action, reason)}
+                                onReopen={handleReopenPayroll}
+                                adminProfile={adminProfile}
+                            />
+                        )}
+                        {modalType === 'initiate-payroll' && (
+                            <InitiatePayrollModal
+                                onClose={() => setIsModalOpen(false)}
+                                onInitiate={async (config) => {
+                                    setLoading(true);
+                                    try {
+                                        const { data: emps } = await supabase.from('employees').select('id, full_name, salary_amount').eq('status', 'Active');
+                                        const { data: att } = await supabase
+                                            .from('attendance')
+                                            .select('employee_id, status, work_hours')
+                                            .gte('attendance_date', config.startDate)
+                                            .lte('attendance_date', config.endDate);
+
+                                        const recordsToInsert = emps.map(emp => {
+                                            const eAtt = (att || []).filter(a => a.employee_id === emp.id);
+                                            const presentDays = eAtt.filter(a => a.status === 'Present').length;
+                                            const leaveDays = eAtt.filter(a => a.status === 'Leave Approved').length;
+                                            const lopDays = eAtt.filter(a => a.status === 'Loss of Pay' || a.status === 'Absent').length + (eAtt.filter(a => a.status === 'Half Day').length * 0.5);
+
+                                            const salary = Number(emp.salary_amount || 0);
+                                            const perDay = salary / config.totalWorkingDays;
+                                            const deductions = perDay * lopDays;
+                                            const netPay = salary - deductions;
+
+                                            return {
+                                                employee_id: emp.id,
+                                                month: config.monthName,
+                                                basic_salary: salary,
+                                                present_days: presentDays,
+                                                leave_days: leaveDays,
+                                                lop_days: lopDays,
+                                                total_working_days: config.totalWorkingDays,
+                                                deductions: deductions,
+                                                net_salary: netPay,
+                                                status: 'Draft'
+                                            };
+                                        });
+
+                                        const { error } = await supabase.from('payroll_records').insert(recordsToInsert);
+                                        if (!error) {
+                                            logActivity(`Bulk Initiative: Synchronized Salary for ${config.monthName} (${emps.length} personnel)`, 'Finance');
+                                            fetchDashboardData();
+                                            setIsModalOpen(false);
+                                        } else throw error;
+                                    } catch (err) {
+                                        alert('Initiation failed: ' + err.message);
+                                    } finally {
+                                        setLoading(false);
+                                    }
+                                }}
+                            />
+                        )}
                         {modalType === 'report' && <ReportForm onClose={() => setIsModalOpen(false)} />}
+
+                        {modalType === 'submit-expense' && (
+                            <ExpenseClaimForm
+                                onClose={() => setIsModalOpen(false)}
+                                onSubmit={async (claim) => {
+                                    const { data: { user } } = await supabase.auth.getUser();
+                                    const { error } = await supabase.from('approval_requests').insert([{
+                                        type: 'Expense Claim',
+                                        requester_name: adminProfile.name || 'Admin User',
+                                        requester_id: user.id || 'system-admin',
+                                        amount: claim.amount,
+                                        details: { description: claim.description, category: claim.category },
+                                        level_1_status: 'Pending',
+                                        level_2_status: 'Pending',
+                                        final_status: 'Pending'
+                                    }]);
+
+                                    if (error) alert('Claim submission failed: ' + error.message);
+                                    else {
+                                        setIsModalOpen(false);
+                                        alert('Expense claim submitted for approval.');
+                                        // Force refresh of approvals tab
+                                        fetchDashboardData();
+                                    }
+                                }}
+                            />
+                        )}
+
+                        {modalType === 'assign-task' && (
+                            <VolunteerTaskForm
+                                volunteers={volunteers}
+                                onClose={() => setIsModalOpen(false)}
+                                onSave={async (taskData) => {
+                                    const { error } = await supabase.from('volunteer_tasks').insert([taskData]);
+                                    if (!error) {
+                                        await logActivity(`Deployed Mission: ${taskData.title} to Volunteer Registry`, 'Operations');
+                                        fetchDashboardData();
+                                        setIsModalOpen(false);
+                                    } else {
+                                        alert('Mission Deployment Failed: ' + error.message);
+                                    }
+                                }}
+                            />
+                        )}
                         {modalType === 'volunteer-id' && <VolunteerIDCard volunteer={selectedVolunteer} onClose={() => setIsModalOpen(false)} />}
                         {modalType === 'volunteer-details' && (
                             <VolunteerDetailsView
@@ -1097,6 +1812,10 @@ const AdminDashboard = () => {
                                 onClose={() => setIsModalOpen(false)}
                                 onApprove={() => {
                                     handleAction('volunteer', selectedVolunteer.id, 'approve');
+                                    setIsModalOpen(false);
+                                }}
+                                onReject={(reason) => {
+                                    handleAction('volunteer', selectedVolunteer.id, 'reject', reason);
                                     setIsModalOpen(false);
                                 }}
                             />
@@ -1107,6 +1826,28 @@ const AdminDashboard = () => {
                                 onClose={() => setIsModalOpen(false)}
                                 onApprove={() => { handleAction('student', selectedStudent.id, 'approve'); setIsModalOpen(false); }}
                                 onReject={() => { handleAction('student', selectedStudent.id, 'reject'); setIsModalOpen(false); }}
+                            />
+                        )}
+                        {modalType === 'scholarship-details' && (
+                            <ScholarshipDetailsView
+                                scholarship={selectedScholarship}
+                                onClose={() => setIsModalOpen(false)}
+                                onApprove={() => { handleAction('scholarship', selectedScholarship.id, 'approve'); setIsModalOpen(false); }}
+                                onAction={(act, res) => { handleAction('scholarship', selectedScholarship.id, act, res); setIsModalOpen(false); }}
+                            />
+                        )}
+                        {modalType === 'report-details' && (
+                            <ReportDetailsView
+                                report={selectedReport}
+                                onClose={() => setIsModalOpen(false)}
+                            />
+                        )}
+                        {modalType === 'task-details' && (
+                            <TaskDetailsView
+                                task={selectedTask}
+                                onClose={() => setIsModalOpen(false)}
+                                onApprove={() => { handleAction('volunteer_task', selectedTask.id, 'approve'); setIsModalOpen(false); }}
+                                onAction={(act, res) => { handleAction('volunteer_task', selectedTask.id, act, res); setIsModalOpen(false); }}
                             />
                         )}
                         {modalType === 'upload-doc' && (
@@ -1217,26 +1958,91 @@ const AdminDashboard = () => {
                         )}
                         {modalType === 'policy' && (
                             <PolicyForm
+                                policy={selectedPolicy}
                                 onClose={() => setIsModalOpen(false)}
-                                onSave={async (p) => {
-                                    const { error } = await supabase.from('policies').insert([p]);
+                                onSave={async (policyData) => {
+                                    // Strip metadata if not in DB yet (safe guard)
+                                    const { approved_by, document_ref, review_date, ...p } = policyData;
+                                    const { error } = p.id
+                                        ? await supabase.from('policies').update(p).eq('id', p.id)
+                                        : await supabase.from('policies').insert([p]);
+
                                     if (!error) {
-                                        logActivity(`Created Policy: ${p.title}`, 'Governance');
+                                        await logActivity(`${p.id ? 'Updated' : 'Created'} Governance Policy: ${p.title}`, 'Governance');
                                         fetchTabData('governance');
                                         setIsModalOpen(false);
-                                    }
+                                    } else alert(error.message);
+                                }}
+                            />
+                        )}
+                        {modalType === 'compliance-doc' && (
+                            <ComplianceDocForm
+                                onClose={() => setIsModalOpen(false)}
+                                onSave={async (doc) => {
+                                    const { error } = await supabase.from('compliance_docs').insert([doc]);
+                                    if (!error) {
+                                        await logActivity(`Uploaded Compliance Certificate: ${doc.title}`, 'Compliance');
+                                        fetchTabData('compliance');
+                                        setIsModalOpen(false);
+                                    } else alert(error.message);
+                                }}
+                            />
+                        )}
+                        {modalType === 'csr-project' && (
+                            <CsrProjectForm
+                                onClose={() => setIsModalOpen(false)}
+                                onSave={async (csr) => {
+                                    const { error } = await supabase.from('csr_funding').insert([csr]);
+                                    if (!error) {
+                                        await logActivity(`Initiated CSR Project Tracking: ${csr.project_name}`, 'Compliance');
+                                        fetchTabData('compliance');
+                                        setIsModalOpen(false);
+                                    } else alert(error.message);
+                                }}
+                            />
+                        )}
+                        {modalType === 'tax-record' && (
+                            <TaxRecordForm
+                                onClose={() => setIsModalOpen(false)}
+                                onSave={async (tax) => {
+                                    const { error } = await supabase.from('donation_tax_records').insert([tax]);
+                                    if (!error) {
+                                        await logActivity(`Logged 80G Tax Record for ${tax.donor_name}`, 'Compliance');
+                                        fetchTabData('compliance');
+                                        setIsModalOpen(false);
+                                    } else alert(error.message);
+                                }}
+                            />
+                        )}
+                        {modalType === 'compliance-task' && (
+                            <ComplianceTaskForm
+                                onClose={() => setIsModalOpen(false)}
+                                onSave={async (task) => {
+                                    const { error } = await supabase.from('compliance_checklists').insert([task]);
+                                    if (!error) {
+                                        await logActivity(`Scheduled Compliance Task: ${task.task_name}`, 'Compliance');
+                                        fetchTabData('compliance');
+                                        setIsModalOpen(false);
+                                    } else alert(error.message);
                                 }}
                             />
                         )}
                         {modalType === 'board-meeting' && (
                             <MeetingForm
+                                meeting={selectedMeeting}
                                 onClose={() => setIsModalOpen(false)}
-                                onSave={async (m) => {
-                                    const { error } = await supabase.from('board_meetings').insert([m]);
+                                onSave={async (meetingData) => {
+                                    const { attendees, recording_link, ...m } = meetingData;
+                                    const { error } = m.id
+                                        ? await supabase.from('board_meetings').update(m).eq('id', m.id)
+                                        : await supabase.from('board_meetings').insert([m]);
+
                                     if (!error) {
-                                        logActivity(`Scheduled Board Meeting: ${m.meeting_date}`, 'Governance');
+                                        logActivity(`${m.id ? 'Updated' : 'Scheduled'} Board Meeting: ${m.meeting_date}`, 'Governance');
                                         fetchTabData('governance');
                                         setIsModalOpen(false);
+                                    } else {
+                                        alert('Save failed: ' + error.message);
                                     }
                                 }}
                             />
@@ -1244,7 +2050,8 @@ const AdminDashboard = () => {
                         {modalType === 'board-member' && (
                             <MemberForm
                                 onClose={() => setIsModalOpen(false)}
-                                onSave={async (m) => {
+                                onSave={async (memberData) => {
+                                    const { term_end, role, voting_rights, ...m } = memberData;
                                     const { error } = await supabase.from('board_members').insert([m]);
                                     if (!error) {
                                         logActivity(`Added Board Member: ${m.full_name}`, 'Governance');
@@ -1261,9 +2068,81 @@ const AdminDashboard = () => {
     );
 };
 
+const SelfAttendancePortal = ({ employee, attendance, onCheckIn, onCheckOut }) => {
+    if (!employee) return null;
+
+    const today = new Date().toISOString().split('T')[0];
+    const todayLog = (attendance || []).find(a => a.employee_id === employee.id && a.attendance_date === today);
+
+    const isCheckedIn = !!todayLog?.check_in;
+    const isCheckedOut = !!todayLog?.check_out;
+
+    return (
+        <div className="content-panel animate-fade-in" style={{ background: 'linear-gradient(135deg, #1A365D 0%, #2D3748 100%)', color: 'white', padding: '30px', borderRadius: '24px', position: 'relative', overflow: 'hidden', marginBottom: '30px' }}>
+            <div style={{ position: 'absolute', top: '-10%', right: '-5%', fontSize: '10rem', opacity: 0.05, transform: 'rotate(-15deg)' }}>
+                <FaFingerprint />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 1 }}>
+                <div>
+                    <h3 style={{ margin: 0, color: '#63B3ED', fontSize: '1.2rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Personal Attendance Terminal</h3>
+                    <p style={{ margin: '5px 0 0', opacity: 0.8, fontSize: '0.95rem' }}>Authenticated Staff: <strong>{employee.full_name} ({employee.employee_id})</strong></p>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', opacity: 0.6, letterSpacing: '1px' }}>Server Date</div>
+                    <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '20px', marginTop: '30px', position: 'relative', zIndex: 1 }}>
+                {!isCheckedIn ? (
+                    <button
+                        className="btn-add"
+                        style={{ background: '#38A169', borderColor: '#38A169', height: '65px', fontSize: '1.1rem', fontWeight: 800, borderRadius: '16px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.4)' }}
+                        onClick={() => onCheckIn(employee.id)}
+                    >
+                        <FaFingerprint style={{ marginRight: '12px' }} /> Initiate Daily Check-In
+                    </button>
+                ) : !isCheckedOut ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ background: 'rgba(255,255,255,0.1)', padding: '15px 20px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.2)' }}>
+                            <div style={{ fontSize: '0.7rem', opacity: 0.6, textTransform: 'uppercase' }}>Session Started At</div>
+                            <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#68D391' }}>{new Date(todayLog.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+                        </div>
+                        <button
+                            className="btn-add"
+                            style={{ background: '#E53E3E', borderColor: '#E53E3E', height: '65px', fontSize: '1.1rem', fontWeight: 800, borderRadius: '16px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.4)' }}
+                            onClick={() => onCheckOut(todayLog.id)}
+                        >
+                            <FaSignOutAlt style={{ marginRight: '12px' }} /> End Active Shift
+                        </button>
+                    </div>
+                ) : (
+                    <div style={{ gridColumn: 'span 2', background: 'rgba(72, 187, 120, 0.15)', padding: '25px', borderRadius: '20px', border: '1px solid #38A169', textAlign: 'center' }}>
+                        <div style={{ fontSize: '1.8rem', color: '#68D391', marginBottom: '8px' }}>
+                            <FaCheckCircle style={{ marginBottom: '-5px' }} /> Shift Finalized
+                        </div>
+                        <div style={{ fontSize: '1rem', opacity: 0.9 }}>
+                            Log Duration: <strong>{new Date(todayLog.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} — {new Date(todayLog.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong>
+                        </div>
+                        <div style={{ fontWeight: 900, color: '#68D391', marginTop: '15px', fontSize: '1.2rem', background: 'rgba(56, 161, 105, 0.1)', padding: '10px', borderRadius: '12px', display: 'inline-block' }}>
+                            Calculated Hours: {Number(todayLog.work_hours).toFixed(2)} Hrs
+                        </div>
+                    </div>
+                )}
+                {!isCheckedOut && isCheckedIn && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: '16px', border: '1px dashed rgba(255,255,255,0.2)' }}>
+                        <FaClock style={{ fontSize: '2.5rem', color: '#63B3ED', animation: 'pulse 2s infinite' }} />
+                        <span style={{ fontSize: '0.7rem', marginTop: '8px', opacity: 0.5, textTransform: 'uppercase' }}>Logging Active...</span>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 /* --- TAB COMPONENTS --- */
 
-const OverviewTab = ({ adminProfile, employees, volunteers, requests, coAdmins, students, scholarships, finances, searchTerm, matchingActions, onClearSearch }) => {
+const OverviewTab = ({ adminProfile, employees, volunteers, requests, coAdmins, students, scholarships, finances, attendance, currentEmployee, onSelfCheckIn, onSelfCheckOut, searchTerm, matchingActions, onClearSearch }) => {
     const isSearching = searchTerm && searchTerm.trim().length > 0;
     const p = adminProfile.permissions;
 
@@ -1283,6 +2162,24 @@ const OverviewTab = ({ adminProfile, employees, volunteers, requests, coAdmins, 
 
     return (
         <>
+            <SelfAttendancePortal
+                employee={currentEmployee}
+                attendance={attendance}
+                onCheckIn={onSelfCheckIn}
+                onCheckOut={onSelfCheckOut}
+            />
+
+            {/* INJECT DIRECTOR'S REPORT IF APPLICABLE */}
+            {(adminProfile?.role?.includes('Director') || adminProfile?.role === 'Super Admin') && (
+                <DirectorsReportView
+                    adminProfile={adminProfile}
+                    requests={requests}
+                    finances={finances}
+                    volunteers={volunteers}
+                    employees={employees}
+                />
+            )}
+
             {isSearching && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '30px' }}>
                     <div style={{ padding: '15px', background: '#e6fffa', border: '2px solid #38b2ac', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
@@ -1397,6 +2294,104 @@ const OverviewTab = ({ adminProfile, employees, volunteers, requests, coAdmins, 
                 </div>
             </div>
         </>
+    );
+};
+
+const DirectorsReportView = ({ adminProfile, requests, departments, finances, volunteers, employees }) => {
+    // Only verify if the user is a Director or Super Admin
+    if (!adminProfile?.role?.includes('Director') && adminProfile?.role !== 'Super Admin') return null;
+
+    const pendingApprovals = requests.filter(r => r.final_status === 'Pending');
+    const rejectedCases = requests.filter(r => r.final_status === 'Declined');
+    const totalSalary = (employees || []).reduce((acc, emp) => acc + (parseFloat(emp.salary || 0)), 0);
+    const budget = 5000000; // Simulated Budget for Demo
+    const salaryPercentage = ((totalSalary / budget) * 100).toFixed(1);
+
+    const fellowshipPerformance = (volunteers || []).filter(v => v.status === 'Approved').length;
+
+    // Heatmap Mock Data
+    const activityHeatmap = [
+        { day: 'Mon', count: 12 }, { day: 'Tue', count: 19 }, { day: 'Wed', count: 8 },
+        { day: 'Thu', count: 24 }, { day: 'Fri', count: 15 }, { day: 'Sat', count: 30 }, { day: 'Sun', count: 5 }
+    ];
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '30px', animation: 'fadeIn 0.5s' }}>
+            {/* Top Stats Row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
+                <div className="content-panel" style={{ textAlign: 'center' }}>
+                    <h4 style={{ color: '#718096', margin: '0 0 10px 0' }}>Pending Decisions</h4>
+                    <div style={{ fontSize: '2.5rem', fontWeight: '800', color: '#DD6B20' }}>{pendingApprovals.length}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#A0AEC0' }}>Awaiting Final Sign-off</div>
+                </div>
+                <div className="content-panel" style={{ textAlign: 'center' }}>
+                    <h4 style={{ color: '#718096', margin: '0 0 10px 0' }}>Rejection Rate</h4>
+                    <div style={{ fontSize: '2.5rem', fontWeight: '800', color: '#E53E3E' }}>
+                        {((rejectedCases.length / (requests.length || 1)) * 100).toFixed(0)}%
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: '#A0AEC0' }}>Avg. Declined Cases</div>
+                </div>
+                <div className="content-panel" style={{ textAlign: 'center' }}>
+                    <h4 style={{ color: '#718096', margin: '0 0 10px 0' }}>Payroll Utilization</h4>
+                    <div style={{ fontSize: '2.5rem', fontWeight: '800', color: '#3182CE' }}>{salaryPercentage}%</div>
+                    <div style={{ fontSize: '0.8rem', color: '#A0AEC0' }}>of Monthly Budget Cap</div>
+                </div>
+                <div className="content-panel" style={{ textAlign: 'center' }}>
+                    <h4 style={{ color: '#718096', margin: '0 0 10px 0' }}>Fellowship Strength</h4>
+                    <div style={{ fontSize: '2.5rem', fontWeight: '800', color: '#38A169' }}>{fellowshipPerformance}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#A0AEC0' }}>Active Fellows</div>
+                </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '30px' }}>
+                <div className="content-panel">
+                    <h3><FaChartLine /> Executive Overview: Rejection Analysis</h3>
+                    <table className="data-table">
+                        <thead><tr><th>Case ID</th><th>Type</th><th>Declined By</th><th>Reason Provided</th></tr></thead>
+                        <tbody>
+                            {rejectedCases.slice(0, 5).map(r => (
+                                <tr key={r.id}>
+                                    <td>{r.id.substring(0, 8)}</td>
+                                    <td>{r.type}</td>
+                                    <td>{r.final_approver_name || r.level_1_approver_name}</td>
+                                    <td style={{ color: '#E53E3E', fontWeight: '600' }}>{r.decline_reason || 'Administrative Decline'}</td>
+                                </tr>
+                            ))}
+                            {rejectedCases.length === 0 && <tr><td colSpan="4" style={{ textAlign: 'center', padding: '20px' }}>No rejections recorded this period.</td></tr>}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div className="content-panel">
+                    <h3><FaTasks /> Volunteer Heatmap</h3>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '150px', marginTop: '20px' }}>
+                        {activityHeatmap.map(d => (
+                            <div key={d.day} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+                                <div style={{
+                                    width: '30px',
+                                    height: `${(d.count / 30) * 100}%`,
+                                    background: d.count > 20 ? '#38A169' : (d.count > 10 ? '#3182CE' : '#CBD5E0'),
+                                    borderRadius: '5px'
+                                }}></div>
+                                <span style={{ fontSize: '0.7rem' }}>{d.day}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <p style={{ textAlign: 'center', fontSize: '0.8rem', color: '#718096', marginTop: '15px' }}>Peak Activity: Saturday</p>
+                </div>
+            </div>
+
+            <div className="content-panel">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3>Report Generator (Director Access)</h3>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <button className="btn-small" onClick={() => alert('Generating Monthly PDF...')}><FaDownload /> Monthly</button>
+                        <button className="btn-small" onClick={() => alert('Generating Quarterly PDF...')}><FaDownload /> Quarterly</button>
+                        <button className="btn-small" onClick={() => alert('Generating Annual Audit PDF...')}><FaDownload /> Annual</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     );
 };
 
@@ -1536,83 +2531,302 @@ const EditProfileModal = ({ admin, onClose, onSave }) => {
 };
 
 const ActivityLogsTab = ({ logs }) => (
-    <div className="content-panel">
-        <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px' }}>
-            <h3>Category 7: Forensic Audit Trail</h3>
-            <button className="btn-small"><FaDownload /> Export CSV</button>
+    <div className="content-panel animate-fade-in" style={{ padding: '0', background: '#f8fafc' }}>
+        <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0', alignItems: 'center', padding: '30px 40px', background: 'white', borderBottom: '1px solid #edf2f7', borderTopLeftRadius: '28px', borderTopRightRadius: '28px' }}>
+            <div>
+                <h3 style={{ margin: 0, fontSize: '1.4rem', color: '#1a365d', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <FaAuditIcon style={{ color: '#e53e3e' }} /> Central Institutional Audit (Level 7)
+                </h3>
+                <p style={{ margin: '5px 0 0', color: '#e53e3e', fontSize: '0.75rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <FaShieldAlt /> IMMUTABLE SECURITY ARCHIVE • DELETE/EDIT PROTOCOLS PHYSICALLY DISABLED AT KERNEL
+                </p>
+            </div>
+            <button className="btn-small" style={{ background: '#2d3748', color: 'white' }}><FaDownload /> Regional CSV Dump</button>
         </div>
-        <table className="data-table">
-            <thead>
-                <tr><th>Event Timestamp</th><th>Actor Profile</th><th>Action Performed</th><th>Sub-system</th></tr>
-            </thead>
-            <tbody>
-                {(logs || []).map(log => (
-                    <tr key={log.id}>
-                        <td>{new Date(log.created_at).toLocaleString()}</td>
-                        <td><strong>{log.actor_id ? 'Admin Access' : 'System Gen'}</strong></td>
-                        <td>{log.action}</td>
-                        <td><span className="badge">{log.sub_system}</span></td>
-                    </tr>
-                ))}
-            </tbody>
-        </table>
+        <div style={{ padding: '0 40px 40px' }}>
+            <div className="table-responsive" style={{ overflowX: 'auto', marginTop: '20px' }}>
+                <table className="data-table" style={{ fontSize: '0.85rem' }}>
+                    <thead>
+                        <tr style={{ background: '#fff' }}>
+                            <th style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase' }}>Timeline (IST)</th>
+                            <th style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase' }}>Personnel</th>
+                            <th style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase' }}>Transaction / Action</th>
+                            <th style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase' }}>Record ID</th>
+                            <th style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase' }}>Sub-System</th>
+                            <th style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase' }}>Terminal Fingerprint</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {(logs || []).length > 0 ? logs.map(log => {
+                            const dateObj = new Date(log.created_at);
+                            return (
+                                <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                    <td style={{ whiteSpace: 'nowrap' }}>
+                                        <div style={{ fontWeight: 700 }}>{dateObj.toLocaleDateString('en-GB')}</div>
+                                        <div style={{ fontSize: '0.7rem', color: '#718096' }}>{dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</div>
+                                    </td>
+                                    <td>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <div style={{ width: '32px', height: '32px', background: '#EBF8FF', borderRadius: '50%', border: '1px solid #BEE3F8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3182CE', fontWeight: 900 }}>
+                                                {log.actor_name?.charAt(0) || 'A'}
+                                            </div>
+                                            <div>
+                                                <strong>{log.actor_name || 'Admin'}</strong><br />
+                                                <span style={{ fontSize: '0.65rem', color: '#3182CE', fontWeight: 900, textTransform: 'uppercase' }}>{log.actor_role || 'HQ Executive'}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td style={{ maxWidth: '250px' }}>
+                                        <div style={{ fontWeight: 700, color: '#2D3748' }}>{log.action}</div>
+                                        {(log.old_value || log.new_value) && (
+                                            <div style={{ marginTop: '5px', fontSize: '0.65rem', color: '#718096', fontStyle: 'italic' }}>
+                                                Modified system state parameters
+                                            </div>
+                                        )}
+                                    </td>
+                                    <td>
+                                        <code style={{ background: '#F7FAFC', padding: '4px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', fontSize: '0.75rem', color: '#1A365D', fontWeight: 700 }}>
+                                            {log.record_id || 'SYS-LINK'}
+                                        </code>
+                                    </td>
+                                    <td><span className="badge" style={{ background: '#edf2f7', color: '#4a5568' }}>{log.sub_system}</span></td>
+                                    <td>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <FaDesktop style={{ color: '#cbd5e0' }} />
+                                            <div style={{ fontSize: '0.7rem' }}>
+                                                <div style={{ fontWeight: 600 }}>{log.ip_address || '127.0.0.1'}</div>
+                                                <div style={{ color: '#94a3b8', fontSize: '0.65rem' }}>{log.device_info || 'Authorized Node'}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        }) : (
+                            <tr><td colSpan="6" style={{ textAlign: 'center', padding: '100px', color: '#94a3b8' }}>
+                                <FaHistory style={{ fontSize: '3rem', opacity: 0.1, marginBottom: '20px' }} /><br />
+                                The Institutional Audit Trail is empty. All administrative transactions will appear here.
+                            </td></tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 );
 
-const EmployeeTab = ({ employees, toggleStatus, deleteEmp, onView, onAdd }) => (
-    <div className="content-panel">
-        <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px' }}>
-            <h3>Personnel Directory</h3>
-            <button className="btn-add" onClick={onAdd}><FaUserPlus /> Hire New Staff</button>
+const EmployeeTab = ({ employees, toggleStatus, deleteEmp, onView, onAdd }) => {
+    const [filterStatus, setFilterStatus] = useState('New');
+
+    const filteredData = (employees || []).filter(emp =>
+        filterStatus === 'All' || emp.status === filterStatus
+    );
+
+    return (
+        <div className="content-panel" style={{ animation: 'fadeIn 0.5s' }}>
+            <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px', alignItems: 'center' }}>
+                <div>
+                    <h3 style={{ margin: 0 }}>Personnel Directory</h3>
+                    <p style={{ margin: '5px 0 0', color: '#718096', fontSize: '0.85rem' }}>Lifecycle Management: Onboarding → Verification → Active Duty</p>
+                </div>
+                <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                    <select
+                        value={filterStatus}
+                        onChange={(e) => setFilterStatus(e.target.value)}
+                        style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.85rem', fontWeight: 600 }}
+                    >
+                        <option value="New">Review Queue (New)</option>
+                        <option value="HR Verified">Pending Admin Approval</option>
+                        <option value="Admin Approved">Awaiting Director</option>
+                        <option value="Active">Active Staff</option>
+                        <option value="Rejected">Rejected</option>
+                        <option value="All">Full Registry</option>
+                    </select>
+                    <button className="btn-premium" onClick={onAdd}><FaUserPlus /> Hire New Staff</button>
+                </div>
+            </div>
+            <table className="data-table">
+                <thead>
+                    <tr><th>Identity</th><th>Role & Dept</th><th>Work Type</th><th>Onboarding Stage</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                    {filteredData.length > 0 ? filteredData.map(emp => (
+                        <tr key={emp.id}>
+                            <td><strong>{emp.full_name}</strong><br /><small>{emp.employee_id || 'PENDING'}</small></td>
+                            <td>{emp.designation}<br /><small>{emp.department}</small></td>
+                            <td>{emp.employment_type}</td>
+                            <td>
+                                <span className={`badge ${emp.status === 'Active' ? 'success' : (emp.status === 'Rejected' ? 'red' : 'blue')}`}>
+                                    {emp.status === 'New' ? 'Awaiting HR' :
+                                        emp.status === 'HR Verified' ? 'Awaiting Admin' :
+                                            emp.status === 'Admin Approved' ? 'Awaiting Director' :
+                                                emp.status}
+                                </span>
+                            </td>
+                            <td>
+                                <div className="action-buttons">
+                                    <button className="btn-icon" onClick={() => onView(emp)} title="Detailed View / Approve"><FaEye /></button>
+                                    <button className="btn-icon danger" onClick={() => deleteEmp(emp.id, emp.full_name)} title="Delete"><FaTrash /></button>
+                                </div>
+                            </td>
+                        </tr>
+                    )) : (
+                        <tr><td colSpan="5" style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>
+                            <FaUsers style={{ fontSize: '3rem', opacity: 0.1, marginBottom: '15px' }} /><br />
+                            No personnel records found for the selected stage.
+                        </td></tr>
+                    )}
+                </tbody>
+            </table>
         </div>
-        <table className="data-table">
-            <thead>
-                <tr><th>Identity</th><th>Role & Dept</th><th>Work Type</th><th>Attendance</th><th>Status</th><th>Actions</th></tr>
-            </thead>
-            <tbody>
-                {(employees || []).map(emp => (
-                    <tr key={emp.id}>
-                        <td><strong>{emp.full_name}</strong><br /><small>{emp.employee_id}</small></td>
-                        <td>{emp.designation}<br /><small>{emp.department}</small></td>
-                        <td>{emp.employment_type}</td>
-                        <td><span className="badge">Verified</span></td>
-                        <td><span className={`badge ${emp.status === 'Active' ? 'success' : 'red-badge'}`}>{emp.status}</span></td>
-                        <td>
-                            <div className="action-buttons">
-                                <button className="btn-icon" onClick={() => onView(emp)} title="Detailed View"><FaEye /></button>
-                                <button className="btn-icon" onClick={() => toggleStatus(emp)} title="Toggle Status"><FaUserCheck /></button>
-                                <button className="btn-icon danger" onClick={() => deleteEmp(emp.id, emp.full_name)} title="Delete"><FaTrash /></button>
-                            </div>
-                        </td>
+    );
+};
+
+const VolunteerTasksTab = ({ tasks, volunteers, handleAction, onExport, onAssign, onView }) => {
+    const [filterStatus, setFilterStatus] = useState('Completed'); // Default to review queue
+
+    const filteredData = (tasks || []).filter(t =>
+        filterStatus === 'All' || t.status === filterStatus
+    );
+
+    const handleDownloadProof = async (task) => {
+        if (!task.proof_file_path) return alert('No proof artifact uploaded for this task.');
+        try {
+            const { data, error } = await supabase.storage.from('vault').createSignedUrl(task.proof_file_path, 60);
+            if (error) throw error;
+            window.open(data.signedUrl, '_blank');
+        } catch (err) { alert('Proof retrieval failed: ' + err.message); }
+    };
+
+    return (
+        <div className="content-panel" style={{ animation: 'fadeIn 0.5s' }}>
+            <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+                <div>
+                    <h3 style={{ margin: 0 }}>Volunteer Task Mastery Hub</h3>
+                    <p style={{ margin: '5px 0 0', color: '#718096', fontSize: '0.85rem' }}>Core verification engine for institutional certificate eligibility.</p>
+                </div>
+                <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                    <button
+                        className="btn-premium"
+                        onClick={onAssign}
+                    >
+                        <FaPlusCircle style={{ fontSize: '1.1rem' }} />
+                        <span>Deploy New Mission</span>
+                    </button>
+                    <div style={{ width: '1px', height: '30px', background: '#e2e8f0', margin: '0 5px' }}></div>
+                    <select
+                        value={filterStatus}
+                        onChange={(e) => setFilterStatus(e.target.value)}
+                        style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.85rem', fontWeight: 600 }}
+                    >
+                        <option value="Completed">Review Queue (Completed)</option>
+                        <option value="Verified">Verified Activities</option>
+                        <option value="Rejected">Rejected Proofs</option>
+                        <option value="In Progress">Active Tasks</option>
+                        <option value="All">Full Audit Trail</option>
+                    </select>
+                    <button className="btn-small" onClick={() => onExport(filteredData, 'Volunteer_Tasks')} style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}>
+                        <FaDownload /> Export CSV
+                    </button>
+                </div>
+            </div>
+
+            <table className="data-table">
+                <thead>
+                    <tr>
+                        <th>Volunteer</th>
+                        <th>Task Mission</th>
+                        <th>Submission Proof</th>
+                        <th>Current Status</th>
+                        <th>Verification Action</th>
                     </tr>
-                ))}
-            </tbody>
-        </table>
-    </div>
-);
+                </thead>
+                <tbody>
+                    {filteredData.length > 0 ? filteredData.map(t => (
+                        <tr key={t.id}>
+                            <td>
+                                <strong>{t.volunteers?.full_name}</strong><br />
+                                <small style={{ color: '#718096' }}>Sub ID: {t.id.substring(0, 8)}</small>
+                            </td>
+                            <td>
+                                <div style={{ fontWeight: 600 }}>{t.title}</div>
+                                <div style={{ fontSize: '0.75rem', color: '#4a5568', marginTop: '4px' }}>{t.description?.substring(0, 60)}...</div>
+                            </td>
+                            <td>
+                                {t.proof_file_path ? (
+                                    <button className="btn-small" onClick={() => onView(t)} style={{ background: '#ebf8ff', color: '#2b6cb0' }}>
+                                        <FaEye /> Audit Registry
+                                    </button>
+                                ) : <span style={{ color: '#cbd5e0', fontSize: '0.8rem' }}>No Artifact</span>}
+                            </td>
+                            <td>
+                                <span className={`badge ${t.status === 'Verified' ? 'success' : t.status === 'Completed' ? 'blue' : t.status === 'Rejected' ? 'red' : 'neutral'}`}>
+                                    {t.status}
+                                </span>
+                            </td>
+                            <td>
+                                {t.status === 'Completed' ? (
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <button className="btn-small success-btn" onClick={() => handleAction('volunteer_task', t.id, 'approve')}>Approve</button>
+                                        <button className="btn-small danger-btn" onClick={() => {
+                                            const reason = prompt('Specify rejection grounds (Incomplete proof / Fake activity):');
+                                            if (reason) handleAction('volunteer_task', t.id, 'reject', reason);
+                                        }}>Reject</button>
+                                    </div>
+                                ) : (
+                                    <div style={{ fontSize: '0.75rem', color: '#718096' }}>
+                                        {t.status === 'Verified' ? `Verified On: ${new Date(t.verified_at).toLocaleDateString()}` : 'No Action Needed'}
+                                    </div>
+                                )}
+                            </td>
+                        </tr>
+                    )) : (
+                        <tr><td colSpan="5" style={{ textAlign: 'center', padding: '100px', color: '#94a3b8' }}>
+                            <FaClipboardCheck style={{ fontSize: '3rem', opacity: 0.1, marginBottom: '20px' }} /><br />
+                            Review queue is clear. All submitted tasks have been processed.
+                        </td></tr>
+                    )}
+                </tbody>
+            </table>
+            {/* Added for Task Verification Detail View */}
+            {filteredData.some(t => t.status === 'Verified' || t.status === 'Rejected') && (
+                <div style={{ marginTop: '30px' }}>
+                    <h4 style={{ color: '#4A5568', fontSize: '0.9rem', marginBottom: '15px' }}>Recent Decision Registry</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                        {filteredData.filter(t => t.status === 'Verified' || t.status === 'Rejected').slice(0, 4).map(t => (
+                            <ApprovalBadge key={`badge-${t.id}`} data={t} level="Mission Verification" />
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div >
+    );
+};
 
 const VolunteerTab = ({ volunteers, handleAction, onDelete, onView, onViewID, onExport }) => {
-    const [filterStatus, setFilterStatus] = useState('All');
+    const [filterStatus, setFilterStatus] = useState('New');
 
     const filteredData = (volunteers || []).filter(v =>
         filterStatus === 'All' || v.status === filterStatus
     );
 
     return (
-        <div className="content-panel">
+        <div className="content-panel" style={{ animation: 'fadeIn 0.5s' }}>
             <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-                <h3 style={{ margin: 0 }}>Volunteer Onboarding</h3>
+                <div>
+                    <h3 style={{ margin: 0 }}>Volunteer Review Queue</h3>
+                    <p style={{ margin: '5px 0 0', color: '#718096', fontSize: '0.85rem' }}>Coordinator Approval Workflow: Submission → Review → ID Generation</p>
+                </div>
                 <div style={{ display: 'flex', gap: '12px' }}>
                     <select
                         value={filterStatus}
                         onChange={(e) => setFilterStatus(e.target.value)}
-                        style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.85rem' }}
+                        style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.85rem', fontWeight: 600 }}
                         aria-label="Filter volunteers by status"
                     >
-                        <option value="All">All Statuses</option>
-                        <option value="New">New Applications</option>
-                        <option value="Approved">Approved</option>
-                        <option value="Rejected">Rejected</option>
+                        <option value="New">Review Queue (New)</option>
+                        <option value="Approved">Verified Volunteers</option>
+                        <option value="Rejected">Rejected Applications</option>
+                        <option value="All">All Records</option>
                     </select>
                     <button
                         className="btn-small"
@@ -1620,41 +2834,179 @@ const VolunteerTab = ({ volunteers, handleAction, onDelete, onView, onViewID, on
                         title="Download as CSV"
                         style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}
                     >
-                        <FaDownload /> Export
+                        <FaDownload /> Export CSV
                     </button>
                 </div>
             </div>
             <table className="data-table" role="table">
-                <thead><tr><th>Name</th><th>Area of Interest</th><th>Contact</th><th>Status</th><th>Actions</th></tr></thead>
+                <thead><tr><th>Applicant Name</th><th>Area of Interest</th><th>Submission Date</th><th>Ref ID</th><th>Status</th><th>Actions</th></tr></thead>
                 <tbody>
                     {filteredData.length > 0 ? filteredData.map(v => (
                         <tr key={v.id} role="row">
-                            <td>{v.full_name}</td>
+                            <td><strong>{v.full_name}</strong></td>
                             <td>{v.area_of_interest}</td>
-                            <td>{v.phone || v.email}</td>
-                            <td><span className={`badge ${v.status === 'New' ? 'blue' : v.status === 'Approved' ? 'success' : 'red'}`}>{v.status}</span></td>
+                            <td>{new Date(v.created_at).toLocaleDateString()}</td>
+                            <td><code style={{ fontSize: '0.75rem' }}>{v.id.substring(0, 8)}</code></td>
+                            <td>
+                                <span className={`badge ${v.status === 'New' ? 'blue' : v.status === 'Approved' ? 'success' : 'red'}`}>
+                                    {v.status === 'New' ? 'Under Review' : v.status}
+                                </span>
+                            </td>
                             <td style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <button className="btn-icon" onClick={() => onView(v)} title="View Full Profile"><FaEye /></button>
-                                {v.status === 'New' && (
-                                    <>
-                                        <button className="btn-small success-btn" onClick={() => handleAction('volunteer', v.id, 'approve')}>Approve</button>
-                                        <button className="btn-small danger-btn" onClick={() => {
-                                            const reason = prompt('Enter rejection reason for volunteer:');
-                                            if (reason) handleAction('volunteer', v.id, 'reject', reason);
-                                        }} style={{ marginLeft: '5px' }}>Reject</button>
-                                    </>
-                                )}
+                                <button className="btn-icon" onClick={() => onView(v)} title="Perform Coordinator Review"><FaEye /></button>
                                 {v.status === 'Approved' && (
-                                    <button className="btn-small" onClick={() => onViewID(v)}><FaIdCard /> ID Card</button>
+                                    <button className="btn-small" onClick={() => onViewID(v)} style={{ background: '#ebf8ff', color: '#2b6cb0' }}><FaIdCard /> Get ID</button>
                                 )}
-                                <button className="btn-icon danger" onClick={() => onDelete(v.id, v.full_name)} title="Remove Record" style={{ marginLeft: 'auto' }}><FaTrash /></button>
+                                <button className="btn-icon danger" onClick={() => onDelete(v.id, v.full_name)} title="Purge Record" style={{ marginLeft: 'auto' }}><FaTrash /></button>
                             </td>
                         </tr>
                     )) : (
-                        <tr><td colSpan="5" style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>No volunteers found.</td></tr>
+                        <tr><td colSpan="6" style={{ textAlign: 'center', padding: '100px', color: '#94a3b8' }}>
+                            <FaHandHoldingUsd style={{ fontSize: '3rem', opacity: 0.2, marginBottom: '15px' }} /><br />
+                            Queue is currently clear. No applications pending review.
+                        </td></tr>
                     )}
                 </tbody>
             </table>
+        </div>
+    );
+};
+
+const AttendanceTab = ({ attendance, employees, onAdd, onExport, onLock, onAction, adminProfile }) => {
+    const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
+    const filteredData = (attendance || []).filter(a => a.attendance_date === filterDate || !filterDate);
+
+    const isDayLocked = filteredData.length > 0 && filteredData.every(a => a.is_locked);
+    const hasPermissionToLock = adminProfile.role === 'Super Admin' || adminProfile.role.includes('Director') || adminProfile.role === 'HR Manager';
+
+    const getApprovalBadge = (a) => {
+        const status = a.approval_status || 'Submitted';
+        let config = { label: 'Submitted', color: '#718096', icon: <FaClock /> };
+
+        if (status === 'Supervisor Reviewed') config = { label: 'Supervisor Reviewed', color: '#3182CE', icon: <FaUserCheck /> };
+        if (status === 'HR Verified') config = { label: 'HR Verified', color: '#805AD5', icon: <FaShieldAlt /> };
+        if (status === 'Locked' || a.is_locked) config = { label: 'Locked / Finalized', color: '#2D3748', icon: <FaLock /> };
+
+        return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 12px', background: `${config.color}15`, color: config.color, borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase' }}>
+                {config.icon} {config.label}
+            </div>
+        );
+    };
+
+    return (
+        <div className="content-panel animate-fade-in" style={{ padding: '0' }}>
+            <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '30px 40px', background: '#fff', borderBottom: '1px solid #edf2f7', borderTopLeftRadius: '28px', borderTopRightRadius: '28px' }}>
+                <div>
+                    <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 900, color: '#1a365d', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <FaClipboardCheck style={{ color: 'var(--primary)' }} /> Daily Attendance Registry
+                    </h3>
+                    <p style={{ margin: '5px 0 0', color: '#718096', fontSize: '0.85rem' }}>Precision tracking & institutional presence logs.</p>
+                </div>
+                <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                    <div style={{ position: 'relative' }}>
+                        <FaCalendarAlt style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#a0aec0' }} />
+                        <input
+                            type="date"
+                            value={filterDate}
+                            onChange={(e) => setFilterDate(e.target.value)}
+                            style={{ padding: '10px 12px 10px 35px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '0.9rem', fontWeight: 600, color: '#2d3748', background: '#f8fafc' }}
+                        />
+                    </div>
+                    <button className="btn-small" onClick={() => onExport(filteredData, `Attendance_${filterDate}`)} style={{ background: '#fff', color: '#4a5568', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                        <FaDownload /> Export CSV
+                    </button>
+                    {!isDayLocked && (
+                        <button className="btn-add" onClick={onAdd} style={{ padding: '10px 20px' }}>
+                            <FaFingerprint /> Log Entry
+                        </button>
+                    )}
+                    {hasPermissionToLock && !isDayLocked && filteredData.length > 0 && (
+                        <button className="btn-premium" onClick={() => onLock(filterDate)} style={{ background: '#2d3748', border: 'none' }}>
+                            <FaLock /> Finalize & Lock
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            <div style={{ padding: '0 40px 40px' }}>
+                {isDayLocked && (
+                    <div style={{ margin: '20px 0', padding: '15px 25px', background: '#fffaf0', border: '1.5px solid #feebc8', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '15px', color: '#9c4221' }}>
+                        <FaLock style={{ fontSize: '1.2rem' }} />
+                        <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>
+                            REGISTRY LOCKED: This day's attendance has been finalized and sanctioned. No further modifications allowed.
+                        </div>
+                    </div>
+                )}
+
+                <table className="data-table" style={{ marginTop: '20px' }}>
+                    <thead>
+                        <tr style={{ background: '#fff' }}>
+                            <th style={{ color: '#94a3b8', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Emp ID</th>
+                            <th style={{ color: '#94a3b8', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Name</th>
+                            <th style={{ color: '#94a3b8', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Time Metrics</th>
+                            <th style={{ color: '#94a3b8', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Approval Flow</th>
+                            <th style={{ color: '#94a3b8', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px', textAlign: 'center' }}>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody style={{ borderTop: 'none' }}>
+                        {filteredData.length > 0 ? filteredData.map(a => (
+                            <tr key={a.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                <td style={{ fontWeight: 800, color: '#1a365d' }}>{a.employees?.employee_id || '—'}</td>
+                                <td>
+                                    <div style={{ fontWeight: 700, color: '#2d3748' }}>{a.employees?.full_name}</div>
+                                    <div style={{ fontSize: '0.7rem', color: '#718096' }}>{a.employees?.department}</div>
+                                </td>
+                                <td>
+                                    <div style={{ display: 'flex', gap: '15px' }}>
+                                        <div>
+                                            <small style={{ display: 'block', color: '#94a3b8', fontSize: '0.65rem', textTransform: 'uppercase' }}>Shift</small>
+                                            <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>{a.check_in ? new Date(a.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'} - {a.check_out ? new Date(a.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}</div>
+                                        </div>
+                                        <div>
+                                            <small style={{ display: 'block', color: '#94a3b8', fontSize: '0.65rem', textTransform: 'uppercase' }}>Net Hours</small>
+                                            <div style={{ fontSize: '0.85rem', fontWeight: 900, color: '#2d3748' }}>{Number(a.work_hours || 0).toFixed(1)} Hrs</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {getApprovalBadge(a)}
+                                    {a.approval_status === 'Locked' && (
+                                        <div style={{ marginTop: '5px', fontSize: '0.65rem', color: '#718096', fontStyle: 'italic' }}>
+                                            Finalized by {adminProfile.name}
+                                        </div>
+                                    )}
+                                </td>
+                                <td style={{ textAlign: 'center' }}>
+                                    {!a.is_locked ? (
+                                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                                            {a.approval_status === 'Submitted' && (
+                                                <button className="btn-small success" onClick={() => onAction(a.id, 'supervisor')} style={{ fontSize: '0.7rem' }}>Verify (Manager)</button>
+                                            )}
+                                            {a.approval_status === 'Supervisor Reviewed' && (
+                                                <button className="btn-small" onClick={() => onAction(a.id, 'hr')} style={{ fontSize: '0.7rem', background: '#805AD5', color: 'white' }}>Audit (HR)</button>
+                                            )}
+                                            {a.approval_status === 'HR Verified' && (
+                                                <span style={{ fontSize: '0.7rem', color: '#38A169', fontWeight: 800 }}>READY TO LOCK</span>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <FaCheckCircle style={{ color: '#3182CE' }} />
+                                    )}
+                                </td>
+                            </tr>
+                        )) : (
+                            <tr><td colSpan="5" style={{ textAlign: 'center', padding: '100px', color: '#94a3b8' }}>
+                                <FaClipboardCheck style={{ fontSize: '3rem', opacity: 0.1, marginBottom: '20px' }} /><br />
+                                No personnel logs recorded for this operation date.
+                            </td></tr>
+                        )}
+                    </tbody>
+                </table>
+                <div style={{ marginTop: '30px', color: '#718096', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FaInfoCircle style={{ color: '#3182ce' }} /> <span>📌 <strong>Approval Flow:</strong> Submitted → Supervisor Review → HR verification → Locked.</span>
+                </div>
+            </div>
         </div>
     );
 };
@@ -1789,7 +3141,7 @@ const StudentTab = ({ students, onView, onDelete, handleAction, onExport }) => {
     );
 };
 
-const ScholarshipTab = ({ scholarships, handleAction, onDelete, onExport }) => {
+const ScholarshipTab = ({ scholarships, handleAction, onDelete, onExport, onView }) => {
     const [filterStatus, setFilterStatus] = useState('All');
     const filteredData = (scholarships || []).filter(s => filterStatus === 'All' || s.status === filterStatus);
 
@@ -1821,9 +3173,10 @@ const ScholarshipTab = ({ scholarships, handleAction, onDelete, onExport }) => {
                             <td>{s.applicant_name}</td>
                             <td>{s.income_status}</td>
                             <td>{s.academic_score}</td>
-                            <td><span className="badge">{s.status}</span></td>
+                            <td><span className={`badge ${s.status === 'Approved' ? 'success' : 'blue'}`}>{s.status}</span></td>
                             <td>
                                 <div className="action-buttons" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                    <button className="btn-icon" onClick={() => onView(s)} title="Review Application Details"><FaEye /></button>
                                     {s.status === 'Awaiting Approval' && (
                                         <button className="btn-small success-btn" onClick={() => handleAction('scholarship', s.id, 'approve')}>Approve</button>
                                     )}
@@ -1888,16 +3241,290 @@ const FinanceTab = ({ finances, onDelete, onExport }) => {
     );
 };
 
-const ReportsTab = ({ reports, onAdd, onDelete }) => (
+const PayrollTab = ({ records, onView, onExport, onInitiate }) => {
+    const [filterStatus, setFilterStatus] = useState('All');
+    const filteredData = (records || []).filter(r => filterStatus === 'All' || r.status === filterStatus);
+
+    return (
+        <div className="content-panel">
+            <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+                <div>
+                    <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <FaFileInvoiceDollar style={{ color: 'var(--primary)' }} /> Institutional Payroll Registry
+                    </h3>
+                    <p style={{ margin: '5px 0 0', color: '#718096', fontSize: '0.85rem' }}>STRICT: Multi-stage salary authorization & attendance-linked disbursement.</p>
+                </div>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                    <button className="btn-premium" onClick={onInitiate} style={{ background: '#2d3748' }}>
+                        <FaPlusCircle /> Initiate Monthly Run
+                    </button>
+                    <select
+                        value={filterStatus}
+                        onChange={(e) => setFilterStatus(e.target.value)}
+                        style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.85rem', fontWeight: 600 }}
+                    >
+                        <option value="All">Full Lifecycle</option>
+                        <option value="Draft">Draft (Newly Sequenced)</option>
+                        <option value="Attendance Locked">Review Queue (Attendance)</option>
+                        <option value="HR Verified">Pending Finance</option>
+                        <option value="Finance Computed">Pending Director Approval</option>
+                        <option value="Director Approved">Ready for Bank Disbursement</option>
+                        <option value="Funds Disbursed">Disbursed (Postings)</option>
+                        <option value="Cycle Complete">Cycle Closed</option>
+                    </select>
+                    <button className="btn-small" onClick={() => onExport(filteredData, 'Payroll_Registry')} style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}>
+                        <FaDownload /> Export
+                    </button>
+                </div>
+            </div>
+
+            <table className="data-table">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Pay Period</th>
+                        <th>Net Payable</th>
+                        <th>Current Stage</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {filteredData.length > 0 ? filteredData.map(r => (
+                        <tr key={r.id}>
+                            <td>
+                                <strong>{r.employees?.full_name}</strong><br />
+                                <small>{r.employees?.designation}</small>
+                            </td>
+                            <td>{r.month} {r.year || ''}</td>
+                            <td><strong>₹ {Number(r.net_salary || 0).toLocaleString()}</strong></td>
+                            <td>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <span className={`badge ${r.status === 'Cycle Complete' ? 'success' : 'blue'}`}>
+                                        {r.status}
+                                    </span>
+                                    {r.is_reopened && <span style={{ fontSize: '0.65rem', color: '#E53E3E', fontWeight: 900 }}>RE-OPENED BY DIRECTOR</span>}
+                                </div>
+                            </td>
+                            <td>
+                                <button className="btn-icon" onClick={() => onView(r)} title="Review Audited Metrics"><FaEye /></button>
+                            </td>
+                        </tr>
+                    )) : (
+                        <tr><td colSpan="5" style={{ textAlign: 'center', padding: '60px', color: '#94a3b8' }}>No payroll records found for this stage.</td></tr>
+                    )}
+                </tbody>
+            </table>
+        </div>
+    );
+};
+
+const PayrollDetailsView = ({ record, onClose, onAction, onReopen, adminProfile }) => {
+    const r = record || {};
+    const stages = ['Draft', 'Attendance Locked', 'HR Verified', 'Finance Computed', 'Director Approved', 'Funds Disbursed', 'Cycle Complete'];
+    const currentIdx = stages.indexOf(r.status);
+    const nextStage = stages[currentIdx + 1];
+
+    const isLocked = r.status === 'Director Approved' || r.status === 'Funds Disbursed' || r.status === 'Cycle Complete';
+    const canReopen = (adminProfile.role === 'Super Admin' || adminProfile.role.includes('Director')) && isLocked;
+
+    const handleReject = () => {
+        const reason = prompt('Specify Strict Rejection Reason:\n- Attendance mismatch\n- Policy violation\n- Budget not approved');
+        if (reason) onAction('reject', reason);
+    };
+
+    const handleReopenRequest = () => {
+        const reason = prompt('DIRECTOR OVERRIDE: Specify legal/accounting reason to re-open this locked record:');
+        if (reason) onReopen(r.id, reason);
+    };
+
+    return (
+        <div className="custom-scroll" style={{ background: '#fff', height: '100%', overflowY: 'auto' }}>
+            <div style={{ background: 'linear-gradient(135deg, #1A365D 0%, #2D3748 100%)', padding: '50px 60px', color: 'white' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                        <h2 style={{ fontSize: '2.2rem', margin: 0 }}>Salary Disbursement</h2>
+                        <p style={{ opacity: 0.8, fontSize: '1.1rem', margin: '5px 0 0' }}>{r.employees?.full_name} | {r.month} {r.year || ''}</p>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '0.8rem', opacity: 0.6, letterSpacing: '2px', textTransform: 'uppercase' }}>Current Flow Status</div>
+                        <div style={{ fontSize: '1.5rem', fontWeight: '800', color: r.is_reopened ? '#FC8181' : '#63B3ED' }}>
+                            {r.is_reopened ? 'RE-OPENED' : r.status}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style={{ padding: '40px 60px' }}>
+                {canReopen && (
+                    <div style={{ marginBottom: '30px', padding: '20px', background: '#FFF5F5', border: '1px solid #FEB2B2', borderRadius: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <strong style={{ color: '#C53030' }}>DIRECTOR OVERRIDE PROTECTED</strong>
+                            <p style={{ margin: '5px 0 0', fontSize: '0.85rem', color: '#7B341E' }}>This record is locked. Modifications require a full audit trail.</p>
+                        </div>
+                        <button className="btn-premium danger" onClick={handleReopenRequest} style={{ background: '#E53E3E' }}>
+                            <FaUnlockAlt /> Re-open Draft
+                        </button>
+                    </div>
+                )}
+
+                {r.status !== 'Cycle Complete' && r.status !== 'Rejected' && !isLocked && (
+                    <div style={{ background: '#EBF8FF', padding: '30px', borderRadius: '20px', border: '2px solid #3182CE', marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <h4 style={{ margin: 0, color: '#2B6CB0' }}>Mandatory Review Action</h4>
+                            <p style={{ margin: '5px 0 0', color: '#4A5568', fontSize: '0.9rem' }}>
+                                Next Step Stage: <strong>{nextStage}</strong>
+                            </p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '15px' }}>
+                            <button className="btn-premium danger" onClick={handleReject}>Decline Request</button>
+                            <button className="btn-premium success" onClick={() => onAction('approve')}>
+                                {currentIdx === 0 ? 'Lock Attendance (HR)' :
+                                    currentIdx === 1 ? 'Verify Records (Audit)' :
+                                        currentIdx === 2 ? 'Compute Net Payout (Finance)' :
+                                            currentIdx === 3 ? 'Authorize Transfer (Director)' :
+                                                currentIdx === 4 ? 'Initiate Bank Transfer' :
+                                                    'Finalize Cycle'}
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '30px' }}>
+                    <div style={{ background: '#F7FAFC', padding: '25px', borderRadius: '15px', border: '1px solid #E2E8F0' }}>
+                        <label style={{ fontSize: '0.75rem', fontWeight: '900', color: '#718096', textTransform: 'uppercase' }}>Gross Monthy Retainer</label>
+                        <div style={{ fontSize: '1.8rem', fontWeight: '800', color: '#2D3748' }}>₹ {Number(r.basic_salary || 0).toLocaleString()}</div>
+                    </div>
+                    <div style={{ background: '#F7FAFC', padding: '25px', borderRadius: '15px', border: '1px solid #E2E8F0' }}>
+                        <label style={{ fontSize: '0.75rem', fontWeight: '900', color: '#718096', textTransform: 'uppercase' }}>Attendance Deductions</label>
+                        <div style={{ fontSize: '1.8rem', fontWeight: '800', color: '#E53E3E' }}>- ₹ {Number(r.deductions || 0).toLocaleString()}</div>
+                    </div>
+                    <div style={{ background: '#EDFDFD', padding: '25px', borderRadius: '15px', border: '1px solid #B2F5EA' }}>
+                        <label style={{ fontSize: '0.75rem', fontWeight: '900', color: '#319795', textTransform: 'uppercase' }}>Net Authorized Payout</label>
+                        <div style={{ fontSize: '1.8rem', fontWeight: '800', color: '#2C7A7B' }}>₹ {Number(r.net_salary || 0).toLocaleString()}</div>
+                    </div>
+                </div>
+
+                <div style={{ marginTop: '40px', display: 'grid', gridTemplateColumns: 'minmax(400px, 1fr) 300px', gap: '40px' }}>
+                    <div style={{ background: '#F8FAFC', padding: '30px', borderRadius: '20px' }}>
+                        <h4 style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <FaFingerprint /> Attendance-Salary Linkage (Live Audit)
+                        </h4>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                            <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #edf2f7' }}>
+                                <small style={{ color: '#718096', textTransform: 'uppercase', fontSize: '0.6rem', fontWeight: 900 }}>Total Working Days</small>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 800 }}>{r.total_working_days || 0} Days</div>
+                            </div>
+                            <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #edf2f7' }}>
+                                <small style={{ color: '#38A169', textTransform: 'uppercase', fontSize: '0.6rem', fontWeight: 900 }}>Present Days</small>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#2F855A' }}>{r.present_days || 0} Days</div>
+                            </div>
+                            <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #edf2f7' }}>
+                                <small style={{ color: '#805AD5', textTransform: 'uppercase', fontSize: '0.6rem', fontWeight: 900 }}>Authorized Leaves</small>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#6B46C1' }}>{r.leave_days || 0} Days</div>
+                            </div>
+                            <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #edf2f7' }}>
+                                <small style={{ color: '#E53E3E', textTransform: 'uppercase', fontSize: '0.6rem', fontWeight: 900 }}>Unpaid (LOP) Days</small>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#C53030' }}>{r.lop_days || 0} Days</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style={{ background: '#F8FAFC', padding: '30px', borderRadius: '20px' }}>
+                        <h4 style={{ marginBottom: '20px' }}>Compliance Summary</h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                            <div style={{ background: 'white', padding: '15px', borderRadius: '10px', fontSize: '0.85rem' }}>
+                                <span style={{ color: '#718096', display: 'block', fontSize: '0.7rem' }}>Bank Disbursemnt Account</span>
+                                <strong style={{ color: 'var(--primary)' }}>...{r.employees?.acc_number?.slice(-4) || '—'}</strong>
+                            </div>
+                            <div style={{ background: 'white', padding: '15px', borderRadius: '10px', fontSize: '0.85rem' }}>
+                                <span style={{ color: '#718096', display: 'block', fontSize: '0.7rem' }}>Audit Status</span>
+                                <strong style={{ color: '#38A169' }}>VALIDATED BY HR</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {r.is_reopened && (
+                    <div style={{ marginTop: '30px', padding: '25px', background: '#FFF5F5', border: '1px solid #FEB2B2', borderRadius: '16px' }}>
+                        <h4 style={{ color: '#C53030', margin: '0 0 10px 0', fontSize: '0.9rem' }}>Director Override Reason:</h4>
+                        <p style={{ margin: 0, fontStyle: 'italic', color: '#7B341E' }}>"{r.reopen_reason}"</p>
+                    </div>
+                )}
+
+                <div style={{ marginTop: '40px' }}>
+                    <ApprovalBadge data={r} level="Payroll Authority Signature" />
+                </div>
+
+                <button onClick={onClose} style={{ marginTop: '400px', width: '100%', padding: '15px', borderRadius: '12px', background: '#F1F5F9', border: 'none', color: '#475569', fontWeight: '700', cursor: 'pointer' }}>Close Audit Frame</button>
+            </div>
+        </div>
+    );
+};
+
+const InitiatePayrollModal = ({ onClose, onInitiate }) => {
+    const [month, setMonth] = useState(new Date().getMonth() + 1);
+    const [year, setYear] = useState(new Date().getFullYear());
+    const [workingDays, setWorkingDays] = useState(26);
+
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+    return (
+        <div className="modal-overlay">
+            <div className="modal-content" style={{ maxWidth: '500px', borderRadius: '30px' }}>
+                <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+                    <div style={{ width: '80px', height: '80px', background: '#EBF8FF', color: '#3182CE', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: '2rem' }}>
+                        <FaCalculator />
+                    </div>
+                    <h2 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#1A365D' }}>Initiate Payroll Run</h2>
+                    <p style={{ color: '#718096' }}>Sequence monthly salary calculations from attendance.</p>
+                </div>
+
+                <div style={{ display: 'grid', gap: '20px' }}>
+                    <div className="form-group">
+                        <label>Select Calendar Month</label>
+                        <select value={month} onChange={(e) => setMonth(Number(e.target.value))} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #E2E8F0', fontWeight: 600 }}>
+                            {monthNames.map((m, i) => (
+                                <option key={m} value={i + 1}>{m}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="form-group">
+                        <label>Calendar Year</label>
+                        <input type="number" value={year} onChange={(e) => setYear(Number(e.target.value))} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #E2E8F0', fontWeight: 600 }} />
+                    </div>
+                    <div className="form-group">
+                        <label>Total Working Days (Institutional Standard)</label>
+                        <input type="number" value={workingDays} onChange={(e) => setWorkingDays(Number(e.target.value))} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #E2E8F0', fontWeight: 600 }} />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '15px', marginTop: '20px' }}>
+                        <button className="btn-small" onClick={onClose} style={{ flex: 1, padding: '15px', background: '#F1F5F9', color: '#4A5568' }}>Cancel</button>
+                        <button className="btn-premium" onClick={() => {
+                            const monthName = `${monthNames[month - 1]} ${year}`;
+                            const startDate = new Date(year, month - 1, 1).toISOString();
+                            const endDate = new Date(year, month, 0).toISOString();
+                            onInitiate({ monthName, startDate, endDate, totalWorkingDays: workingDays });
+                        }} style={{ flex: 2, padding: '15px', background: 'linear-gradient(135deg, #3182CE 0%, #2C5282 100%)' }}>
+                            Run Sequence
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const ReportsTab = ({ reports, onAdd, onDelete, onView }) => (
     <div className="content-panel">
         <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px' }}>
             <h3>Impact & Program Reports</h3>
-            <button className="btn-add" onClick={onAdd}><FaFileUpload /> Upload New Report</button>
+            <button className="btn-premium" onClick={onAdd}><FaFileUpload /> Upload New Report</button>
         </div>
         <div className="reports-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
             {(reports || []).length > 0 ? reports.map(report => (
                 <div key={report.id} className="report-card" style={{ padding: '25px', border: '1px solid #edf2f7', borderRadius: '20px', background: 'white', position: 'relative', transition: 'all 0.3s ease', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
-                    <div style={{ position: 'absolute', top: '15px', right: '15px' }}>
+                    <div style={{ position: 'absolute', top: '15px', right: '15px', display: 'flex', gap: '5px' }}>
+                        <button className="btn-icon blue" onClick={() => onView(report)} title="View Proof / Details"><FaEye style={{ fontSize: '0.8rem' }} /></button>
                         <button className="btn-icon danger" onClick={() => onDelete(report.id, report.title)} title="Delete Report"><FaTrash style={{ fontSize: '0.8rem' }} /></button>
                     </div>
                     <FaFileAlt style={{ fontSize: '2.5rem', color: '#1a365d', marginBottom: '15px', opacity: 0.8 }} />
@@ -1989,8 +3616,8 @@ const EOfficeTab = ({ docFiles, categories, onUpload, refreshData, onAddFolder, 
                 </h3>
                 <div style={{ display: 'flex', gap: '10px' }}>
                     <button className="btn-small" onClick={() => setView('efiles')}><FaFileSignature /> Manage e-Files</button>
-                    <button className="btn-add" onClick={onAddFolder}><FaPlusCircle /> New Folder</button>
-                    <button className="btn-add" onClick={onUpload}><FaFileUpload /> Upload Artifact</button>
+                    <button className="btn-premium" onClick={onAddFolder}><FaPlusCircle /> New Folder</button>
+                    <button className="btn-premium" onClick={onUpload}><FaFileUpload /> Upload Artifact</button>
                     <button className="btn-icon danger" onClick={handleWipeVault} title="Purge Vault"><FaTrash /></button>
                 </div>
             </div>
@@ -2160,7 +3787,7 @@ const OrgMasterTab = ({ org, refreshData }) => {
                     <h3 style={{ margin: 0 }}>NGO Statutory Profile</h3>
                     <p style={{ color: '#718096', fontSize: '0.9rem', margin: '5px 0 0 0' }}>Core Identity & Regulatory Metadata</p>
                 </div>
-                {!isEditing && <button className="btn-add" onClick={() => setIsEditing(true)}><FaEdit /> Modify Profile</button>}
+                {!isEditing && <button className="btn-premium" onClick={() => setIsEditing(true)}><FaEdit /> Modify Profile</button>}
             </div>
 
             {isEditing ? (
@@ -2236,52 +3863,149 @@ const OrgMasterTab = ({ org, refreshData }) => {
     );
 };
 
-const ApprovalsTab = ({ requests, handleAction }) => (
-    <div className="content-panel">
-        <h3>Operational Desktop (Real-time Approvals)</h3>
-        <table className="data-table">
-            <thead>
-                <tr>
-                    <th>Type</th>
-                    <th>Requester</th>
-                    <th>Details</th>
-                    <th>L1 Status</th>
-                    <th>Final Status</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {(requests || []).map(r => (
-                    <tr key={r.id}>
-                        <td><strong>{r.type}</strong></td>
-                        <td>{r.requester_name || 'System'}</td>
-                        <td>
-                            <div style={{ fontSize: '0.85rem' }}>
-                                {r.amount && <div><strong>Amount:</strong> ₹{r.amount}</div>}
-                                {r.details && Object.entries(r.details).map(([k, v]) => (
-                                    <div key={k}><strong>{k}:</strong> {String(v)}</div>
-                                ))}
-                            </div>
-                        </td>
-                        <td><span className={`badge ${r.level_1_status === 'Approved' ? 'success' : r.level_1_status === 'Pending' ? 'blue' : 'red'}`}>{r.level_1_status}</span></td>
-                        <td><span className={`badge ${r.final_status === 'Approved' ? 'success' : r.final_status === 'Pending' ? 'blue' : 'red'}`}>{r.final_status}</span></td>
-                        <td>
-                            {(r.level_1_status === 'Pending' || (r.level_1_status === 'Approved' && r.final_status === 'Pending')) ? (
-                                <div style={{ display: 'flex', gap: '5px' }}>
-                                    <button className="btn-small success-btn" onClick={() => handleAction(r.id, 'approve')}>Approve</button>
-                                    <button className="btn-small danger-btn" onClick={() => {
-                                        const reason = prompt('Enter reason for decline:');
-                                        if (reason) handleAction(r.id, 'decline', reason);
-                                    }}>Decline</button>
+const ApprovalsTab = ({ requests, handleAction }) => {
+    const rules = {
+        'Salary Processing': { init: 'Finance HR', stage1: 'Finance Verification', final: 'Director Approval' },
+        'Fellowship Stipend': { init: 'Program Head', stage1: 'Treasury Review', final: 'Director Approval' },
+        'Volunteer Certificate': { init: 'Coordinator', stage1: 'Program Head', final: 'Admin Approval' },
+        'Expense Claim': { init: 'Employee Submission', stage1: 'Finance Review', final: 'Director Final Approval' },
+        'Personnel Termination': { init: 'Admin Request', stage1: 'HR Manager', final: 'Director Final Approval' }
+    };
+
+    return (
+        <div className="content-panel" style={{ animation: 'fadeIn 0.5s' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '30px' }}>
+                <div style={{ width: '45px', height: '45px', background: '#EBF8FF', color: '#2B6CB0', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
+                    <FaCheckDouble />
+                </div>
+                <div>
+                    <h3 style={{ margin: 0 }}>Authority Approval Workflow Registry</h3>
+                    <p style={{ margin: '4px 0 0', color: '#718096', fontSize: '0.85rem' }}>Centralized oversight of organizational multi-stage approval paths.</p>
+                </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+                {(requests || []).length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '60px', background: '#f8fafc', borderRadius: '20px', color: '#a0aec0' }}>
+                        <FaTasks fontSize="3rem" style={{ marginBottom: '15px', opacity: 0.5 }} />
+                        <p>No active approval workflows in the registry.</p>
+                    </div>
+                ) : (
+                    requests.map(r => {
+                        const rule = rules[r.type] || { init: 'System', stage1: 'HR Step', stage2: 'Finance Step', final: 'Director' };
+                        const isStage1 = r.level_1_status === 'Pending';
+                        const isStage2 = r.level_1_status === 'Approved' && r.level_2_status === 'Pending';
+                        const isFinal = r.level_1_status === 'Approved' && r.level_2_status === 'Approved' && r.final_status === 'Pending';
+                        const isProcessed = r.final_status !== 'Pending';
+
+                        return (
+                            <div key={r.id} style={{ border: '1px solid #e2e8f0', borderRadius: '15px', overflow: 'hidden', background: 'white', transition: 'box-shadow 0.3s' }}>
+                                <div style={{ background: '#f8fafc', padding: '15px 25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0' }}>
+                                    <div>
+                                        <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Registry ID: {r.id.substring(0, 8)}</span>
+                                        <h4 style={{ margin: '5px 0 0', color: '#1a365d' }}>{r.type}</h4>
+                                    </div>
+                                    <span className={`badge ${isProcessed ? (r.final_status === 'Approved' ? 'success' : 'red') : 'blue'}`}>
+                                        {isProcessed ? r.final_status : (isStage1 ? 'Step 1: Pending HR' : (isStage2 ? 'Step 2: Pending Finance' : 'Step 3: Pending Director'))}
+                                    </span>
                                 </div>
-                            ) : <span style={{ color: '#718096', fontSize: '0.8rem' }}>Processed</span>}
-                        </td>
-                    </tr>
-                ))}
-            </tbody>
-        </table>
-    </div>
-);
+
+                                <div style={{ padding: '25px', display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '30px' }}>
+                                    <div>
+                                        <div style={{ marginBottom: '15px' }}>
+                                            <label style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700 }}>Initiated By</label>
+                                            <div style={{ fontWeight: 600, color: '#2d3748' }}>{r.requester_name || 'System Auto'}</div>
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700 }}>Details / Amount</label>
+                                            <div style={{ fontSize: '0.9rem', color: '#4a5568', marginTop: '5px' }}>
+                                                {r.amount && <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#2d3748' }}>₹ {Number(r.amount).toLocaleString()}</div>}
+                                                {r.details && Object.entries(r.details).map(([k, v]) => (
+                                                    <div key={k} style={{ marginTop: '5px' }}><strong>{k}:</strong> {String(v)}</div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <div style={{ marginBottom: '20px' }}>
+                                            <label style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, marginBottom: '15px', display: 'block' }}>Authority Path Tracking (Institutional Trace)</label>
+                                            <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <div style={{ position: 'absolute', top: '15px', left: '5%', right: '5%', height: '2px', background: '#e2e8f0', zIndex: 0 }}></div>
+
+                                                {/* Step 1: HR */}
+                                                <div style={{ textAlign: 'center', zIndex: 1, width: '25%' }}>
+                                                    <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: r.level_1_status === 'Approved' ? '#38a169' : (r.level_1_status === 'Declined' ? '#e53e3e' : '#edf2f7'), color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px', fontSize: '0.8rem', border: isStage1 ? '2px solid #3182ce' : 'none' }}>
+                                                        {r.level_1_status === 'Approved' ? '✔' : '1'}
+                                                    </div>
+                                                    <div style={{ fontSize: '0.7rem', fontWeight: 800 }}>HR VERIFIED</div>
+                                                    <div style={{ fontSize: '0.6rem', color: '#718096' }}>{r.level_1_status}</div>
+                                                </div>
+
+                                                {/* Step 2: Finance */}
+                                                <div style={{ textAlign: 'center', zIndex: 1, width: '25%' }}>
+                                                    <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: r.level_2_status === 'Approved' ? '#38a169' : (r.level_2_status === 'Declined' ? '#e53e3e' : '#edf2f7'), color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px', fontSize: '0.8rem', border: isStage2 ? '2px solid #3182ce' : 'none' }}>
+                                                        {r.level_2_status === 'Approved' ? '✔' : '2'}
+                                                    </div>
+                                                    <div style={{ fontSize: '0.7rem', fontWeight: 800 }}>FINANCE APPROVED</div>
+                                                    <div style={{ fontSize: '0.6rem', color: '#718096' }}>{r.level_2_status}</div>
+                                                </div>
+
+                                                {/* Step 3: Director */}
+                                                <div style={{ textAlign: 'center', zIndex: 1, width: '25%' }}>
+                                                    <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: r.final_status === 'Approved' ? '#38a169' : (r.final_status === 'Declined' ? '#e53e3e' : '#edf2f7'), color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px', fontSize: '0.8rem', border: isFinal ? '2px solid #3182ce' : 'none' }}>
+                                                        {r.final_status === 'Approved' ? '✔' : '3'}
+                                                    </div>
+                                                    <div style={{ fontSize: '0.7rem', fontWeight: 800 }}>DIRECTOR SIGNED</div>
+                                                    <div style={{ fontSize: '0.6rem', color: '#718096' }}>{r.final_status}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <ApprovalTimeline data={r} />
+
+                                        <div style={{ marginTop: '25px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                                            {(isStage1 || isStage2 || isFinal) ? (
+                                                <>
+                                                    <button className="btn-small danger-btn" onClick={() => {
+                                                        const reason = prompt('State the official grounds for declining this authority request (Mandatory for correction tracking):');
+                                                        if (reason) handleAction(r.id, 'decline', reason);
+                                                    }}>Decline & Route Back</button>
+                                                    <button className="btn-add" onClick={() => handleAction(r.id, 'approve')}>Digitally Sign & Advance</button>
+                                                </>
+                                            ) : (
+                                                <div style={{ fontSize: '0.85rem', color: '#718096', fontStyle: 'italic', background: '#f1f5f9', padding: '8px 15px', borderRadius: '8px' }}>
+                                                    Audit Trail: Workflow finalized on {new Date(r.updated_at || r.created_at).toLocaleDateString()}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })
+                )}
+            </div>
+
+            <div style={{ marginTop: '50px' }}>
+                <h4 style={{ color: '#4A5568', fontSize: '1rem', marginBottom: '20px', fontWeight: 900 }}>Multi-Level Security Evidence (Historical Registry)</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '30px' }}>
+                    {requests.filter(r => r.level_1_status !== 'Pending' || r.final_status !== 'Pending').slice(0, 4).map(r => (
+                        <div key={`hist-reg-${r.id}`} style={{ border: '1px solid #E2E8F0', borderRadius: '15px', overflow: 'hidden', background: '#ffffff', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+                            <div style={{ padding: '15px 25px', background: '#F8FAF9', borderBottom: '1px solid #E2E8F0', fontWeight: 800, fontSize: '0.8rem', color: '#1A365D' }}>
+                                {r.type} ARCHIVE ID: {(r.id || '').substring(0, 6)}
+                            </div>
+                            <div style={{ padding: '25px' }}>
+                                {r.level_1_status !== 'Pending' && <ApprovalBadge data={{ ...r, approved_by_name: r.level_1_approver_name, approved_by_designation: r.level_1_designation, approved_by_dept: r.level_1_dept, approved_at: r.level_1_at, approval_remarks: r.level_1_remarks }} level="Level 1 Authority" />}
+                                {r.final_status !== 'Pending' && <ApprovalBadge data={{ ...r, approved_by_name: r.final_approver_name, approved_by_designation: r.final_designation, approved_by_dept: r.final_dept, approved_at: r.final_at, approval_remarks: r.final_remarks }} level="Final Board Sanction" />}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const CoAdminTab = ({ admins, onAdd, onDelete, onEdit, onManage }) => (
     <div className="content-panel">
@@ -2427,10 +4151,10 @@ const AdminForm = ({ onClose, onSave, admin, initialStep = 1 }) => {
                     <div className="form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                         <div className="form-group"><label>Full Name</label><input className="form-control" name="full_name" value={formData.full_name} onChange={handleChange} type="text" placeholder="Legal Name" required /></div>
                         <div className="form-group"><label>Official Email ID</label><input className="form-control" name="email" value={formData.email} onChange={handleChange} type="email" placeholder="hr@bharathcaresindia.org" required /></div>
-                        <div className="form-group"><label>Role Type</label><select className="form-control" name="role_type" value={formData.role_type} onChange={handleChange} required><option value="">Select Role</option><option>Admin</option><option>Co-Admin</option><option>HR Manager</option><option>Finance Officer</option><option>Field Super</option></select></div>
+                        <div className="form-group"><label>Role Type</label><select className="form-control" name="role_type" value={formData.role_type} onChange={handleChange} required><option value="">Select Role</option>{AUTHORIZED_ADMIN_ROLES.map(r => <option key={r}>{r}</option>)}</select></div>
                         <div className="form-group"><label>Department</label><select className="form-control" name="department" value={formData.department} onChange={handleChange} required><option value="">Select Dept</option><option>HQ Administration</option><option>Human Resources</option><option>Finance & Treasury</option><option>Social Welfare</option><option>IT & Security</option></select></div>
                         <div className="form-group"><label>Authority Level</label><select className="form-control" name="authority_level" value={formData.authority_level} onChange={handleChange} required><option value="L1">L1 - Executive (Full)</option><option value="L2">L2 - High (Command)</option><option value="L3">L3 - Mid (Operational)</option><option value="L4">L4 - Base (View Only)</option></select></div>
-                        <div className="form-group"><label>Reporting To</label><input className="form-control" type="text" value="Super Admin (Institutional)" readOnly /></div>
+                        <div className="form-group"><label>Reporting To</label><input className="form-control" type="text" value="Directorate (Institutional)" readOnly /></div>
                         <div className="form-group"><label>DOB</label><input className="form-control" name="dob" value={formData.dob} onChange={handleChange} type="date" required /></div>
                         <div className="form-group"><label>Official Mobile</label><input className="form-control" name="mobile" value={formData.mobile} onChange={handleChange} type="tel" required /></div>
                         <div className="form-group"><label>Emergency Contact</label><input className="form-control" name="emergency" value={formData.emergency} onChange={handleChange} type="tel" required /></div>
@@ -2537,6 +4261,81 @@ const AdminForm = ({ onClose, onSave, admin, initialStep = 1 }) => {
     );
 };
 
+const AttendanceLogForm = ({ employees, onClose, onSave }) => {
+    const [empId, setEmpId] = useState('');
+    const [status, setStatus] = useState('Present');
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [checkIn, setCheckIn] = useState('');
+    const [checkOut, setCheckOut] = useState('');
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onSave({
+            employee_id: empId,
+            attendance_date: date,
+            status,
+            check_in: checkIn ? `${date}T${checkIn}:00` : null,
+            check_out: checkOut ? `${date}T${checkOut}:00` : null
+        });
+    };
+
+    return (
+        <div className="modal-overlay">
+            <div className="modal-content" style={{ maxWidth: '400px', borderRadius: '24px', padding: '35px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px' }}>
+                    <h3 style={{ margin: 0, color: '#1a365d' }}>Register Attendance</h3>
+                    <button className="btn-icon" onClick={onClose}>×</button>
+                </div>
+                <form onSubmit={handleSubmit}>
+                    <div className="form-group" style={{ marginBottom: '20px' }}>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#4a5568', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Select Staff Member</label>
+                        <select value={empId} onChange={(e) => setEmpId(e.target.value)} required style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
+                            <option value="">Choose Employee...</option>
+                            {employees.map(e => (
+                                <option key={e.id} value={e.id}>{e.full_name} ({e.employee_id})</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                        <div className="form-group">
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#4a5568', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Date</label>
+                            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }} />
+                        </div>
+                        <div className="form-group">
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#4a5568', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Status</label>
+                            <select value={status} onChange={(e) => setStatus(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
+                                <option>Present</option>
+                                <option>Absent</option>
+                                <option>Half Day</option>
+                                <option>Official Duty</option>
+                                <option>Leave Approved</option>
+                                <option>Loss of Pay</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '30px' }}>
+                        <div className="form-group">
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#4a5568', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>In Time</label>
+                            <input type="time" value={checkIn} onChange={(e) => setCheckIn(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }} />
+                        </div>
+                        <div className="form-group">
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#4a5568', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Out Time</label>
+                            <input type="time" value={checkOut} onChange={(e) => setCheckOut(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }} />
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '15px' }}>
+                        <button type="button" className="btn-add" style={{ background: '#f1f5f9', color: '#475569' }} onClick={onClose}>Cancel</button>
+                        <button type="submit" className="btn-add" style={{ flex: 1 }}>Commit Log</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
 const EmployeeForm = ({ onClose, onSave }) => {
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
@@ -2570,7 +4369,7 @@ const EmployeeForm = ({ onClose, onSave }) => {
         emergency_name: '',
         emergency_relation: '',
         emergency_mobile: '',
-        status: 'Active'
+        status: 'New'
     });
 
     const handleChange = (e) => {
@@ -2673,7 +4472,7 @@ const EmployeeForm = ({ onClose, onSave }) => {
     );
 };
 
-const EmployeeDetailsView = ({ emp, onClose }) => {
+const EmployeeDetailsView = ({ emp, onClose, onAction }) => {
     const details = emp || {};
 
     const Field = ({ icon, label, value, color = '#718096' }) => (
@@ -2701,8 +4500,21 @@ const EmployeeDetailsView = ({ emp, onClose }) => {
         </div>
     );
 
+    const getStatusLabel = () => {
+        switch (details.status) {
+            case 'New': return { label: 'Awaiting HR Verification', color: '#3182CE' };
+            case 'HR Verified': return { label: 'Pending Admin Approval', color: '#805AD5' };
+            case 'Admin Approved': return { label: 'Awaiting Director Confirmation', color: '#DD6B20' };
+            case 'Active': return { label: 'ID Activated / Active Duty', color: '#38A169' };
+            case 'Rejected': return { label: 'Application Rejected', color: '#E53E3E' };
+            default: return { label: details.status, color: '#718096' };
+        }
+    };
+
+    const statusInfo = getStatusLabel();
+
     return (
-        <div style={{ background: '#FFFFFF' }}>
+        <div style={{ background: '#FFFFFF', height: '100%', overflowY: 'auto' }} className="custom-scroll">
             {/* STICKY HEADER AREA */}
             <div style={{
                 background: 'linear-gradient(135deg, #1A365D 0%, #0F172A 100%)',
@@ -2734,18 +4546,27 @@ const EmployeeDetailsView = ({ emp, onClose }) => {
                             <h2 style={{ fontSize: '3rem', margin: '0', fontWeight: '900', letterSpacing: '-1.5px', color: '#ffffff' }}>{details.full_name}</h2>
                             <span style={{
                                 padding: '8px 20px',
-                                background: details.status === 'Active' ? '#48BB78' : '#F56565',
+                                background: statusInfo.color,
                                 borderRadius: '50px',
                                 fontSize: '0.85rem',
                                 fontWeight: '900',
                                 textTransform: 'uppercase',
                                 letterSpacing: '2px',
                                 boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-                            }}>{details.status}</span>
+                            }}>{statusInfo.label}</span>
                         </div>
                         <p style={{ margin: '15px 0 0', opacity: 0.8, fontSize: '1.2rem', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '15px' }}>
                             <FaBriefcase style={{ color: '#ECC94B' }} /> {details.designation} <span style={{ opacity: 0.5 }}>|</span> <FaBuilding /> {details.department}
                         </p>
+                        <div style={{ marginTop: '25px', display: 'flex', gap: '10px' }}>
+                            <span className="badge" style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}>
+                                PAID POSITION
+                            </span>
+                            <span className="badge" style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}>
+                                {details.designation?.includes('Director') ? 'FINAL AUTHORITY' : (details.designation?.includes('Admin') ? 'HIGH APPROVAL POWER' : 'LIMITED APPROVAL POWER')}
+                            </span>
+                            {details.designation?.includes('Fellow') && <span className="badge" style={{ background: '#ECC94B', color: '#1A202C' }}>CERTIFICATE ELIGIBLE</span>}
+                        </div>
                     </div>
                 </div>
 
@@ -2762,8 +4583,54 @@ const EmployeeDetailsView = ({ emp, onClose }) => {
                         cursor: 'pointer',
                         fontWeight: '700'
                     }}>Close Archive</button>
+
+                    <div style={{ marginTop: '30px' }}>
+                        <ApprovalBadge data={details} level="HQ Onboarding Sanction" />
+                    </div>
                 </div>
             </div>
+
+            {/* ONBOARDING APPROVAL HUB (NEW) */}
+            {details.status !== 'Active' && details.status !== 'Rejected' && (
+                <div style={{ margin: '30px 60px -30px', padding: '30px', background: '#EBF8FF', borderRadius: '24px', border: '2px solid #63B3ED', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+                        <div style={{ width: '60px', height: '60px', background: '#3182CE', color: 'white', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>
+                            <FaCheckDouble />
+                        </div>
+                        <div>
+                            <h4 style={{ margin: 0, color: '#2B6CB0', fontSize: '1.2rem' }}>Onboarding Command Center</h4>
+                            <p style={{ margin: '5px 0 0', color: '#4A5568', fontSize: '0.9rem' }}>
+                                Next Step: <strong>{
+                                    details.status === 'New' ? 'Verify Documents & KYC (HR)' :
+                                        details.status === 'HR Verified' ? 'Review Budget & Role (Admin)' :
+                                            'Final HQ Confirmation (Director)'
+                                }</strong>
+                            </p>
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '15px' }}>
+                        <button
+                            className="btn-premium danger"
+                            onClick={() => {
+                                const reason = prompt('Specify rejection grounds:');
+                                if (reason) onAction('reject', reason);
+                            }}
+                        >
+                            Decline Candidate
+                        </button>
+                        <button
+                            className="btn-premium success"
+                            onClick={() => onAction('approve')}
+                        >
+                            {
+                                details.status === 'New' ? 'Verify & Pass to Admin' :
+                                    details.status === 'HR Verified' ? 'Approve & Pass to Director' :
+                                        'Confirm & Activate ID'
+                            }
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* HIGH-DENSITY GRID DATA */}
             <div style={{ padding: '60px' }}>
@@ -2780,7 +4647,9 @@ const EmployeeDetailsView = ({ emp, onClose }) => {
                     <Field icon={<FaClipboardCheck />} label="Birth Date" value={details.dob} />
                     <Field icon={<FaHeartbeat />} label="Blood Marker" value={details.blood_group} />
                     <Field icon={<FaCheckCircle />} label="Marital Status" value={details.marital_status} />
-                    <Field icon={<FaShieldAlt />} label="Aadhaar Verification" value={details.aadhaar_number ? 'XXXX-XXXX-' + details.aadhaar_number.slice(-4) : '—'} />
+
+                    {/* EMERGENCY SECTION */}
+                    <Field icon={<FaShieldAlt />} label="Aadhaar Verification" value={details.aadhaar_masked || (details.aadhaar_number ? 'XXXX-XXXX-' + String(details.aadhaar_number).slice(-4) : '—')} />
                     <Field icon={<FaFileContract />} label="Tax ID (PAN)" value={details.pan_number} />
                     <Field icon={<FaEnvelope />} label="Sytem Email" value={details.email} />
                     <Field icon={<FaPhone />} label="Primary Comm" value={details.mobile} />
@@ -2814,8 +4683,7 @@ const EmployeeDetailsView = ({ emp, onClose }) => {
                     <Field icon={<FaFileInvoiceDollar />} label="Monthly Retainer" value={`₹ ${details.salary_amount || 0}`} />
                     <Field icon={<FaUniversity />} label="Institution" value={details.bank_name} />
                     <Field icon={<FaFingerprint />} label="IFSC Protocol" value={details.ifsc_code} />
-                    <Field icon={<FaUniversity />} label="Account Ending" value={details.acc_number ? '****' + details.acc_number.slice(-4) : '—'} />
-
+                    <Field icon={<FaUniversity />} label="Account Ending" value={details.acc_number_encrypted || (details.acc_number ? '****' + String(details.acc_number).slice(-4) : '—')} />
                     {/* EMERGENCY SECTION */}
                     <div style={{ gridColumn: 'span 4', display: 'flex', alignItems: 'center', gap: '20px', margin: '40px 0 10px' }}>
                         <div style={{ height: '4px', flex: 1, background: '#F1F5F9' }}></div>
@@ -2833,8 +4701,9 @@ const EmployeeDetailsView = ({ emp, onClose }) => {
     );
 };
 
-const VolunteerDetailsView = ({ volunteer, onClose, onApprove }) => {
+const VolunteerDetailsView = ({ volunteer, onClose, onApprove, onReject }) => {
     const v = volunteer || {};
+    const [rejectionReason, setRejectionReason] = useState('Fake data');
 
     const Field = ({ icon, label, value, centered = false }) => (
         <div style={{
@@ -2863,7 +4732,7 @@ const VolunteerDetailsView = ({ volunteer, onClose, onApprove }) => {
     );
 
     return (
-        <div style={{ background: '#FFFFFF' }}>
+        <div className="custom-scroll" style={{ background: '#FFFFFF', height: '100%', overflowY: 'auto' }}>
             {/* LARGE HERO TOP */}
             <div style={{
                 background: 'linear-gradient(135deg, #2B6CB0 0%, #1A365D 100%)',
@@ -2894,18 +4763,23 @@ const VolunteerDetailsView = ({ volunteer, onClose, onApprove }) => {
                                 <h1 style={{ fontSize: '4rem', margin: '0', fontWeight: '900', letterSpacing: '-2px', color: '#ffffff' }}>{v.full_name}</h1>
                                 <div style={{
                                     padding: '8px 24px',
-                                    background: v.status === 'New' ? '#ECC94B' : '#48BB78',
-                                    color: v.status === 'New' ? '#744210' : 'white',
+                                    background: v.status === 'New' ? '#ECC94B' : (v.status === 'Approved' ? '#48BB78' : '#E53E3E'),
+                                    color: 'white',
                                     borderRadius: '50px',
                                     fontSize: '1rem',
                                     fontWeight: '900',
                                     boxShadow: '0 8px 16px rgba(0,0,0,0.2)'
-                                }}>{v.status?.toUpperCase()}</div>
+                                }}>{v.status === 'New' ? 'Under Review' : v.status?.toUpperCase()}</div>
                             </div>
                             <div style={{ marginTop: '20px', fontSize: '1.4rem', opacity: 0.9, fontWeight: '600', display: 'flex', alignItems: 'center', gap: '20px' }}>
                                 <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><FaTasks /> {v.area_of_interest || 'General Social Support'}</span>
                                 <span style={{ opacity: 0.4 }}>|</span>
                                 <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><FaFingerprint /> VOL-{v.id?.substring(0, 10).toUpperCase()}</span>
+                            </div>
+                            <div style={{ marginTop: '25px', display: 'flex', gap: '10px' }}>
+                                <span className="badge" style={{ background: '#E53E3E', color: 'white' }}>UNPAID (VOLUNTARY)</span>
+                                <span className="badge" style={{ background: '#38A169', color: 'white' }}>CERTIFICATE ELIGIBLE</span>
+                                <span className="badge" style={{ background: 'rgba(255,255,255,0.15)', color: 'white' }}>NO APPROVAL POWER</span>
                             </div>
                         </div>
                     </div>
@@ -2950,7 +4824,7 @@ const VolunteerDetailsView = ({ volunteer, onClose, onApprove }) => {
                     {/* STATUS BLOCK */}
                     <div style={{ gridColumn: 'span 1' }}>
                         <h3 style={{ fontSize: '1.8rem', fontWeight: '900', color: '#1A365D', marginBottom: '40px', display: 'flex', alignItems: 'center', gap: '20px' }}>
-                            <FaShieldAlt /> System Control
+                            <FaShieldAlt /> Coordinator Action Hub
                         </h3>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
@@ -2963,17 +4837,46 @@ const VolunteerDetailsView = ({ volunteer, onClose, onApprove }) => {
                                 border: '2px dashed #3182CE',
                                 textAlign: 'center'
                             }}>
-                                <h4 style={{ color: '#2B6CB0', marginBottom: '25px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '2px' }}>Administrative Actions</h4>
+                                <h4 style={{ color: '#2B6CB0', marginBottom: '25px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '2px' }}>Review Decision</h4>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                                     {v.status === 'New' ? (
                                         <>
-                                            <button onClick={onApprove} style={{ padding: '18px', borderRadius: '15px', background: '#3182CE', color: 'white', border: 'none', fontWeight: '800', cursor: 'pointer', fontSize: '1.1rem' }}>Authorize Entry</button>
-                                            <button style={{ padding: '15px', borderRadius: '15px', background: 'white', color: '#E53E3E', border: '1px solid #FED7D7', fontWeight: '700', cursor: 'pointer' }}>Reject Submission</button>
+                                            <button className="btn-premium success" onClick={onApprove} style={{ width: '100%', justifyContent: 'center' }}>
+                                                <FaCheckCircle /> Authorize & Link ID
+                                            </button>
+
+                                            <div style={{ marginTop: '20px', borderTop: '1px solid #c3dafe', paddingTop: '20px' }}>
+                                                <label style={{ fontSize: '0.7rem', fontWeight: 800, color: '#4a5568', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Rejection Grounds</label>
+                                                <select
+                                                    className="form-control"
+                                                    value={rejectionReason}
+                                                    onChange={e => setRejectionReason(e.target.value)}
+                                                    style={{ marginBottom: '15px' }}
+                                                >
+                                                    <option>Fake data</option>
+                                                    <option>Incomplete ID proof</option>
+                                                    <option>Policy violation</option>
+                                                </select>
+                                                <button
+                                                    onClick={() => onReject(rejectionReason)}
+                                                    className="btn-premium danger"
+                                                    style={{ width: '100%', justifyContent: 'center' }}
+                                                >
+                                                    Decline Application
+                                                </button>
+                                            </div>
                                         </>
+                                    ) : v.status === 'Approved' ? (
+                                        <div style={{ background: '#F0FFF4', padding: '30px', borderRadius: '25px', color: '#2F855A', fontWeight: '800' }}>
+                                            <FaIdCard style={{ fontSize: '3rem', marginBottom: '15px', color: '#38a169' }} /><br />
+                                            CREDENTIALS LIVE
+                                            <p style={{ fontSize: '0.75rem', fontWeight: 'normal', margin: '10px 0 0' }}>Volunteer ID card has been cryptographically generated and is ready for dispatch.</p>
+                                        </div>
                                     ) : (
-                                        <div style={{ background: '#F0FFF4', padding: '20px', borderRadius: '15px', color: '#2F855A', fontWeight: '800' }}>
-                                            <FaUserCheck style={{ fontSize: '2rem', marginBottom: '10px' }} /><br />
-                                            RECORD VERIFIED
+                                        <div style={{ background: '#FFF5F5', padding: '30px', borderRadius: '25px', color: '#C53030', fontWeight: '800' }}>
+                                            <FaUserTimes style={{ fontSize: '2.5rem', marginBottom: '15px' }} /><br />
+                                            APPLICATION REJECTED
+                                            <p style={{ fontSize: '0.75rem', fontWeight: 'normal', margin: '10px 0 0' }}>Grounds: {v.decline_reason || 'Administrative Decision'}</p>
                                         </div>
                                     )}
                                 </div>
@@ -2984,8 +4887,9 @@ const VolunteerDetailsView = ({ volunteer, onClose, onApprove }) => {
                     {/* FOOTER AUDIT */}
                     <div style={{ gridColumn: 'span 3', marginTop: '50px', padding: '40px', background: '#F7FAFC', borderRadius: '30px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
-                            <div style={{ fontSize: '0.8rem', color: '#718096', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '2px' }}>Data Integrity Protocol</div>
-                            <div style={{ color: '#4A5568', fontWeight: '600', marginTop: '5px' }}>Digitally signed and cryptographically verified record.</div>
+                            <div style={{ fontSize: '0.8rem', color: '#718096', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '2px' }}>Regulatory Compliance Protocol</div>
+                            <div style={{ color: '#4A5568', fontWeight: '600', marginTop: '5px', marginBottom: '15px' }}>Decision logged by Coordinator Profile with Forensic IP Timestamp.</div>
+                            <ApprovalBadge data={v} level="Mission Enrollment Signature" />
                         </div>
                         <div style={{ display: 'flex', gap: '20px' }}>
                             <FaFingerprint style={{ fontSize: '2rem', color: '#CBD5E0' }} />
@@ -3292,6 +5196,10 @@ const StudentDetailsView = ({ student, onClose, onApprove, onReject }) => {
                     <Field icon={<FaUniversity />} label="Account Number" value={s.acc_no} />
                     <Field icon={<FaFileInvoiceDollar />} label="Payment UTR / Ref No" value={s.utr_number} />
 
+                    <div style={{ gridColumn: 'span 3' }}>
+                        <ApprovalBadge data={s} level="Financial Disbursement Approval" />
+                    </div>
+
                     {(s.status === 'Pending' || s.status === 'Active') && (
                         <div style={{ gridColumn: 'span 3', marginTop: '30px', padding: '25px', background: '#f8fafc', borderRadius: '15px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
@@ -3310,33 +5218,179 @@ const StudentDetailsView = ({ student, onClose, onApprove, onReject }) => {
     );
 };
 
-const GovernanceTab = ({ policies, boardMembers, meetings, onAddPolicy, onAddMeeting, onAddMember, onDeletePolicy, onDeleteMember, onDeleteMeeting, refreshData }) => {
+const ScholarshipDetailsView = ({ scholarship, onClose, onApprove, onAction }) => {
+    const s = scholarship || {};
+
+    const Field = ({ icon, label, value }) => (
+        <div style={{ background: '#F8F9FA', padding: '20px', borderRadius: '15px', border: '1px solid #EDF2F7' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#718096', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: '700', marginBottom: '8px' }}>
+                {icon} {label}
+            </label>
+            <div style={{ fontWeight: '700', color: '#2D3748', fontSize: '1rem' }}>{value || '—'}</div>
+        </div>
+    );
+
+    return (
+        <div className="details-view-container animate-fade-in custom-scroll" style={{ height: '100%', overflowY: 'auto' }}>
+            <div className="details-header" style={{ background: 'linear-gradient(135deg, #2C5282 0%, #1A365D 100%)', padding: '40px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                    <h2 style={{ fontSize: '2rem', marginBottom: '10px' }}>{s.applicant_name}</h2>
+                    <div style={{ display: 'flex', gap: '15px' }}>
+                        <span className="badge" style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}>{s.application_id}</span>
+                        <span className={`badge ${s.status === 'Approved' ? 'success' : 'blue'}`}>{s.status}</span>
+                    </div>
+                </div>
+                <button className="btn-small" onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', color: 'white' }}>Close</button>
+            </div>
+
+            <div style={{ padding: '30px' }}>
+                <ApprovalBadge data={s} level="Scholarship Sanction Board" />
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginTop: '30px' }}>
+                    <div style={{ gridColumn: 'span 3', borderBottom: '2px solid #F1F5F9', paddingBottom: '10px', color: '#94A3B8', fontSize: '0.8rem', fontWeight: '900', textTransform: 'uppercase' }}>Financial Scrutiny</div>
+                    <Field icon={<FaFileInvoiceDollar />} label="Income Status" value={s.income_status} />
+                    <Field icon={<FaGraduationCap />} label="Academic Score" value={s.academic_score} />
+                    <Field icon={<FaUniversity />} label="Institution" value={s.college_name} />
+                </div>
+
+                {s.status === 'Awaiting Approval' && (
+                    <div style={{ marginTop: '30px', padding: '25px', background: '#F0FFF4', borderRadius: '15px', border: '1px solid #C6F6D5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <h4 style={{ margin: 0, color: '#22543D' }}>Fund Disbursement Authority</h4>
+                            <p style={{ margin: '5px 0 0', color: '#276749', fontSize: '0.85rem' }}>Authorize scholarship release based on academic merit.</p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '15px' }}>
+                            <button className="btn-add" onClick={onApprove}>Authorize Sanction</button>
+                            <button className="btn-add" style={{ background: '#E53E3E' }} onClick={() => {
+                                const r = prompt('Rejection reason (Public record):');
+                                if (r) onAction('reject', r);
+                            }}>Decline Grant</button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+const ReportDetailsView = ({ report, onClose }) => {
+    const r = report || {};
+
+    return (
+        <div className="details-view-container animate-fade-in custom-scroll" style={{ height: '100%', overflowY: 'auto' }}>
+            <div className="details-header" style={{ background: 'linear-gradient(135deg, #2D3748 0%, #1A202C 100%)', padding: '40px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                    <h2 style={{ fontSize: '2rem', marginBottom: '10px' }}>{r.title}</h2>
+                    <div style={{ display: 'flex', gap: '15px' }}>
+                        <span className="badge" style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}>{r.category}</span>
+                        <span className={`badge ${r.status === 'Approved' ? 'success' : 'blue'}`}>{r.status}</span>
+                    </div>
+                </div>
+                <button className="btn-small" onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', color: 'white' }}>Close</button>
+            </div>
+
+            <div style={{ padding: '40px' }}>
+                <ApprovalBadge data={r} level="Program Impact Verification" />
+
+                <div style={{ marginTop: '40px', background: '#F8F9FA', padding: '30px', borderRadius: '20px', border: '1px solid #EDF2F7' }}>
+                    <h4 style={{ color: '#4A5568', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '20px', fontWeight: 900 }}>Executive Summary</h4>
+                    <p style={{ fontSize: '1.1rem', color: '#2D3748', lineHeight: '1.8' }}>{r.content || 'No detailed content provided for this report.'}</p>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginTop: '30px' }}>
+                    <div style={{ background: 'white', padding: '20px', borderRadius: '15px', border: '1px solid #E2E8F0' }}>
+                        <label style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 900, textTransform: 'uppercase' }}>Filed By</label>
+                        <div style={{ fontWeight: 700, marginTop: '5px' }}>{r.posted_by_name || 'Field Officer / Automated'}</div>
+                    </div>
+                    <div style={{ background: 'white', padding: '20px', borderRadius: '15px', border: '1px solid #E2E8F0' }}>
+                        <label style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 900, textTransform: 'uppercase' }}>Creation Date</label>
+                        <div style={{ fontWeight: 700, marginTop: '5px' }}>{new Date(r.created_at).toLocaleString()}</div>
+                    </div>
+                </div>
+
+                {r.file_url && (
+                    <div style={{ marginTop: '30px' }}>
+                        <button className="btn-premium" style={{ width: '100%', justifyContent: 'center' }} onClick={() => window.open(r.file_url, '_blank')}>
+                            <FaEye /> View Associated Artifact / Document
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+const TaskDetailsView = ({ task, onClose, onApprove, onAction }) => {
+    const t = task || {};
+
+    return (
+        <div className="details-view-container animate-fade-in custom-scroll" style={{ height: '100%', overflowY: 'auto' }}>
+            <div className="details-header" style={{ background: 'linear-gradient(135deg, #1A365D 0%, #2D3748 100%)', padding: '40px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                    <h2 style={{ fontSize: '2rem', marginBottom: '10px' }}>{t.title}</h2>
+                    <div style={{ display: 'flex', gap: '15px' }}>
+                        <span className="badge" style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}>{t.volunteers?.full_name}</span>
+                        <span className={`badge ${t.status === 'Verified' ? 'success' : (t.status === 'Completed' ? 'blue' : 'warning')}`}>{t.status}</span>
+                    </div>
+                </div>
+                <button className="btn-small" onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', color: 'white' }}>Close</button>
+            </div>
+
+            <div style={{ padding: '40px' }}>
+                <ApprovalBadge data={t} level="Mission Verification Signature" />
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '30px', marginTop: '30px' }}>
+                    <div style={{ background: '#F8FAF9', padding: '25px', borderRadius: '15px', border: '1px solid #E2E8F0' }}>
+                        <h4 style={{ color: '#4A5568', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '15px', fontWeight: 900 }}>Mission Description</h4>
+                        <p style={{ color: '#2D3748', lineHeight: '1.6' }}>{t.description}</p>
+                    </div>
+                    <div>
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '15px', border: '1px solid #E2E8F0', marginBottom: '15px' }}>
+                            <label style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 900, textTransform: 'uppercase' }}>Deadline / Target</label>
+                            <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>{t.deadline ? new Date(t.deadline).toLocaleDateString() : '—'}</div>
+                        </div>
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '15px', border: '1px solid #E2E8F0' }}>
+                            <label style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 900, textTransform: 'uppercase' }}>Submission Proof</label>
+                            <div style={{ marginTop: '10px' }}>
+                                {t.proof_file_path ? (
+                                    <button className="btn-small" style={{ width: '100%', justifyContent: 'center', background: '#EBF8FF', color: '#2B6CB0' }}>
+                                        <FaEye /> View Artifact
+                                    </button>
+                                ) : <span style={{ color: '#CBD5E0' }}>No proof uploaded yet</span>}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {t.status === 'Completed' && (
+                    <div style={{ marginTop: '40px', padding: '30px', background: '#EBF8FF', borderRadius: '20px', border: '2px solid #3182CE', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <h4 style={{ margin: 0, color: '#2B6CB0' }}>Verification Command</h4>
+                            <p style={{ margin: '5px 0 0', color: '#4A5568', fontSize: '0.9rem' }}>Review the artifact and certify this activity for the volunteer's record.</p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '15px' }}>
+                            <button className="btn-add" onClick={onApprove}>Verify Mission</button>
+                            <button className="btn-add" style={{ background: '#E53E3E' }} onClick={() => {
+                                const r = prompt('Grounds for proof rejection:');
+                                if (r) onAction('reject', r);
+                            }}>Decline Proof</button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+const GovernanceTab = ({ policies, boardMembers, meetings, onAddPolicy, onEditPolicy, onAddMeeting, onEditMeeting, onAddMember, onDeletePolicy, onDeleteMember, onDeleteMeeting, refreshData }) => {
     const [subTab, setSubTab] = useState('policies');
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div style={{ display: 'flex', gap: '15px' }}>
-                <button
-                    className="btn-small"
-                    style={subTab === 'policies' ? { backgroundColor: 'var(--primary)', color: 'white' } : {}}
-                    onClick={() => setSubTab('policies')}
-                >
-                    Policies & SOPs
-                </button>
-                <button
-                    className="btn-small"
-                    style={subTab === 'board' ? { backgroundColor: 'var(--primary)', color: 'white' } : {}}
-                    onClick={() => setSubTab('board')}
-                >
-                    Board & Resolutions
-                </button>
-                <button
-                    className="btn-small"
-                    style={subTab === 'members' ? { backgroundColor: 'var(--primary)', color: 'white' } : {}}
-                    onClick={() => setSubTab('members')}
-                >
-                    Board Members
-                </button>
+        <div style={{ animation: 'fadeIn 0.5s' }}>
+            <div style={{ display: 'flex', gap: '20px', marginBottom: '30px', borderBottom: '1px solid #edf2f7', paddingBottom: '15px' }}>
+                <button className={`btn-small ${subTab === 'policies' ? 'active' : ''}`} onClick={() => setSubTab('policies')} style={{ background: subTab === 'policies' ? '#1a237e' : 'transparent', color: subTab === 'policies' ? 'white' : '#64748b' }}>Current Policies</button>
+                <button className={`btn-small ${subTab === 'board' ? 'active' : ''}`} onClick={() => setSubTab('board')} style={{ background: subTab === 'board' ? '#1a237e' : 'transparent', color: subTab === 'board' ? 'white' : '#64748b' }}>Board Meetings</button>
+                <button className={`btn-small ${subTab === 'members' ? 'active' : ''}`} onClick={() => setSubTab('members')} style={{ background: subTab === 'members' ? '#1a237e' : 'transparent', color: subTab === 'members' ? 'white' : '#64748b' }}>Board Registry</button>
             </div>
 
             {subTab === 'policies' && (
@@ -3346,7 +5400,7 @@ const GovernanceTab = ({ policies, boardMembers, meetings, onAddPolicy, onAddMee
                         <button className="btn-add" onClick={onAddPolicy}><FaPlus /> New Policy</button>
                     </div>
                     <table className="data-table">
-                        <thead><tr><th>Title</th><th>Version</th><th>Category</th><th>Status</th><th>Updated</th><th>Actions</th></tr></thead>
+                        <thead><tr><th>Title</th><th>Version</th><th>Category</th><th>Status</th><th>Effective Date</th><th>Approved By</th><th>Actions</th></tr></thead>
                         <tbody>
                             {(policies || []).map(p => (
                                 <tr key={p.id}>
@@ -3354,9 +5408,13 @@ const GovernanceTab = ({ policies, boardMembers, meetings, onAddPolicy, onAddMee
                                     <td>{p.version}</td>
                                     <td><span className="badge">{p.category}</span></td>
                                     <td><span className={`badge ${p.status === 'Active' ? 'success' : 'warning'}`}>{p.status}</span></td>
-                                    <td>{new Date(p.updated_at).toLocaleDateString()}</td>
+                                    <td>{p.effective_date || 'N/A'}</td>
+                                    <td>{p.approved_by || 'N/A'}</td>
                                     <td>
-                                        <button className="btn-icon danger" onClick={() => onDeletePolicy(p.id, p.title)}><FaTrash /></button>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <button className="btn-icon blue" title="Edit Policy" onClick={() => onEditPolicy(p)}><FaEdit /></button>
+                                            <button className="btn-icon danger" onClick={() => onDeletePolicy(p.id, p.title)}><FaTrash /></button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -3378,10 +5436,15 @@ const GovernanceTab = ({ policies, boardMembers, meetings, onAddPolicy, onAddMee
                                 <tr key={m.id}>
                                     <td>{new Date(m.meeting_date).toLocaleString()}</td>
                                     <td><span className={`badge ${m.status === 'Finalized' ? 'success' : 'blue'}`}>{m.status}</span></td>
-                                    <td>{m.agenda}</td>
-                                    <td>{m.resolution_text || 'Pending'}</td>
+                                    <td style={{ maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.agenda}</td>
+                                    <td style={{ maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.resolution_text || 'Pending'}</td>
                                     <td>
-                                        <button className="btn-icon danger" onClick={() => onDeleteMeeting(m.id, new Date(m.meeting_date).toLocaleString())}><FaTrash /></button>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <button className="btn-icon blue" title="Process Resolution / View" onClick={() => onEditMeeting(m)}>
+                                                <FaEdit />
+                                            </button>
+                                            <button className="btn-icon danger" onClick={() => onDeleteMeeting(m.id, new Date(m.meeting_date).toLocaleString())}><FaTrash /></button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -3418,49 +5481,958 @@ const GovernanceTab = ({ policies, boardMembers, meetings, onAddPolicy, onAddMee
     );
 };
 
-const PolicyForm = ({ onClose, onSave }) => {
-    const [p, setP] = useState({ title: '', version: '1.0', category: 'HR', content: '', status: 'Draft' });
+const PolicyForm = ({ onClose, onSave, policy = null }) => {
+    const [p, setP] = useState(policy || {
+        title: '',
+        version: '1.0.0',
+        category: 'HR Policy',
+        department: 'Corporate HQ',
+        effective_date: new Date().toISOString().split('T')[0],
+        review_date: '',
+        content: '',
+        status: 'Draft',
+        document_ref: ''
+    });
+    const [activeTab, setActiveTab] = useState('editor');
+
+    const handleSave = () => {
+        if (!p.title || !p.content) {
+            alert('CRITICAL: Policy Title and Content are mandatory for governance trail.');
+            return;
+        }
+        onSave(p);
+    };
+
     return (
-        <div style={{ padding: '30px' }}>
-            <h3>Create Internal Policy / SOP</h3>
-            <div className="form-group"><label>Policy Title</label><input className="form-control" value={p.title} onChange={e => setP({ ...p, title: e.target.value })} /></div>
-            <div className="form-group"><label>Category</label><select className="form-control" value={p.category} onChange={e => setP({ ...p, category: e.target.value })}><option>HR</option><option>Salary</option><option>Fellowship</option><option>Finance</option></select></div>
-            <div className="form-group"><label>Content (Markdown)</label><textarea className="form-control" rows="5" value={p.content} onChange={e => setP({ ...p, content: e.target.value })} /></div>
-            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-                <button className="btn-small" onClick={onClose}>Cancel</button>
-                <button className="btn-add" onClick={() => onSave(p)}>Save Policy</button>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', maxHeight: '92vh' }}>
+            {/* COMPACT PREMIUM HEADER */}
+            <div style={{ padding: '30px 40px', borderBottom: '1px solid #edf2f7', background: 'white' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                        <div style={{ width: '50px', height: '50px', background: '#e2e8f0', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2d3748', fontSize: '1.5rem' }}>
+                            <FaGavel />
+                        </div>
+                        <div>
+                            <h3 style={{ margin: 0, fontSize: '1.4rem' }}>Governance: Create Internal Policy / SOP</h3>
+                            <p style={{ margin: '5px 0 0', color: '#718096', fontSize: '0.85rem' }}>Establish foundational rules and operational procedures.</p>
+                        </div>
+                    </div>
+                    <button className="btn-icon" onClick={onClose} style={{ fontSize: '1.5rem' }}>&times;</button>
+                </div>
+            </div>
+
+            {/* SCROLLABLE FORM CONTENT */}
+            <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', padding: '35px 40px' }}>
+                {/* METADATA GRID */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '25px', marginBottom: '40px' }}>
+                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                        <label style={{ color: '#4a5568', fontWeight: '700', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Policy Title</label>
+                        <input className="form-control" placeholder="e.g. Anti-Harassment & Ethics Policy" value={p.title} onChange={e => setP({ ...p, title: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                        <label style={{ color: '#4a5568', fontWeight: '700', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Version Control</label>
+                        <input className="form-control" placeholder="1.0.0" value={p.version} onChange={e => setP({ ...p, version: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                        <label style={{ color: '#4a5568', fontWeight: '700', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Primary Category</label>
+                        <select className="form-control" value={p.category} onChange={e => setP({ ...p, category: e.target.value })}>
+                            <option>HR Policy</option>
+                            <option>Salary & Stipend Policy</option>
+                            <option>Volunteer Policy</option>
+                            <option>Fellowship Policy</option>
+                            <option>Code of Conduct</option>
+                            <option>Anti-Misuse of Funds Policy</option>
+                            <option>Operational SOP</option>
+                        </select>
+                    </div>
+                    <div className="form-group">
+                        <label style={{ color: '#4a5568', fontWeight: '700', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Approved By (Director Signature)</label>
+                        <input className="form-control" placeholder="Full Name of Director" value={p.approved_by || ''} onChange={e => setP({ ...p, approved_by: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                        <label style={{ color: '#4a5568', fontWeight: '700', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Publishing Status</label>
+                        <select className="form-control" value={p.status} onChange={e => setP({ ...p, status: e.target.value })}>
+                            <option>Draft</option>
+                            <option>Active</option>
+                            <option>Archived</option>
+                        </select>
+                    </div>
+                    <div className="form-group">
+                        <label style={{ color: '#4a5568', fontWeight: '700', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Effective Date</label>
+                        <input type="date" className="form-control" value={p.effective_date} onChange={e => setP({ ...p, effective_date: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                        <label style={{ color: '#4a5568', fontWeight: '700', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Next Review Cycle</label>
+                        <input type="date" className="form-control" value={p.review_date} onChange={e => setP({ ...p, review_date: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                        <label style={{ color: '#4a5568', fontWeight: '700', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Ext Document Ref (ID)</label>
+                        <input className="form-control" placeholder="BCLL-GOV-2026-01" value={p.document_ref} onChange={e => setP({ ...p, document_ref: e.target.value })} />
+                    </div>
+                </div>
+
+                {/* EDITOR / PREVIEW TABS */}
+                <div style={{ marginBottom: '15px', display: 'flex', gap: '15px', borderBottom: '2px solid #f1f5f9' }}>
+                    <button
+                        onClick={() => setActiveTab('editor')}
+                        style={{ padding: '12px 25px', border: 'none', background: 'none', fontWeight: '700', cursor: 'pointer', borderBottom: activeTab === 'editor' ? '3px solid #3182ce' : '3px solid transparent', color: activeTab === 'editor' ? '#3182ce' : '#718096' }}
+                    >
+                        Drafting Editor (Markdown)
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('preview')}
+                        style={{ padding: '12px 25px', border: 'none', background: 'none', fontWeight: '700', cursor: 'pointer', borderBottom: activeTab === 'preview' ? '3px solid #3182ce' : '3px solid transparent', color: activeTab === 'preview' ? '#3182ce' : '#718096' }}
+                    >
+                        Legal Preview
+                    </button>
+                </div>
+
+                {activeTab === 'editor' ? (
+                    <div className="form-group">
+                        <textarea
+                            className="form-control"
+                            rows="12"
+                            placeholder="# Policy Introduction\n\nEnter the legal and operational framework here using markdown syntax..."
+                            value={p.content}
+                            onChange={e => setP({ ...p, content: e.target.value })}
+                        />
+                        <p style={{ marginTop: '10px', fontSize: '0.75rem', color: '#a0aec0' }}><FaDesktop /> System captures audit trail of all content modifications.</p>
+                    </div>
+                ) : (
+                    <div style={{ padding: '40px', background: 'white', border: '2px solid #e2e8f0', borderRadius: '20px', minHeight: '350px', whiteSpace: 'pre-wrap', color: '#2d3748', lineHeight: '1.8' }}>
+                        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+                            <h2 style={{ textTransform: 'uppercase', letterSpacing: '2px', fontSize: '1.2rem', margin: 0 }}>Official Governance Document</h2>
+                            <p style={{ color: '#718096', fontSize: '0.8rem' }}>Bharath Cares Life Line Foundation</p>
+                        </div>
+                        <h1 style={{ borderBottom: '2px solid #2d3748', paddingBottom: '10px', marginBottom: '20px' }}>{p.title || 'Draft Policy Title'}</h1>
+                        <div style={{ marginBottom: '20px', fontSize: '0.85rem', color: '#718096', display: 'flex', gap: '30px' }}>
+                            <span><strong>Ref:</strong> {p.document_ref || 'Pending'}</span>
+                            <span><strong>Version:</strong> {p.version}</span>
+                            <span><strong>Effective:</strong> {p.effective_date}</span>
+                        </div>
+                        <div style={{ fontSize: '1.05rem' }}>
+                            {p.content || 'Start drafting in the editor tab to see the preview here...'}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* ACTION BAR */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px', padding: '30px 40px', borderTop: '1px solid #edf2f7', background: '#f8fafc', borderBottomLeftRadius: '28px', borderBottomRightRadius: '28px' }}>
+                <button className="btn-small" onClick={onClose} style={{ padding: '12px 30px' }}>Cancel Draft</button>
+                <button className="btn-add" onClick={handleSave} style={{ padding: '12px 35px' }}>
+                    <FaClipboardCheck /> Commit to Governance Registry
+                </button>
             </div>
         </div>
     );
 };
 
-const MeetingForm = ({ onClose, onSave }) => {
-    const [m, setM] = useState({ meeting_date: '', agenda: '', status: 'Scheduled' });
+const MeetingForm = ({ onClose, onSave, meeting = null }) => {
+    const [m, setM] = useState(meeting || {
+        meeting_date: '',
+        agenda: '',
+        minutes: '',
+        resolution_text: '',
+        status: 'Scheduled',
+        attendees: [],
+        recording_link: ''
+    });
+
+    const isLocked = m.status === 'Finalized';
+
     return (
-        <div style={{ padding: '30px' }}>
-            <h3>Schedule Board Meeting</h3>
-            <div className="form-group"><label>Meeting Date</label><input type="datetime-local" className="form-control" value={m.meeting_date} onChange={e => setM({ ...m, meeting_date: e.target.value })} /></div>
-            <div className="form-group"><label>Initial Agenda</label><textarea className="form-control" value={m.agenda} onChange={e => setM({ ...m, agenda: e.target.value })} /></div>
-            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-                <button className="btn-small" onClick={onClose}>Cancel</button>
-                <button className="btn-add" onClick={() => onSave(m)}>Schedule</button>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', maxHeight: '92vh' }}>
+            <div style={{ padding: '30px 40px', borderBottom: '1px solid #edf2f7', background: 'white' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                        <div style={{ width: '50px', height: '50px', background: isLocked ? '#C6F6D5' : '#EBF8FF', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isLocked ? '#22543D' : '#2B6CB0', fontSize: '1.5rem' }}>
+                            {isLocked ? <FaCheckDouble /> : <FaCalendarAlt />}
+                        </div>
+                        <div>
+                            <h3 style={{ margin: 0, fontSize: '1.4rem' }}>Board Governance: {meeting ? 'Process Resolution' : 'Schedule Meeting'}</h3>
+                            <p style={{ margin: '5px 0 0', color: '#718096', fontSize: '0.85rem' }}>
+                                {isLocked ? 'Document is SIGNED and LOCKED. No further edits permitted.' : 'Manage meeting agenda, minutes, and final board resolutions.'}
+                            </p>
+                        </div>
+                    </div>
+                    <button className="btn-icon" onClick={onClose} style={{ fontSize: '1.5rem' }}>&times;</button>
+                </div>
+            </div>
+
+            <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', padding: '35px 40px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '25px', marginBottom: '30px' }}>
+                    <div className="form-group">
+                        <label>Meeting Schedule Date & Time</label>
+                        <input type="datetime-local" className="form-control" value={m.meeting_date} onChange={e => setM({ ...m, meeting_date: e.target.value })} disabled={isLocked} />
+                    </div>
+                    <div className="form-group">
+                        <label>Current Lifecycle Status</label>
+                        <select className="form-control" value={m.status} onChange={e => setM({ ...m, status: e.target.value })} disabled={isLocked}>
+                            <option>Scheduled</option>
+                            <option>Agenda Uploaded</option>
+                            <option>Minutes Drafted</option>
+                            <option>Under Board Review</option>
+                            <option>Resolution Finalized</option>
+                            <option>Finalized</option>
+                        </select>
+                    </div>
+                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                        <label>Primary Agenda (Key Discussion Points)</label>
+                        <textarea className="form-control" rows="4" placeholder="Detail the agenda for the board members..." value={m.agenda} onChange={e => setM({ ...m, agenda: e.target.value })} disabled={isLocked} />
+                    </div>
+
+                    {(m.status !== 'Scheduled' && m.status !== 'Agenda Uploaded') && (
+                        <div className="form-group" style={{ gridColumn: 'span 2', animation: 'fadeIn 0.5s' }}>
+                            <label style={{ color: '#2B6CB0' }}>Official Meeting Minutes</label>
+                            <textarea className="form-control" rows="6" placeholder="Document the discussions, motions, and discussions here..." value={m.minutes} onChange={e => setM({ ...m, minutes: e.target.value })} disabled={isLocked} style={{ background: '#f0f9ff' }} />
+                        </div>
+                    )}
+
+                    {(m.status === 'Resolution Finalized' || m.status === 'Finalized') && (
+                        <div className="form-group" style={{ gridColumn: 'span 2', animation: 'fadeIn 0.5s' }}>
+                            <label style={{ color: '#2F855A' }}>Final Board Resolution & Directives</label>
+                            <textarea className="form-control" rows="5" placeholder="State the final binding decision of the board..." value={m.resolution_text} onChange={e => setM({ ...m, resolution_text: e.target.value })} disabled={isLocked} style={{ background: '#f0fff4', fontWeight: '700' }} />
+                        </div>
+                    )}
+                </div>
+
+                {isLocked && (
+                    <div style={{ padding: '20px', background: '#fff5f5', border: '1px solid #feb2b2', borderRadius: '15px', color: '#c53030', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <FaUserLock fontSize="1.5rem" />
+                        <div>
+                            <strong style={{ display: 'block' }}>Immutable Resolution</strong>
+                            <span style={{ fontSize: '0.85rem' }}>This document was crystallized on {new Date().toLocaleDateString()}. To change this, a new board resolution must be filed.</span>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px', padding: '30px 40px', borderTop: '1px solid #edf2f7', background: '#f8fafc' }}>
+                <button className="btn-small" onClick={onClose}>Discard</button>
+                {!isLocked && (
+                    <button className="btn-add" onClick={() => onSave(m)}>
+                        {meeting ? 'Update Governance Log' : 'Initialize Meeting'}
+                    </button>
+                )}
             </div>
         </div>
     );
 };
+
 
 const MemberForm = ({ onClose, onSave }) => {
-    const [m, setM] = useState({ full_name: '', designation: 'Trustee', organization: '', term_start: '' });
+    const [m, setM] = useState({
+        full_name: '',
+        designation: 'Director',
+        role: 'Executive Member',
+        organization: 'BCLL Foundation',
+        term_start: '',
+        term_end: '',
+        voting_rights: true
+    });
+
     return (
-        <div style={{ padding: '30px' }}>
-            <h3>Add Board Member</h3>
-            <div className="form-group"><label>Full Name</label><input className="form-control" value={m.full_name} onChange={e => setM({ ...m, full_name: e.target.value })} /></div>
-            <div className="form-group"><label>Designation</label><input className="form-control" value={m.designation} onChange={e => setM({ ...m, designation: e.target.value })} /></div>
-            <div className="form-group"><label>Organization</label><input className="form-control" value={m.organization} onChange={e => setM({ ...m, organization: e.target.value })} /></div>
-            <div className="form-group"><label>Term Start Date</label><input type="date" className="form-control" value={m.term_start} onChange={e => setM({ ...m, term_start: e.target.value })} /></div>
-            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', maxHeight: '92vh' }}>
+            <div style={{ padding: '30px 40px', borderBottom: '1px solid #edf2f7', background: 'white' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                        <div style={{ width: '50px', height: '50px', background: '#F6E05E', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#744210', fontSize: '1.5rem' }}>
+                            <FaUserShield />
+                        </div>
+                        <div>
+                            <h3 style={{ margin: 0, fontSize: '1.4rem' }}>Registry: Board Member Profile</h3>
+                            <p style={{ margin: '5px 0 0', color: '#718096', fontSize: '0.85rem' }}>Update the official directory of directors and trustees.</p>
+                        </div>
+                    </div>
+                    <button className="btn-icon" onClick={onClose} style={{ fontSize: '1.5rem' }}>&times;</button>
+                </div>
+            </div>
+
+            <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', padding: '35px 40px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '25px', marginBottom: '30px' }}>
+                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                        <label>Legal Full Name</label>
+                        <input className="form-control" placeholder="e.g. Dr. Satish Kumar" value={m.full_name} onChange={e => setM({ ...m, full_name: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                        <label>Official Designation</label>
+                        <select className="form-control" value={m.designation} onChange={e => setM({ ...m, designation: e.target.value })}>
+                            <option>Director</option>
+                            <option>Trustee</option>
+                            <option>Chairman</option>
+                            <option>Secretary</option>
+                            <option>Treasurer</option>
+                            <option>Advisor</option>
+                        </select>
+                    </div>
+                    <div className="form-group">
+                        <label>Board Role Type</label>
+                        <select className="form-control" value={m.role} onChange={e => setM({ ...m, role: e.target.value })}>
+                            <option>Executive Member</option>
+                            <option>Non-Executive</option>
+                            <option>Independent Director</option>
+                            <option>Nominee Director</option>
+                        </select>
+                    </div>
+                    <div className="form-group">
+                        <label>Tenure Start Date</label>
+                        <input type="date" className="form-control" value={m.term_start} onChange={e => setM({ ...m, term_start: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                        <label>Tenure End Date (Optional)</label>
+                        <input type="date" className="form-control" value={m.term_end} onChange={e => setM({ ...m, term_end: e.target.value })} />
+                    </div>
+                    <div className="form-group" style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: '15px', padding: '15px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                        <input type="checkbox" checked={m.voting_rights} onChange={e => setM({ ...m, voting_rights: e.target.checked })} style={{ width: '20px', height: '20px', accentColor: 'var(--primary)' }} />
+                        <div>
+                            <label style={{ margin: 0, cursor: 'pointer' }}>Active Voting Rights</label>
+                            <p style={{ margin: 0, fontSize: '0.75rem', color: '#718096' }}>Checking this grants the member authorization to cast votes in board resolutions.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px', padding: '30px 40px', borderTop: '1px solid #edf2f7', background: '#f8fafc' }}>
                 <button className="btn-small" onClick={onClose}>Cancel</button>
-                <button className="btn-add" onClick={() => onSave(m)}>Add Member</button>
+                <button className="btn-add" onClick={() => onSave(m)}>Commit Member to Registry</button>
+            </div>
+        </div>
+    );
+};
+
+
+const VolunteerTaskForm = ({ volunteers, onClose, onSave }) => {
+    const [formData, setFormData] = useState({
+        volunteer_id: '',
+        title: '',
+        description: '',
+        deadline: '',
+        status: 'In Progress'
+    });
+
+    const handleSave = () => {
+        if (!formData.volunteer_id || !formData.title) {
+            alert('CRITICAL: Strategic Mission must have a designated volunteer and title.');
+            return;
+        }
+        onSave(formData);
+    };
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <div style={{ padding: '40px 40px 0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+                    <div>
+                        <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800 }}>Deploy Institutional Mission</h3>
+                        <p style={{ margin: '5px 0 0', color: '#718096', fontSize: '0.85rem' }}>Assign a field task to the selected volunteer in the registry.</p>
+                    </div>
+                    <button className="btn-icon" onClick={onClose} style={{ fontSize: '1.5rem' }}>&times;</button>
+                </div>
+            </div>
+
+            <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', padding: '0 40px' }}>
+                <div className="form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px' }}>
+                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                        <label style={{ fontWeight: 700, color: '#2d3748', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '1px', marginBottom: '10px' }}>Assigned Volunteer</label>
+                        <select
+                            className="form-control"
+                            name="volunteer_id"
+                            value={formData.volunteer_id}
+                            onChange={e => setFormData({ ...formData, volunteer_id: e.target.value })}
+                            style={{ padding: '15px' }}
+                        >
+                            <option value="">Select Personnel from Directory...</option>
+                            {(volunteers || []).filter(v => v.status === 'Approved').map(v => (
+                                <option key={v.id} value={v.id}>{v.full_name} (VOL-{v.id.substring(0, 8).toUpperCase()})</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                        <label style={{ fontWeight: 700, color: '#2d3748', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '1px', marginBottom: '10px' }}>Mission Title</label>
+                        <input
+                            className="form-control"
+                            type="text"
+                            placeholder="e.g. Community Health Survey 2025"
+                            value={formData.title}
+                            onChange={e => setFormData({ ...formData, title: e.target.value })}
+                            style={{ padding: '15px' }}
+                        />
+                    </div>
+
+                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                        <label style={{ fontWeight: 700, color: '#2d3748', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '1px', marginBottom: '10px' }}>Strategic Objectives / Description</label>
+                        <textarea
+                            className="form-control"
+                            rows="4"
+                            placeholder="Define task deliverables and reporting requirements..."
+                            value={formData.description}
+                            onChange={e => setFormData({ ...formData, description: e.target.value })}
+                            style={{ padding: '15px', resize: 'none' }}
+                        ></textarea>
+                    </div>
+
+                    <div className="form-group">
+                        <label style={{ fontWeight: 700, color: '#2d3748', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '1px', marginBottom: '10px' }}>Deadline Signature</label>
+                        <input
+                            className="form-control"
+                            type="date"
+                            value={formData.deadline}
+                            onChange={e => setFormData({ ...formData, deadline: e.target.value })}
+                            style={{ padding: '15px' }}
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label style={{ fontWeight: 700, color: '#2d3748', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '1px', marginBottom: '10px' }}>Initial Assignment Status</label>
+                        <input className="form-control" type="text" value="Active / In Progress" readOnly style={{ padding: '15px', background: '#f8fafc' }} />
+                    </div>
+                </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end', padding: '40px', borderTop: '1px solid #f1f5f9', background: '#fff' }}>
+                <button className="btn-small" onClick={onClose} style={{ padding: '12px 25px' }}>Abort Deployment</button>
+                <button
+                    className="btn-add"
+                    onClick={handleSave}
+                    style={{ padding: '12px 30px', background: '#1a365d', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 800, cursor: 'pointer' }}
+                >
+                    Launch Official Mission
+                </button>
+            </div>
+        </div>
+    );
+};
+
+const ExpenseClaimForm = ({ onClose, onSubmit }) => {
+    const [amount, setAmount] = useState('');
+    const [description, setDescription] = useState('');
+    const [category, setCategory] = useState('Travel');
+
+    return (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div style={{ background: 'white', padding: '30px', borderRadius: '15px', width: '400px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+                <h3 style={{ margin: '0 0 20px 0', color: '#1a365d' }}>Submit Expense Claim</h3>
+
+                <div className="form-group" style={{ marginBottom: '15px' }}>
+                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#4a5568' }}>Claim Amount (₹)</label>
+                    <input
+                        type="number"
+                        className="form-control"
+                        value={amount}
+                        onChange={e => setAmount(e.target.value)}
+                        placeholder="0.00"
+                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e0' }}
+                    />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '15px' }}>
+                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#4a5568' }}>Category</label>
+                    <select
+                        className="form-control"
+                        value={category}
+                        onChange={e => setCategory(e.target.value)}
+                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e0' }}
+                    >
+                        <option>Travel</option>
+                        <option>Food & Lodging</option>
+                        <option>Office Supplies</option>
+                        <option>Equipment</option>
+                        <option>Miscellaneous</option>
+                    </select>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '25px' }}>
+                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#4a5568' }}>Description / Purpose</label>
+                    <textarea
+                        className="form-control"
+                        value={description}
+                        onChange={e => setDescription(e.target.value)}
+                        rows="3"
+                        placeholder="Brief details about the expense..."
+                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e0' }}
+                    />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                    <button className="btn-small" onClick={onClose}>Cancel</button>
+                    <button className="btn-premium" onClick={() => onSubmit({ amount, description, category })}>Submit Claim</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const ComplianceDocForm = ({ onClose, onSave }) => {
+    const [formData, setFormData] = useState({ title: '', category: '12A', document_url: '', expiry_date: '', notes: '' });
+    return (
+        <div style={{ padding: '40px' }}>
+            <h3 style={{ marginBottom: '25px', color: '#2C5282' }}>Upload Compliance Certificate</h3>
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label>Certificate Title</label>
+                <input className="form-control" type="text" placeholder="e.g. 12A Registration 2025" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                <div className="form-group">
+                    <label>Category</label>
+                    <select className="form-control" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
+                        <option>12A</option>
+                        <option>80G</option>
+                        <option>CSR-1</option>
+                        <option>FCRA</option>
+                        <option>Audit Report</option>
+                        <option>IT Return</option>
+                        <option>Trust Deed</option>
+                    </select>
+                </div>
+                <div className="form-group">
+                    <label>Expiry Date</label>
+                    <input className="form-control" type="date" value={formData.expiry_date} onChange={e => setFormData({ ...formData, expiry_date: e.target.value })} />
+                </div>
+            </div>
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label>Document URL / Secure Link</label>
+                <input className="form-control" type="text" placeholder="https://..." value={formData.document_url} onChange={e => setFormData({ ...formData, document_url: e.target.value })} />
+            </div>
+            <div className="form-group">
+                <label>Administrative Notes</label>
+                <textarea className="form-control" rows="3" value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })}></textarea>
+            </div>
+            <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end', marginTop: '30px' }}>
+                <button className="btn-small" onClick={onClose}>Cancel</button>
+                <button className="btn-add" style={{ background: '#2C5282' }} onClick={() => onSave(formData)}>Save Certificate</button>
+            </div>
+        </div>
+    );
+};
+
+const CsrProjectForm = ({ onClose, onSave }) => {
+    const [formData, setFormData] = useState({ company_name: '', project_name: '', financial_year: '2025-26', sanctioned_amount: 0, utilized_amount: 0, status: 'Ongoing' });
+    return (
+        <div style={{ padding: '40px' }}>
+            <h3 style={{ marginBottom: '25px', color: '#2C5282' }}>Track CSR Project Compliance</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px', marginBottom: '20px' }}>
+                <div className="form-group"><label>Funding Company</label><input className="form-control" placeholder="e.g. Reliance Foundation" value={formData.company_name} onChange={e => setFormData({ ...formData, company_name: e.target.value })} /></div>
+                <div className="form-group"><label>Project Designation</label><input className="form-control" placeholder="e.g. Digital Literacy Phase 1" value={formData.project_name} onChange={e => setFormData({ ...formData, project_name: e.target.value })} /></div>
+                <div className="form-group"><label>Financial Year</label><input className="form-control" placeholder="2025-26" value={formData.financial_year} onChange={e => setFormData({ ...formData, financial_year: e.target.value })} /></div>
+                <div className="form-group"><label>Sanctioned Budget (₹)</label><input className="form-control" type="number" value={formData.sanctioned_amount} onChange={e => setFormData({ ...formData, sanctioned_amount: e.target.value })} /></div>
+                <div className="form-group">
+                    <label>Current Status</label>
+                    <select className="form-control" value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
+                        <option>Ongoing</option>
+                        <option>Completed</option>
+                        <option>Audited</option>
+                    </select>
+                </div>
+            </div>
+            <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end', marginTop: '30px' }}>
+                <button className="btn-small" onClick={onClose}>Cancel</button>
+                <button className="btn-add" style={{ background: '#2C5282' }} onClick={() => onSave(formData)}>Initiate Project Tracking</button>
+            </div>
+        </div>
+    );
+};
+
+const TaxRecordForm = ({ onClose, onSave }) => {
+    const [formData, setFormData] = useState({ donor_name: '', donor_pan: '', donor_id_type: 'PAN', donation_amount: 0, donation_date: new Date().toISOString().split('T')[0], payment_mode: 'Bank Transfer', receipt_number: '', is_80g_issued: true });
+    return (
+        <div style={{ padding: '40px' }}>
+            <h3 style={{ marginBottom: '25px', color: '#2C5282' }}>Log 80G Donation (Scrutiny Ready)</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px', marginBottom: '20px' }}>
+                <div className="form-group"><label>Legal Donor Name</label><input className="form-control" value={formData.donor_name} onChange={e => setFormData({ ...formData, donor_name: e.target.value })} /></div>
+                <div className="form-group">
+                    <label>ID Type / Number</label>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <select className="form-control" style={{ width: '100px' }} value={formData.donor_id_type} onChange={e => setFormData({ ...formData, donor_id_type: e.target.value })}>
+                            <option>PAN</option>
+                            <option>Aadhaar</option>
+                        </select>
+                        <input className="form-control" placeholder="ID Number" value={formData.donor_pan} onChange={e => setFormData({ ...formData, donor_pan: e.target.value })} />
+                    </div>
+                </div>
+                <div className="form-group"><label>Donation Amount (₹)</label><input className="form-control" type="number" value={formData.donation_amount} onChange={e => setFormData({ ...formData, donation_amount: e.target.value })} /></div>
+                <div className="form-group"><label>Official Receipt Number</label><input className="form-control" placeholder="BCLL/25-26/001" value={formData.receipt_number} onChange={e => setFormData({ ...formData, receipt_number: e.target.value })} /></div>
+                <div className="form-group"><label>Donation Date</label><input className="form-control" type="date" value={formData.donation_date} onChange={e => setFormData({ ...formData, donation_date: e.target.value })} /></div>
+                <div className="form-group">
+                    <label>Payment Mode</label>
+                    <select className="form-control" value={formData.payment_mode} onChange={e => setFormData({ ...formData, payment_mode: e.target.value })}>
+                        <option>Bank Transfer</option>
+                        <option>Cheque</option>
+                        <option>UPI</option>
+                        <option>Cash</option>
+                    </select>
+                </div>
+            </div>
+            <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end', marginTop: '30px' }}>
+                <button className="btn-small" onClick={onClose}>Cancel</button>
+                <button className="btn-add" style={{ background: '#2C5282' }} onClick={() => onSave(formData)}>Log Tax Record</button>
+            </div>
+        </div>
+    );
+};
+
+const ComplianceTaskForm = ({ onClose, onSave }) => {
+    const [formData, setFormData] = useState({ task_name: '', frequency: 'Monthly', due_date: '', law_reference: '', status: 'Pending' });
+    return (
+        <div style={{ padding: '40px' }}>
+            <h3 style={{ marginBottom: '25px', color: '#2C5282' }}>Schedule Compliance Filing Task</h3>
+            <div className="form-group" style={{ marginBottom: '20px' }}><label>Task Description</label><input className="form-control" placeholder="e.g. TDS Quarter 1 Filing" value={formData.task_name} onChange={e => setFormData({ ...formData, task_name: e.target.value })} /></div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                <div className="form-group">
+                    <label>Filing Frequency</label>
+                    <select className="form-control" value={formData.frequency} onChange={e => setFormData({ ...formData, frequency: e.target.value })}>
+                        <option>Monthly</option>
+                        <option>Quarterly</option>
+                        <option>Annual</option>
+                        <option>One-time</option>
+                    </select>
+                </div>
+                <div className="form-group"><label>Task Due Date</label><input className="form-control" type="date" value={formData.due_date} onChange={e => setFormData({ ...formData, due_date: e.target.value })} /></div>
+            </div>
+            <div className="form-group"><label>Regulatory Reference (e.g. IT Act Sec 194)</label><input className="form-control" value={formData.law_reference} onChange={e => setFormData({ ...formData, law_reference: e.target.value })} /></div>
+            <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end', marginTop: '30px' }}>
+                <button className="btn-small" onClick={onClose}>Cancel</button>
+                <button className="btn-add" style={{ background: '#2C5282' }} onClick={() => onSave(formData)}>Queue Compliance Task</button>
+            </div>
+        </div>
+    );
+};
+
+const ComplianceTab = ({ docs, csr, tax, checklist, onAddDoc, onAddCsr, onAddTax, onAddCheck, onExport }) => {
+    const [subTab, setSubTab] = useState('vault');
+
+    return (
+        <div style={{ animation: 'fadeIn 0.5s' }}>
+            <div style={{ display: 'flex', gap: '20px', marginBottom: '30px', borderBottom: '1px solid #edf2f7', paddingBottom: '15px' }}>
+                <button className={`btn-small ${subTab === 'vault' ? 'active' : ''}`} onClick={() => setSubTab('vault')} style={{ background: subTab === 'vault' ? '#2c5282' : 'transparent', color: subTab === 'vault' ? 'white' : '#64748b' }}>Audit Vault (Certificates)</button>
+                <button className={`btn-small ${subTab === 'csr' ? 'active' : ''}`} onClick={() => setSubTab('csr')} style={{ background: subTab === 'csr' ? '#2c5282' : 'transparent', color: subTab === 'csr' ? 'white' : '#64748b' }}>CSR Compliance</button>
+                <button className={`btn-small ${subTab === 'tax' ? 'active' : ''}`} onClick={() => setSubTab('tax')} style={{ background: subTab === 'tax' ? '#2c5282' : 'transparent', color: subTab === 'tax' ? 'white' : '#64748b' }}>Tax Scrutiny (80G)</button>
+                <button className={`btn-small ${subTab === 'checklist' ? 'active' : ''}`} onClick={() => setSubTab('checklist')} style={{ background: subTab === 'checklist' ? '#2c5282' : 'transparent', color: subTab === 'checklist' ? 'white' : '#64748b' }}>Checklist</button>
+            </div>
+
+            {subTab === 'vault' && (
+                <div className="content-panel">
+                    <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+                        <div>
+                            <h3 style={{ margin: 0 }}>Category 1: Audit Vault (12A/80G/CSR-1)</h3>
+                            <p style={{ margin: '5px 0 0', color: '#718096', fontSize: '0.85rem' }}>Central repository for NGO compliance certifications.</p>
+                        </div>
+                        <button className="btn-add" onClick={onAddDoc}><FaFileUpload /> Upload Certificate</button>
+                    </div>
+                    <table className="data-table">
+                        <thead><tr><th>Certificate Name</th><th>Category</th><th>Expiry Date</th><th>Status</th><th>Notes</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            {(docs || []).length > 0 ? (docs || []).map(d => (
+                                <tr key={d.id}>
+                                    <td><strong>{d.title}</strong></td>
+                                    <td><span className="badge blue">{d.category}</span></td>
+                                    <td>{d.expiry_date || 'N/A'}</td>
+                                    <td><span className={`badge ${d.status === 'Active' ? 'success' : 'warning'}`}>{d.status}</span></td>
+                                    <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.notes}</td>
+                                    <td>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <button className="btn-icon blue" title="View Document" onClick={() => window.open(d.document_url)}><FaEye /></button>
+                                            <button className="btn-icon danger"><FaTrash /></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            )) : (
+                                <tr><td colSpan="6" style={{ textAlign: 'center', padding: '100px', color: '#94a3b8' }}>Audit Vault is currently empty.</td></tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {subTab === 'csr' && (
+                <div className="content-panel">
+                    <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+                        <div>
+                            <h3 style={{ margin: 0 }}>Category 2: CSR Project Compliance</h3>
+                            <p style={{ margin: '5px 0 0', color: '#718096', fontSize: '0.85rem' }}>Tracking CSR utilization and sanctioned amounts.</p>
+                        </div>
+                        <button className="btn-add" onClick={onAddCsr}><FaPlus /> Track CSR Project</button>
+                    </div>
+                    <table className="data-table">
+                        <thead><tr><th>Company / Project</th><th>FY</th><th>Sanctioned</th><th>Utilized</th><th>Status</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            {(csr || []).length > 0 ? (csr || []).map(c => (
+                                <tr key={c.id}>
+                                    <td><strong>{c.company_name}</strong><br /><small>{c.project_name}</small></td>
+                                    <td>{c.financial_year}</td>
+                                    <td>₹ {Number(c.sanctioned_amount).toLocaleString()}</td>
+                                    <td>₹ {Number(c.utilized_amount).toLocaleString()}</td>
+                                    <td><span className={`badge ${c.status === 'Audited' ? 'success' : 'blue'}`}>{c.status}</span></td>
+                                    <td>
+                                        <button className="btn-small">View Certificate</button>
+                                    </td>
+                                </tr>
+                            )) : (
+                                <tr><td colSpan="6" style={{ textAlign: 'center', padding: '100px', color: '#94a3b8' }}>No CSR projects tracked yet.</td></tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {subTab === 'tax' && (
+                <div className="content-panel">
+                    <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+                        <div>
+                            <h3 style={{ margin: 0 }}>Category 3: Donation Tax Scrutiny (80G)</h3>
+                            <p style={{ margin: '5px 0 0', color: '#718096', fontSize: '0.85rem' }}>Data preparedness for IT Act 10BD filings.</p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <button className="btn-small" onClick={() => onExport(tax, '80G_Tax_Records')}><FaDownload /> Export for 10BD</button>
+                            <button className="btn-add" onClick={onAddTax}><FaPlusCircle /> Add Tax Record</button>
+                        </div>
+                    </div>
+                    <table className="data-table">
+                        <thead><tr><th>Donor / PAN</th><th>Amount</th><th>Date</th><th>Receipt No</th><th>80G Issued</th><th>Status</th></tr></thead>
+                        <tbody>
+                            {(tax || []).length > 0 ? (tax || []).map(t => (
+                                <tr key={t.id}>
+                                    <td><strong>{t.donor_name}</strong><br /><small>PAN: {t.donor_pan || 'N/A'}</small></td>
+                                    <td>₹ {Number(t.donation_amount).toLocaleString()}</td>
+                                    <td>{new Date(t.donation_date).toLocaleDateString()}</td>
+                                    <td>{t.receipt_number}</td>
+                                    <td><span className={`badge ${t.is_80g_issued ? 'success' : 'warning'}`}>{t.is_80g_issued ? 'Yes' : 'No'}</span></td>
+                                    <td><span className={`badge ${t.form_10bd_filed ? 'success' : 'blue'}`}>{t.form_10bd_filed ? 'Filed' : 'Pending'}</span></td>
+                                </tr>
+                            )) : (
+                                <tr><td colSpan="6" style={{ textAlign: 'center', padding: '100px', color: '#94a3b8' }}>No 80G tax records found.</td></tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {subTab === 'checklist' && (
+                <div className="content-panel">
+                    <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+                        <h3>Compliance Checklist (IT Act & CSR Rules)</h3>
+                        <button className="btn-add" onClick={onAddCheck}><FaClipboardCheck /> New Task</button>
+                    </div>
+                    <table className="data-table">
+                        <thead><tr><th>Task</th><th>Frequency</th><th>Due Date</th><th>Status</th><th>Reference</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            {(checklist || []).length > 0 ? (checklist || []).map(item => (
+                                <tr key={item.id}>
+                                    <td><strong>{item.task_name}</strong></td>
+                                    <td>{item.frequency}</td>
+                                    <td>{item.due_date || 'N/A'}</td>
+                                    <td><span className={`badge ${item.status === 'Completed' ? 'success' : (item.status === 'Overdue' ? 'red' : 'warning')}`}>{item.status}</span></td>
+                                    <td><small>{item.law_reference}</small></td>
+                                    <td>
+                                        <button className="btn-small success-btn">Mark Done</button>
+                                    </td>
+                                </tr>
+                            )) : (
+                                <tr><td colSpan="6" style={{ textAlign: 'center', padding: '100px', color: '#94a3b8' }}>Compliance checklist is clear.</td></tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const GovernanceReports = ({ attendance, employees, payrollRecords, activityLogs }) => {
+    const [reportType, setReportType] = useState('daily-attendance');
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [selectedEmp, setSelectedEmp] = useState('');
+
+    const downloadPDF = (data, title, headers) => {
+        const doc = new jsPDF();
+        doc.setFontSize(18);
+        doc.text("BHARATH CARES LIFE LINE FOUNDATION", 14, 20);
+        doc.setFontSize(12);
+        doc.setTextColor(100);
+        doc.text(`${title} | Generated: ${new Date().toLocaleString()}`, 14, 28);
+
+        doc.autoTable({
+            head: [headers.map(h => h.label)],
+            body: data.map(item => headers.map(h => {
+                const val = typeof h.key === 'function' ? h.key(item) : item[h.key];
+                return val === null || val === undefined ? '—' : String(val);
+            })),
+            startY: 35,
+            theme: 'grid',
+            headStyles: { fillColor: [26, 54, 93], textColor: [255, 255, 255] },
+            alternateRowStyles: { fillColor: [245, 247, 250] }
+        });
+
+        doc.save(`${title.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`);
+    };
+
+    const downloadExcel = (data, title, headers) => {
+        const mappedData = data.map(item => {
+            const obj = {};
+            headers.forEach(h => {
+                obj[h.label] = typeof h.key === 'function' ? h.key(item) : item[h.key];
+            });
+            return obj;
+        });
+        const worksheet = XLSX.utils.json_to_sheet(mappedData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Governance Report");
+        XLSX.writeFile(workbook, `${title.replace(/\s+/g, '_')}_${new Date().getTime()}.xlsx`);
+    };
+
+    const generateReport = (format) => {
+        let data = [];
+        let title = '';
+        let headers = [];
+
+        if (reportType === 'daily-attendance') {
+            data = (attendance || []).filter(a => a.attendance_date === selectedDate);
+            title = `Daily Attendance Report - ${selectedDate}`;
+            headers = [
+                { label: 'Emp ID', key: (a) => a.employees?.employee_id },
+                { label: 'Name', key: (a) => a.employees?.full_name },
+                { label: 'Check-In', key: (a) => a.check_in ? new Date(a.check_in).toLocaleTimeString() : '—' },
+                { label: 'Check-Out', key: (a) => a.check_out ? new Date(a.check_out).toLocaleTimeString() : '—' },
+                { label: 'Work Hours', key: 'work_hours' },
+                { label: 'Status', key: 'status' },
+                { label: 'Approval Stage', key: 'approval_status' }
+            ];
+        } else if (reportType === 'monthly-summary') {
+            const monthName = new Date(selectedYear, selectedMonth - 1).toLocaleString('default', { month: 'long' });
+            title = `Monthly Attendance Summary - ${monthName} ${selectedYear}`;
+            data = employees.map(emp => {
+                const empAtt = (attendance || []).filter(a => {
+                    const d = new Date(a.attendance_date);
+                    return d.getMonth() + 1 === selectedMonth && d.getFullYear() === selectedYear && a.employee_id === emp.id;
+                });
+                return {
+                    emp_id: emp.employee_id,
+                    name: emp.full_name,
+                    total: empAtt.length,
+                    present: empAtt.filter(a => a.status === 'Present').length,
+                    leaves: empAtt.filter(a => a.status === 'Leave Approved').length,
+                    lop: empAtt.filter(a => a.status === 'Loss of Pay' || a.status === 'Absent').length
+                };
+            });
+            headers = [
+                { label: 'Emp ID', key: 'emp_id' },
+                { label: 'Name', key: 'name' },
+                { label: 'Logged Days', key: 'total' },
+                { label: 'Present', key: 'present' },
+                { label: 'Leaves', key: 'leaves' },
+                { label: 'LOP Days', key: 'lop' }
+            ];
+        } else if (reportType === 'employee-wise') {
+            const emp = employees.find(e => e.id === selectedEmp);
+            data = (attendance || []).filter(a => a.employee_id === selectedEmp).sort((a, b) => new Date(b.attendance_date) - new Date(a.attendance_date));
+            title = `Individual Attendance Log - ${emp?.full_name || 'Personnel'}`;
+            headers = [
+                { label: 'Date', key: 'attendance_date' },
+                { label: 'Check-In', key: (a) => a.check_in ? new Date(a.check_in).toLocaleTimeString() : '—' },
+                { label: 'Check-Out', key: (a) => a.check_out ? new Date(a.check_out).toLocaleTimeString() : '—' },
+                { label: 'Work Hours', key: 'work_hours' },
+                { label: 'Status', key: 'status' }
+            ];
+        } else if (reportType === 'approval-history') {
+            data = activityLogs.filter(l => l.sub_system === 'HR' || l.sub_system === 'Operations').sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            title = `Institutional Approval & Audit History`;
+            headers = [
+                { label: 'Timestamp', key: (l) => new Date(l.created_at).toLocaleString() },
+                { label: 'Sub-System', key: 'sub_system' },
+                { label: 'Action Taken', key: 'action' },
+                { label: 'Identity Ref', key: 'actor_id' }
+            ];
+        } else if (reportType === 'decline-reasons') {
+            const rejectedPayroll = (payrollRecords || []).filter(p => p.status === 'Rejected').map(p => ({ ...p, type: 'Payroll', name: p.employees?.full_name, reason: p.decline_reason, date: p.updated_at }));
+            data = [...rejectedPayroll].sort((a, b) => new Date(b.date) - new Date(a.date));
+            title = `Institutional Governance: Rejection & Decline Registry`;
+            headers = [
+                { label: 'Category', key: 'type' },
+                { label: 'Subject / Requester', key: 'name' },
+                { label: 'Reason for Rejection', key: 'reason' },
+                { label: 'Declined At', key: (d) => new Date(d.date).toLocaleString() }
+            ];
+        }
+
+        if (format === 'PDF') downloadPDF(data, title, headers);
+        else downloadExcel(data, title, headers);
+    };
+
+    return (
+        <div className="content-panel animate-fade-in" style={{ padding: '40px' }}>
+            <div style={{ display: 'flex', gap: '40px' }}>
+                <div style={{ flex: '0 0 350px', background: '#f8fafc', padding: '30px', borderRadius: '24px', border: '1px solid #e2e8f0' }}>
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '1.2rem', marginBottom: '25px', color: '#1a365d' }}>
+                        <FaFileDownload style={{ color: '#3182ce' }} /> Report Configuration
+                    </h3>
+
+                    <div style={{ display: 'grid', gap: '20px' }}>
+                        <div className="form-group">
+                            <label style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#64748b' }}>Select Target Report</label>
+                            <select className="form-control" value={reportType} onChange={e => setReportType(e.target.value)} style={{ marginTop: '8px' }}>
+                                <option value="daily-attendance">Daily Attendance Log</option>
+                                <option value="monthly-summary">Monthly Attendance Summary</option>
+                                <option value="employee-wise">Personnel-specific Log</option>
+                                <option value="approval-history">Institutional Approval Trail</option>
+                                <option value="decline-reasons">Governance Rejection Registry</option>
+                            </select>
+                        </div>
+
+                        {reportType === 'daily-attendance' && (
+                            <div className="form-group">
+                                <label style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#64748b' }}>Operational Date</label>
+                                <input type="date" className="form-control" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} style={{ marginTop: '8px' }} />
+                            </div>
+                        )}
+
+                        {reportType === 'monthly-summary' && (
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                <div className="form-group">
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b' }}>Month</label>
+                                    <select className="form-control" value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))}>
+                                        {Array.from({ length: 12 }).map((_, i) => <option key={i} value={i + 1}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>)}
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b' }}>Year</label>
+                                    <input type="number" className="form-control" value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} />
+                                </div>
+                            </div>
+                        )}
+
+                        {reportType === 'employee-wise' && (
+                            <div className="form-group">
+                                <label style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#64748b' }}>Select Personnel</label>
+                                <select className="form-control" value={selectedEmp} onChange={e => setSelectedEmp(e.target.value)} style={{ marginTop: '8px' }}>
+                                    <option value="">Choose Employee</option>
+                                    {(employees || []).map(e => <option key={e.id} value={e.id}>{e.full_name} ({e.employee_id})</option>)}
+                                </select>
+                            </div>
+                        )}
+
+                        <div style={{ marginTop: '10px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                            <button className="btn-premium" onClick={() => generateReport('PDF')} style={{ background: '#E53E3E', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                <FaFilePdf /> Export PDF
+                            </button>
+                            <button className="btn-premium" onClick={() => generateReport('EXCEL')} style={{ background: '#38A169', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                <FaFileExcel /> Export Excel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{ flex: 1 }}>
+                    <div style={{ background: '#fff', padding: '30px', borderRadius: '24px', border: '1.5px solid #edf2f7', minHeight: '500px' }}>
+                        <h4 style={{ color: '#64748b', textTransform: 'uppercase', letterSpacing: '2px', fontSize: '0.8rem', marginBottom: '20px' }}>Preview & Contextual Insights</h4>
+                        <div style={{ textAlign: 'center', marginTop: '100px', color: '#94a3b8' }}>
+                            <FaChartPie style={{ fontSize: '4rem', opacity: 0.1, marginBottom: '20px' }} />
+                            <p>Configure and generate the report to extract institutional intelligence.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );

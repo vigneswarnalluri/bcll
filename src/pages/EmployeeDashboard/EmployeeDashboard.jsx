@@ -35,10 +35,16 @@ const EmployeeDashboard = () => {
             const { data: profile } = await supabase
                 .from('profiles')
                 .select('role_type')
-                .eq('id', user.id)
+                .eq('user_id', user.id)
                 .single();
 
-            if (profile && ['Admin', 'Super Admin', 'Co-Admin'].includes(profile.role_type)) {
+            const adminRoles = [
+                'Super Admin', 'Admin', 'Co-Admin', 'Founder / Director',
+                'Executive Director', 'Chief Advisory Secretary', 'Admin Head', 'Finance Head'
+            ];
+
+            if (profile && adminRoles.some(r => r.toLowerCase() === profile.role_type?.trim().toLowerCase())) {
+                console.log('Admin detected in Employee HQ: Redirecting to Command Center');
                 navigate('/admin-dashboard');
                 return;
             }
@@ -237,6 +243,7 @@ const EmployeeDashboard = () => {
         { id: 'benefits', icon: <FaPlane />, label: 'Leave & TA Claims' },
         { id: 'official', icon: <FaEnvelopeOpenText />, label: 'Official Requests' },
         { id: 'id-card', icon: <FaIdCard />, label: 'ID Card System' },
+        { id: 'policies', icon: <FaGavel />, label: 'Governance & Policies' },
     ];
 
     if (loading) return <div className="loading-state">Syncing Professional Record...</div>;
@@ -251,6 +258,7 @@ const EmployeeDashboard = () => {
             case 'benefits': return <BenefitsTab requests={requests} onApply={(type) => { setModalType(type); setIsModalOpen(true); }} />;
             case 'official': return <OfficialLettersTab requests={[]} />;
             case 'id-card': return <IDCardTab />;
+            case 'policies': return <EmployeePoliciesTab />;
             default: return <ProfileTab data={employeeData} />;
         }
     };
@@ -622,5 +630,57 @@ const StatCard = ({ title, count, color, icon }) => (
         <div className="stat-icon-overlay" style={{ fontSize: '3rem' }}>{icon}</div>
     </div>
 );
+
+/* --- EMPLOYEE POLICY TAB (READ-ONLY) --- */
+const EmployeePoliciesTab = () => {
+    const [policies, setPolicies] = useState([]);
+    const [selectedPolicy, setSelectedPolicy] = useState(null);
+
+    useEffect(() => {
+        const fetchPolicies = async () => {
+            const { data } = await supabase.from('policies').select('*').eq('status', 'Active');
+            if (data) setPolicies(data);
+        };
+        fetchPolicies();
+    }, []);
+
+    if (selectedPolicy) {
+        return (
+            <div className="content-panel">
+                <button className="btn-small" onClick={() => setSelectedPolicy(null)} style={{ marginBottom: '20px' }}>&larr; Back to Registry</button>
+                <div style={{ padding: '30px', background: '#f8fafc', borderRadius: '20px', border: '1px solid #cbd5e0' }}>
+                    <h2 style={{ color: '#1a237e', marginBottom: '10px' }}>{selectedPolicy.title}</h2>
+                    <div style={{ display: 'flex', gap: '20px', fontSize: '0.85rem', color: '#64748b', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '15px' }}>
+                        <span><strong>Ref:</strong> {selectedPolicy.document_ref || 'INTERNAL'}</span>
+                        <span><strong>Version:</strong> {selectedPolicy.version}</span>
+                        <span><strong>Effective:</strong> {selectedPolicy.effective_date}</span>
+                        <span><strong>Approved By:</strong> {selectedPolicy.approved_by}</span>
+                    </div>
+                    <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.8', color: '#2d3748' }}>
+                        {selectedPolicy.content}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="content-panel">
+            <h3>Organizational Policies & Governance SOPs</h3>
+            <p style={{ color: '#718096', marginBottom: '25px' }}>Authorized digital registry of all active foundation rules. Your acknowledgment is captured in the audit trail during onboarding.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+                {policies.map(p => (
+                    <div key={p.id} className="folder-box" style={{ padding: '25px', border: '1px solid #cbd5e0', borderRadius: '15px', cursor: 'pointer' }} onClick={() => setSelectedPolicy(p)}>
+                        <FaGavel style={{ fontSize: '2rem', color: 'var(--primary)', marginBottom: '15px' }} />
+                        <h4 style={{ margin: '0 0 10px 0' }}>{p.title}</h4>
+                        <div style={{ fontSize: '0.75rem', color: '#718096' }}>
+                            Version {p.version} • Effective {p.effective_date}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
 
 export default EmployeeDashboard;

@@ -109,6 +109,54 @@ const FellowDashboard = () => {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Fellowship Policies */}
+                <FellowshipPolicies />
+            </div>
+        </div>
+    );
+};
+
+const FellowshipPolicies = () => {
+    const [policies, setPolicies] = useState([]);
+    const [selectedPolicy, setSelectedPolicy] = useState(null);
+
+    useEffect(() => {
+        const fetchPolicies = async () => {
+            const { data } = await supabase.from('policies').select('*').eq('status', 'Active');
+            if (data) setPolicies(data);
+        };
+        fetchPolicies();
+    }, []);
+
+    if (selectedPolicy) {
+        return (
+            <div className="dash-card wide animate-fade-in" style={{ padding: '30px' }}>
+                <button className="btn-small" onClick={() => setSelectedPolicy(null)} style={{ marginBottom: '20px' }}>&larr; Back to List</button>
+                <h2 style={{ color: '#1a237e' }}>{selectedPolicy.title}</h2>
+                <div style={{ display: 'flex', gap: '20px', fontSize: '0.8rem', color: '#666', margin: '15px 0', borderBottom: '1px solid #eee', paddingBottom: '15px' }}>
+                    <span><strong>Version:</strong> {selectedPolicy.version}</span>
+                    <span><strong>Effective:</strong> {selectedPolicy.effective_date}</span>
+                    <span><strong>Approved By:</strong> {selectedPolicy.approved_by}</span>
+                </div>
+                <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6', fontSize: '1rem', color: '#444' }}>
+                    {selectedPolicy.content}
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="dash-card wide">
+            <h3><FaCheckCircle /> Fellowship Governance & Rules</h3>
+            <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '20px' }}>Active organizational frameworks governing your fellowship engagement.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '20px' }}>
+                {policies.map(p => (
+                    <div key={p.id} className="policy-item-card" style={{ padding: '20px', border: '1px solid #ddd', borderRadius: '12px', cursor: 'pointer' }} onClick={() => setSelectedPolicy(p)}>
+                        <h4 style={{ margin: 0, color: '#1a237e' }}>{p.title}</h4>
+                        <div style={{ fontSize: '0.75rem', marginTop: '10px', color: '#888' }}>Version {p.version}</div>
+                    </div>
+                ))}
             </div>
         </div>
     );
