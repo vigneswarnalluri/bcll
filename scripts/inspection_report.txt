@@ -1,0 +1,11 @@
+--- DATABASE INSPECTION REPORT ---
+
+PROFILES:
+- ID: 21533e55-02fb-4a1f-96cb-188b214c427b | UserID: 8ca6b326-9e75-4f1c-9b06-7f269bcfa760 | Name: Sai | Email: sai@gmail.com | Role: Founder / Director
+- ID: 89e76f48-3a38-47e3-8cbf-3b564c6dd3a5 | UserID: 40bc9769-9c9a-4e5b-b3d4-c13a0138acb1 | Name: Vamsi | Email: vigneswarnalluri10@gmail.com | Role: Super Admin
+- ID: af2fefec-d3d1-4987-a8c4-ffb9d89ab4b9 | UserID: af2fefec-d3d1-4987-a8c4-ffb9d89ab4b9 | Name: example@gmail.com | Email: example@gmail.com | Role: Admin
+
+ADMIN CONTROLS:
+- ID: 7c2d0607-3e26-4fd1-84e9-b5c2879a00bd | ProfileRef: 8ca6b326-9e75-4f1c-9b06-7f269bcfa760 | Level: L1
+- ID: de535a93-75b1-4609-a6ea-15b12552304f | ProfileRef: 40bc9769-9c9a-4e5b-b3d4-c13a0138acb1 | Level: L1
+- ID: 50387d62-454a-4ee7-8808-4ea067d97d74 | ProfileRef: af2fefec-d3d1-4987-a8c4-ffb9d89ab4b9 | Level: L1

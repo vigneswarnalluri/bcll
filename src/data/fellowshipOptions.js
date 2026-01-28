@@ -153,7 +153,6 @@ export const COLLEGES = [
     "Vignan's Nirula Institute of Technology and Science for Women",
     "Vikas Degree College",
     "Vishnu Institute of Technology",
-    "VIT AP University",
-    "Z.P.H.S (Exemplary Case)"
+    "VIT AP University"
 ];
 // Updated list

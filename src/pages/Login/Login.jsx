@@ -64,14 +64,10 @@ const Login = () => {
             if (profileError) throw profileError;
 
             const adminRoles = [
-                'Super Admin',
-                'Admin',
-                'Co-Admin',
-                'Founder / Director',
-                'Executive Director',
-                'Chief Advisory Secretary',
-                'Admin Head',
-                'Finance Head'
+                'Super Admin', 'Admin', 'Co-Admin',
+                'Founder / Director', 'Executive Director',
+                'Chief Advisory Secretary', 'Admin Head',
+                'Finance Head', 'HR Manager', 'Supervisor', 'Finance Executive'
             ];
 
             const userRole = profile?.role_type?.trim();

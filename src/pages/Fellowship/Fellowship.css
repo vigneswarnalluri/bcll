@@ -896,31 +896,30 @@ body.modal-open {
 .modal-container {
     background: white;
     width: 95%;
-    max-width: 550px;
-    /* Even slimmer */
-    border-radius: 16px;
+    max-width: 950px;
+    /* Extra large form layout */
+    border-radius: 24px;
     box-shadow: 0 40px 80px rgba(0, 0, 0, 0.4);
-    margin: 10px auto;
-    /* Minimal top margin */
+    margin: 30px auto;
     overflow: hidden;
     position: relative;
     animation: f-modalEntry 0.3s ease-out;
 }
 
 .modal-header {
-    padding: 16px 20px;
+    padding: 24px 40px;
     border-bottom: 1px solid var(--f-border);
     display: flex;
     justify-content: space-between;
     align-items: center;
     background: #fff;
     gap: 16px;
-    min-height: 70px;
+    min-height: 80px;
 }
 
 .modal-header h2 {
-    font-size: 1.1rem;
-    /* Smaller heading */
+    font-size: 1.4rem;
+    /* Larger heading */
     font-weight: 800;
     color: var(--f-primary);
 }
@@ -989,8 +988,8 @@ body.modal-open {
 
 
 .modal-body {
-    padding: 16px 20px;
-    /* Reduced padding for mobile tightness */
+    padding: 40px 50px;
+    /* Very spacious padding */
 }
 
 .formal-form {
@@ -998,8 +997,8 @@ body.modal-open {
 }
 
 .form-grid-section {
-    margin-bottom: 20px;
-    /* Cut section gap in half again */
+    margin-bottom: 40px;
+    /* Extra vertical spacing */
 }
 
 .form-sub-header {
@@ -1033,9 +1032,9 @@ body.modal-open {
 }
 
 .form-group label {
-    font-size: 0.7rem;
-    margin-bottom: 2px;
-    /* Almost no gap */
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+    /* Better label spacing */
     font-weight: 700;
     color: var(--f-dark);
     display: block;
@@ -1044,11 +1043,11 @@ body.modal-open {
 .form-group input,
 .form-group select {
     width: 100%;
-    padding: 8px 12px;
-    /* Ultra-thin inputs */
+    padding: 18px 20px;
+    /* Extra large inputs */
     border: 1.5px solid var(--f-border);
-    border-radius: 10px;
-    font-size: 0.813rem;
+    border-radius: 14px;
+    font-size: 1.05rem;
     font-weight: 500;
     transition: all 0.2s ease;
     background: #fcfcfc;
@@ -1573,4 +1572,60 @@ body.modal-open {
 
 .form-support-notice strong {
     font-weight: 800;
+}
+
+/* Floating WhatsApp Button */
+.floating-whatsapp-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+    color: white;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    text-decoration: none;
+    box-shadow: 0 8px 25px rgba(37, 211, 102, 0.4);
+    z-index: 9999;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    animation: whatsapp-pulse 2s infinite;
+}
+
+.floating-whatsapp-btn:hover {
+    transform: scale(1.15) translateY(-3px);
+    box-shadow: 0 12px 35px rgba(37, 211, 102, 0.5);
+    background: linear-gradient(135deg, #2EE370 0%, #25D366 100%);
+}
+
+.whatsapp-icon {
+    font-size: 2rem;
+}
+
+@keyframes whatsapp-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 8px 25px rgba(37, 211, 102, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 8px 35px rgba(37, 211, 102, 0.6), 0 0 0 12px rgba(37, 211, 102, 0.1);
+    }
+}
+
+/* Mobile responsive for WhatsApp button */
+@media (max-width: 768px) {
+    .floating-whatsapp-btn {
+        bottom: 20px;
+        right: 20px;
+        width: 55px;
+        height: 55px;
+    }
+
+    .whatsapp-icon {
+        font-size: 1.8rem;
+    }
 }

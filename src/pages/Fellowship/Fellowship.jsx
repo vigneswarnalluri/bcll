@@ -16,8 +16,8 @@ import {
     HiOutlineBadgeCheck,
     HiOutlinePhone,
     HiOutlineMail,
-    HiX
 } from 'react-icons/hi';
+import { FaWhatsapp } from 'react-icons/fa';
 import './Fellowship.css';
 import { supabase } from '../../lib/supabase';
 import { COLLEGES } from '../../data/fellowshipOptions';
@@ -303,6 +303,13 @@ const Fellowship = () => {
                     </div>
                 </div>
             </section>
+
+            <marquee style={{ background: '#1a365d', color: 'white', padding: '10px 0', fontSize: '1rem', fontWeight: 'bold' }}>
+                🎓 Viksit Bharath Fellowship – Empowering youth leaders for grassroots social transformation.
+            </marquee>
+            <marquee behavior="alternate" style={{ background: '#f8fafc', color: '#1a365d', padding: '5px 0', fontSize: '0.9rem', fontWeight: 'bold', borderBottom: '1px solid #e2e8f0' }}>
+                📑 Fellowship stipend is performance & attendance based and subject to multi-level approval.
+            </marquee>
 
             {/* 1. Program Overview */}
             <section id="overview" className="f-section overview-section">
@@ -837,6 +844,17 @@ const Fellowship = () => {
                     </div>
                 </div>
             )}
+
+            {/* Floating WhatsApp Button */}
+            <a
+                href="https://wa.me/919490991752?text=Hello!%20I%20have%20an%20inquiry%20regarding%20the%20Viksit%20Bharat%20Fellowship%20Program%202026."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="floating-whatsapp-btn"
+                title="Chat with us on WhatsApp"
+            >
+                <FaWhatsapp className="whatsapp-icon" />
+            </a>
         </div>
     );
 };

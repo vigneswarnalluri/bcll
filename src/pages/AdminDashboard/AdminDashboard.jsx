@@ -8,8 +8,8 @@ import {
     FaMapMarkerAlt, FaPhone, FaUserCheck, FaBalanceScale, FaHistory, FaShieldAlt, FaDesktop, FaUnlockAlt,
     FaDownload, FaUserTie, FaFileContract, FaHandshake, FaRegIdCard, FaEnvelope,
     FaBuilding, FaGavel, FaUserTimes, FaClock, FaFingerprint, FaSearch,
-    FaBalanceScaleLeft, FaCalendarAlt, FaHistory as FaAuditIcon, FaCheckDouble, FaSignature, FaLock, FaInfoCircle,
-    FaChartPie, FaFileDownload, FaTable, FaFilePdf, FaFileExcel, FaMoneyCheckAlt, FaCalculator
+    FaBalanceScaleLeft, FaCalendarAlt, FaCalendarCheck, FaHistory as FaAuditIcon, FaCheckDouble, FaSignature, FaLock, FaInfoCircle,
+    FaChartPie, FaFileDownload, FaTable, FaFilePdf, FaFileExcel, FaMoneyCheckAlt, FaCalculator, FaShareAlt
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { PROGRAM_TRACKS, COLLEGES } from '../../data/fellowshipOptions';
@@ -179,29 +179,22 @@ const ApprovalTimeline = ({ data }) => {
     );
 };
 
+// --- AUTHORITY CONFIGURATION (Section 2.1) ---
+const AUTHORIZED_ADMIN_ROLES = [
+    'Super Admin', 'Admin', 'Co-Admin',
+    'Founder / Director', 'Executive Director',
+    'Chief Advisory Secretary', 'Admin Head',
+    'Finance Head', 'HR Manager', 'Supervisor', 'Finance Executive'
+];
+
+const SUPER_ROLES = [
+    'Super Admin'
+];
+
 const AdminDashboard = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('overview');
-
-    // --- AUTHORITY CONFIGURATION (Section 2.1) ---
-    const AUTHORIZED_ADMIN_ROLES = [
-        'Super Admin',
-        'Admin',
-        'Co-Admin',
-        'Founder / Director',
-        'Executive Director',
-        'Chief Advisory Secretary',
-        'Admin Head',
-        'Finance Head'
-    ];
-
-    const SUPER_ROLES = [
-        'Super Admin',
-        'Founder / Director',
-        'Executive Director',
-        'Chief Advisory Secretary'
-    ];
 
     // --- REAL DATABASE STATE ---
     const [employees, setEmployees] = useState([]);
@@ -541,7 +534,7 @@ const AdminDashboard = () => {
                     .eq('user_id', user.id)
                     .maybeSingle();
 
-                const userRoleType = pData?.role_type?.trim() || '';
+                const userRoleType = pData?.role_type?.trim() || "";
                 const isAuthorized = AUTHORIZED_ADMIN_ROLES.some(r => r.toLowerCase() === userRoleType.toLowerCase());
 
                 console.log('Admin Secure authorization check:', { userRoleType, isAuthorized, hasProfile: !!pData });
@@ -560,9 +553,9 @@ const AdminDashboard = () => {
                         id: pData.id,
                         user_id: pData.user_id, // Store the Auth ID for comparison
                         name: pData.full_name,
-                        role: pData.role_type,
+                        role: userRoleType,
                         dept: pData.department || 'HQ Executive',
-                        level: `Level ${controls.authority_level || '3'} (Operational)`,
+                        level: 'Level ' + (controls.authority_level || '3') + ' (Operational)',
                         status: 'Active Security Clearance',
                         email: pData.email,
                         mobile: pData.mobile || 'Not Set',
@@ -578,28 +571,28 @@ const AdminDashboard = () => {
                             lastIP: myLastLog?.ip_address || 'Logged Session'
                         },
                         financials: {
-                            salaryLimit: `₹ ${Number(controls.salary_approval_limit || 0).toLocaleString()}`,
+                            salaryLimit: 'Rs. ' + Number(controls.salary_approval_limit || 0).toLocaleString(),
                             bankAccess: controls.perm_bank_access ? 'Unlocked' : 'Partial',
                             fundUtilization: controls.fund_utilization_auth ? 'Full Authority' : 'Restricted',
                             donationAccess: 'Read/Write'
                         },
                         permissions: {
-                            view_employees: controls.perm_view_employees,
-                            edit_employees: controls.perm_edit_employees,
-                            approve_leaves: controls.perm_approve_leaves,
-                            process_salary: controls.perm_process_salary,
-                            bank_access: controls.perm_bank_access,
-                            volunteer_approval: controls.perm_volunteer_approval,
-                            scholarship_verify: controls.perm_scholarship_verify,
-                            manage_admins: controls.perm_manage_admins,
-                            student_mgmt: controls.perm_student_mgmt,
-                            report_approval: controls.perm_report_approval,
-                            vault_access: controls.perm_vault_access,
-                            audit_logs: controls.perm_audit_logs,
-                            org_master: controls.perm_org_master,
-                            fin_reports_auth: controls.fin_reports_auth,
-                            perm_governance: controls.perm_governance ?? (SUPER_ROLES.includes(pData.role_type)),
-                            perm_compliance: controls.perm_compliance ?? (SUPER_ROLES.includes(pData.role_type))
+                            view_employees: controls.perm_view_employees ?? (userRoleType.includes('HR') || SUPER_ROLES.includes(userRoleType)),
+                            edit_employees: controls.perm_edit_employees ?? (userRoleType.includes('HR') || SUPER_ROLES.includes(userRoleType)),
+                            approve_leaves: controls.perm_approve_leaves ?? (userRoleType.includes('HR') || SUPER_ROLES.includes(userRoleType)),
+                            process_salary: controls.perm_process_salary ?? (userRoleType.includes('Finance') || SUPER_ROLES.includes(userRoleType)),
+                            bank_access: controls.perm_bank_access ?? (userRoleType.includes('Finance') || SUPER_ROLES.includes(userRoleType)),
+                            volunteer_approval: controls.perm_volunteer_approval ?? (userRoleType.includes('HR') || SUPER_ROLES.includes(userRoleType)),
+                            scholarship_verify: controls.perm_scholarship_verify ?? (userRoleType.includes('Finance') || SUPER_ROLES.includes(userRoleType)),
+                            manage_admins: controls.perm_manage_admins ?? (SUPER_ROLES.includes(userRoleType)),
+                            student_mgmt: controls.perm_student_mgmt ?? (userRoleType.includes('HR') || SUPER_ROLES.includes(userRoleType)),
+                            report_approval: controls.perm_report_approval ?? (userRoleType.includes('Supervisor') || SUPER_ROLES.includes(userRoleType)),
+                            vault_access: controls.perm_vault_access ?? (SUPER_ROLES.includes(userRoleType) || userRoleType.includes('Admin')),
+                            audit_logs: controls.perm_audit_logs ?? (userRoleType.includes('Supervisor') || userRoleType.includes('HR') || SUPER_ROLES.includes(userRoleType)),
+                            org_master: controls.perm_org_master ?? (SUPER_ROLES.includes(userRoleType)),
+                            fin_reports_auth: controls.fin_reports_auth ?? (userRoleType.includes('Finance') || SUPER_ROLES.includes(userRoleType)),
+                            perm_governance: controls.perm_governance ?? (SUPER_ROLES.includes(userRoleType)),
+                            perm_compliance: controls.perm_compliance ?? (SUPER_ROLES.includes(userRoleType))
                         }
                     });
 
@@ -646,17 +639,17 @@ const AdminDashboard = () => {
         }
     };
     const [tabSearchTerms, setTabSearchTerms] = useState({
-        overview: '',
-        employees: '',
-        volunteers: '',
-        students: '',
-        scholarships: '',
-        finance: '',
-        'e-office': '',
-        approvals: '',
-        'activity-logs': ''
+        overview: "",
+        employees: "",
+        volunteers: "",
+        students: "",
+        scholarships: "",
+        finance: "",
+        "e-office": "",
+        approvals: "",
+        "activity-logs": ""
     });
-    const searchTerm = tabSearchTerms[activeTab] || '';
+    const searchTerm = tabSearchTerms[activeTab] || "";
 
     // DEBOUNCED SEARCH EFFECT
     useEffect(() => {
@@ -782,15 +775,21 @@ const AdminDashboard = () => {
             setRequests(prev => prev.map(r => r.id === id ? { ...r, status: updateData.status, ...updateData } : r));
         } else if (type === 'employee') {
             table = 'employees';
-            const currentStatus = employees.find(e => e.id === id)?.status;
+            const empRecord = employees.find(e => e.id === id);
+            const currentStatus = empRecord?.status || 'New';
+
+            console.log(`[GOVERNANCE] Action: ${action} | Current Status: ${currentStatus}`);
+
             let nextStatus = '';
             if (action === 'reject') {
                 nextStatus = 'Rejected';
             } else {
                 if (currentStatus === 'New') nextStatus = 'HR Verified';
                 else if (currentStatus === 'HR Verified') nextStatus = 'Admin Approved';
-                else if (currentStatus === 'Admin Approved') nextStatus = 'Active';
+                else if (currentStatus === 'Admin Approved' || currentStatus === 'Director Approved' || currentStatus === 'Approved') nextStatus = 'Active';
+                else nextStatus = 'Active'; // Robust fallback for final activation
             }
+
             updateData = {
                 status: nextStatus,
                 decline_reason: action === 'reject' ? reason : null,
@@ -816,6 +815,16 @@ const AdminDashboard = () => {
                 approval_level: nextStatus
             };
             setPayrollRecords(prev => prev.map(p => p.id === id ? { ...p, status: nextStatus, ...updateData } : p));
+        } else if (type === 'approval_request') {
+            table = 'approval_requests';
+            updateData = {
+                final_status: action === 'approve' ? 'Approved' : 'Declined',
+                final_remarks: action === 'reject' ? reason : 'Authorized by Registry HQ',
+                final_at: new Date().toISOString(),
+                final_approver: adminProfile.user_id,
+                ...getApprovalSignature(reason)
+            };
+            setApprovalRequests(prev => prev.map(a => a.id === id ? { ...a, ...updateData } : a));
         }
 
         if (table) {
@@ -1004,7 +1013,7 @@ const AdminDashboard = () => {
 
     const synchronizeApprovalAction = async (req) => {
         // Logic to sync with students/volunteers/finance tables based on type
-        const { type, requester_id, final_approver_name, final_designation, final_dept, final_at, final_remarks } = req;
+        const { type, initiated_by, final_approver_name, final_designation, final_dept, final_at, final_remarks } = req;
         const sig = {
             approved_by_name: final_approver_name,
             approved_by_designation: final_designation,
@@ -1014,9 +1023,9 @@ const AdminDashboard = () => {
         };
 
         if (type === 'Student Registration') {
-            await supabase.from('students').update({ status: 'Approved', ...sig }).eq('id', requester_id);
+            await supabase.from('students').update({ status: 'Approved', ...sig }).eq('id', initiated_by);
         } else if (type === 'Volunteer Registration') {
-            await supabase.from('volunteers').update({ status: 'Approved', ...sig }).eq('id', requester_id);
+            await supabase.from('volunteers').update({ status: 'Approved', ...sig }).eq('id', initiated_by);
         } else if (type === 'Expense Claim') {
             // Create a payment entry in finance_logs
             await supabase.from('finance_logs').insert([{
@@ -1027,7 +1036,7 @@ const AdminDashboard = () => {
                 status: 'Funds Disbursed',
                 metadata: {
                     claim_id: req.id,
-                    employee_id: req.requester_id,
+                    employee_id: req.initiated_by,
                     approved_by: req.final_approver_name
                 }
             }]);
@@ -1160,48 +1169,50 @@ const AdminDashboard = () => {
 
     const menuSections = [
         {
-            group: 'Governance',
+            group: "Governance",
             items: [
-                { id: 'governance', icon: <FaGavel />, label: 'Policies & SOPs', permission: 'perm_governance' },
-                { id: 'compliance', icon: <FaBalanceScaleLeft />, label: 'Board & Resolutions', permission: 'perm_compliance' }
+                { id: "governance", icon: <FaGavel />, label: "Policies and SOPs", permission: "perm_governance" },
+                { id: "compliance", icon: <FaBalanceScaleLeft />, label: "Board and Resolutions", permission: "perm_compliance" },
+                { id: "e-office", icon: <FaFolderOpen />, label: "e-Office Vault", permission: "vault_access" }
             ]
         },
         {
-            group: 'Users Management',
+            group: "Users Management",
             items: [
-                { id: 'employees', icon: <FaUsers />, label: 'Employees', permission: 'view_employees' },
-                { id: 'students', icon: <FaGraduationCap />, label: 'Fellows', permission: 'student_mgmt' },
-                { id: 'volunteers', icon: <FaHandHoldingUsd />, label: 'Volunteers', permission: 'volunteer_approval' }
+                { id: "employees", icon: <FaUsers />, label: "Employees", permission: "view_employees" },
+                { id: "students", icon: <FaGraduationCap />, label: "Fellows", permission: "student_mgmt" },
+                { id: "volunteers", icon: <FaHandHoldingUsd />, label: "Volunteers", permission: "volunteer_approval" }
             ]
         },
         {
-            group: 'Approvals',
+            group: "Approvals",
             items: [
-                { id: 'attendance', icon: <FaFingerprint />, label: 'Attendance Approval', permission: 'audit_logs' },
-                { id: 'approvals', icon: <FaCheckDouble />, label: 'Leave Approval', permission: 'approve_leaves' },
-                { id: 'scholarships', icon: <FaClipboardCheck />, label: 'Stipend Approval', permission: 'scholarship_verify' }
+                { id: "attendance", icon: <FaFingerprint />, label: "Attendance Approval", permission: "audit_logs" },
+                { id: "approvals", icon: <FaCheckDouble />, label: "Leave Approval", permission: "approve_leaves" },
+                { id: "scholarships", icon: <FaClipboardCheck />, label: "Stipend Approval", permission: "scholarship_verify" }
             ]
         },
         {
-            group: 'Finance',
+            group: "Finance",
             items: [
-                { id: 'payroll', icon: <FaFileInvoiceDollar />, label: 'Salary Processing', permission: 'process_salary' },
-                { id: 'finance', icon: <FaMoneyCheckAlt />, label: 'Expenses & Budget', permission: 'fin_reports_auth' }
+                { id: "payroll", icon: <FaFileInvoiceDollar />, label: "Salary Processing", permission: "process_salary" },
+                { id: "finance", icon: <FaMoneyCheckAlt />, label: "Expenses and Budget", permission: "fin_reports_auth" }
             ]
         },
         {
-            group: 'Reports & Audit',
+            group: "Reports and Audit",
             items: [
-                { id: 'activity-logs', icon: <FaHistory />, label: 'Approval Logs', permission: 'audit_logs' },
-                { id: 'reports', icon: <FaFileAlt />, label: 'Attendance Reports', permission: 'report_approval' },
-                { id: 'institutional-reports', icon: <FaChartPie />, label: 'Salary Reports', permission: 'fin_reports_auth' }
+                { id: "activity-logs", icon: <FaHistory />, label: "Approval Logs", permission: "audit_logs" },
+                { id: "connectivity", icon: <FaShareAlt />, label: "System Connectivity", permission: "audit_logs" },
+                { id: "reports", icon: <FaFileAlt />, label: "Attendance Reports", permission: "report_approval" },
+                { id: "institutional-reports", icon: <FaChartPie />, label: "Salary Reports", permission: "fin_reports_auth" }
             ]
         },
         {
-            group: 'Settings',
+            group: "Settings",
             items: [
-                { id: 'co-admins', icon: <FaUserShield />, label: 'Roles & Permissions', permission: 'manage_admins' },
-                { id: 'org-master', icon: <FaBuilding />, label: 'System Lock / Unlock', permission: 'org-master' }
+                { id: "co-admins", icon: <FaUserShield />, label: "Roles & Permissions", permission: "manage_admins" },
+                { id: "org-master", icon: <FaBuilding />, label: "System Lock / Unlock", permission: "org_master" }
             ]
         }
     ];
@@ -1257,19 +1268,35 @@ const AdminDashboard = () => {
             case 'employees':
                 return <EmployeeTab employees={employees} toggleStatus={toggleEmployeeStatus} deleteEmp={deleteEmployee} onView={(emp) => { setSelectedEmployee(emp); setModalType('emp-details'); setIsModalOpen(true); }} onAdd={() => { setModalType('employee'); setIsModalOpen(true); }} />;
             case 'attendance':
-                return <AttendanceTab
-                    attendance={attendance}
-                    employees={employees}
-                    onAdd={() => { setModalType('attendance-log'); setIsModalOpen(true); }}
-                    onExport={exportToCSV}
-                    onLock={lockAttendanceDaily}
-                    onAction={handleAttendanceAction}
-                    adminProfile={adminProfile}
-                />;
+                return (
+                    <>
+                        <marquee behavior="alternate" style={{ background: '#fffaf0', color: '#b7791f', padding: '10px 0', fontSize: '0.9rem', fontWeight: 'bold', borderRadius: '15px 15px 0 0' }}>
+                            🕘 Employees must mark daily attendance before 10:00 AM | Attendance is linked to salary processing.
+                        </marquee>
+                        <marquee direction="right" style={{ background: '#f8fafc', color: '#1a365d', padding: '5px 0', fontSize: '0.85rem', fontWeight: 'bold', borderBottom: '1px solid #e2e8f0' }}>
+                            📄 Attendance once locked cannot be edited without Director approval.
+                        </marquee>
+                        <AttendanceTab
+                            attendance={attendance}
+                            employees={employees}
+                            onAdd={() => { setModalType('attendance-log'); setIsModalOpen(true); }}
+                            onExport={exportToCSV}
+                            onLock={lockAttendanceDaily}
+                            onAction={handleAttendanceAction}
+                            adminProfile={adminProfile}
+                        />
+                    </>
+                );
             case 'volunteers':
                 return (
                     <>
-                        <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', padding: '0 5px' }}>
+                        <marquee style={{ background: '#1a365d', color: 'white', padding: '10px 0', fontSize: '1rem', fontWeight: 'bold', borderRadius: '15px 15px 0 0' }}>
+                            👐 Volunteers are the backbone of our mission | Certificates issued only for verified service.
+                        </marquee>
+                        <marquee direction="right" style={{ background: '#f8fafc', color: '#1a365d', padding: '5px 0', fontSize: '0.9rem', fontWeight: 'bold', borderBottom: '1px solid #e2e8f0' }}>
+                            📸 Upload valid work proof to receive volunteer recognition certificates.
+                        </marquee>
+                        <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', padding: '15px 5px' }}>
                             <button className={`btn-small ${selectedVolunteer === null ? 'active' : ''}`} onClick={() => setSelectedVolunteer(null)} style={{ background: selectedVolunteer === null ? '#1a365d' : 'white', color: selectedVolunteer === null ? 'white' : '#64748b' }}>Resource Registry</button>
                             <button className={`btn-small ${selectedVolunteer === 'tasks' ? 'active' : ''}`} onClick={() => setSelectedVolunteer('tasks')} style={{ background: selectedVolunteer === 'tasks' ? '#1a365d' : 'white', color: selectedVolunteer === 'tasks' ? 'white' : '#64748b' }}>Task Mastery Hub</button>
                         </div>
@@ -1295,7 +1322,17 @@ const AdminDashboard = () => {
                     </>
                 );
             case 'students':
-                return <StudentTab students={students} onDelete={deleteStudent} handleAction={handleAction} onExport={exportToCSV} onView={(s) => { setSelectedStudent(s); setModalType('student-details'); setIsModalOpen(true); }} />;
+                return (
+                    <>
+                        <marquee style={{ background: '#2c5282', color: 'white', padding: '10px 0', fontSize: '0.9rem', fontWeight: 800, borderRadius: '15px 15px 0 0' }}>
+                            🎓 Viksit Bharath Fellowship – Empowering youth leaders for grassroots social transformation.
+                        </marquee>
+                        <marquee behavior="alternate" style={{ background: '#f8fafc', color: '#2c5282', padding: '5px 0', fontSize: '0.8rem', fontWeight: 700, borderBottom: '1.5px solid #e2e8f0' }}>
+                            📑 Fellowship stipend is performance & attendance based and subject to multi-level approval.
+                        </marquee>
+                        <StudentTab students={students} onDelete={deleteStudent} handleAction={handleAction} onExport={exportToCSV} onView={(s) => { setSelectedStudent(s); setModalType('student-details'); setIsModalOpen(true); }} />
+                    </>
+                );
             case 'scholarships':
                 return <ScholarshipTab scholarships={scholarships} handleAction={handleAction} onDelete={deleteScholarship} onExport={exportToCSV} onView={(s) => { setSelectedScholarship(s); setModalType('scholarship-details'); setIsModalOpen(true); }} />;
             case 'finance': return <FinanceTab finances={finances} onDelete={deleteFinanceEntry} onExport={exportToCSV} />;
@@ -1322,7 +1359,7 @@ const AdminDashboard = () => {
                     />
                 );
             case 'approvals':
-                return <ApprovalsTab requests={approvalRequests} handleAction={handleApprovalRequest} />;
+                return <LeaveApprovalsTab requests={requests} onAction={handleAction} />;
             case 'institutional-reports':
                 return <GovernanceReports
                     attendance={attendance}
@@ -1334,6 +1371,7 @@ const AdminDashboard = () => {
                 return (
                     <CoAdminTab
                         admins={coAdmins}
+                        adminProfile={adminProfile}
                         onAdd={() => { setSelectedAdmin(null); setModalType('co-admin'); setStep(1); setIsModalOpen(true); }}
                         onDelete={deleteCoAdmin}
                         onEdit={(adm) => { setSelectedAdmin(adm); setModalType('co-admin'); setStep(1); setIsModalOpen(true); }}
@@ -1345,6 +1383,7 @@ const AdminDashboard = () => {
                 policies={policies}
                 boardMembers={boardMembers}
                 meetings={boardMeetings}
+                approvalRequests={approvalRequests}
                 onAddPolicy={() => { setSelectedPolicy(null); setModalType('policy'); setIsModalOpen(true); }}
                 onEditPolicy={(p) => { setSelectedPolicy(p); setModalType('policy'); setIsModalOpen(true); }}
                 onAddMeeting={() => { setSelectedMeeting(null); setModalType('board-meeting'); setIsModalOpen(true); }}
@@ -1353,8 +1392,10 @@ const AdminDashboard = () => {
                 onDeletePolicy={deletePolicy}
                 onDeleteMember={deleteBoardMember}
                 onDeleteMeeting={deleteBoardMeeting}
+                onApprovalAction={handleAction}
                 refreshData={() => fetchTabData('governance')}
             />;
+            case 'connectivity': return <ConnectivityMapTab />;
             case 'compliance':
                 return <ComplianceTab
                     docs={complianceDocs}
@@ -1381,7 +1422,7 @@ const AdminDashboard = () => {
                         finances={finances}
                         searchTerm={tabSearchTerms.overview}
                         matchingActions={matchingActions}
-                        onClearSearch={() => setTabSearchTerms(prev => ({ ...prev, overview: '' }))}
+                        onClearSearch={() => setTabSearchTerms(prev => ({ ...prev, overview: "" }))}
                     />
                 );
         }
@@ -1423,19 +1464,19 @@ const AdminDashboard = () => {
                 </div>
                 <div className="sidebar-scroll custom-scroll">
                     <ul className="sidebar-menu" role="menu">
-                        <li className={activeTab === 'overview' ? 'active' : ''} onClick={() => setActiveTab('overview')} role="menuitem" tabIndex="0">
+                        <li className={activeTab === "overview" ? "active" : ""} onClick={() => setActiveTab("overview")} role="menuitem" tabIndex="0">
                             <FaChartLine /> <span>Dashboard Overview</span>
                         </li>
-                        <li className={activeTab === 'admin-profile' ? 'active' : ''} onClick={() => setActiveTab('admin-profile')} role="menuitem" tabIndex="0">
+                        <li className={activeTab === "admin-profile" ? "active" : ""} onClick={() => setActiveTab("admin-profile")} role="menuitem" tabIndex="0">
                             <FaShieldAlt /> <span>Institutional Persona</span>
                         </li>
 
                         {menuSections.map(section => {
                             const filteredItems = section.items.filter(item => {
-                                const currentRole = adminProfile?.role || '';
+                                const currentRole = adminProfile?.role || "";
                                 const currentPerms = adminProfile?.permissions || {};
 
-                                if (SUPER_ROLES.includes(currentRole)) return true;
+                                if (SUPER_ROLES.some(r => r.toLowerCase() === currentRole.trim().toLowerCase())) return true;
                                 if (item.permission && currentPerms[item.permission]) return true;
                                 return false;
                             });
@@ -1444,11 +1485,11 @@ const AdminDashboard = () => {
 
                             return (
                                 <React.Fragment key={section.group}>
-                                    <li className="menu-group-title" style={{ padding: '25px 25px 10px', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '2px', color: 'rgba(255,255,255,0.4)', fontWeight: 800 }}>
+                                    <li className="menu-group-title" style={{ padding: "25px 25px 10px", fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "2px", color: "rgba(255,255,255,0.4)", fontWeight: 800 }}>
                                         {section.group}
                                     </li>
                                     {filteredItems.map(item => (
-                                        <li key={item.id} className={activeTab === item.id ? 'active' : ''} onClick={() => setActiveTab(item.id)} role="menuitem" tabIndex="0">
+                                        <li key={item.id} className={activeTab === item.id ? "active" : ""} onClick={() => setActiveTab(item.id)} role="menuitem" tabIndex="0">
                                             {item.icon} <span>{item.label}</span>
                                         </li>
                                     ))}
@@ -1523,6 +1564,12 @@ const AdminDashboard = () => {
                         <div className="avatar">VK</div>
                     </div>
                 </div>
+                <marquee direction="left" scrollamount="4" style={{ background: '#f8fafc', color: '#1a365d', padding: '10px 0', fontSize: '0.85rem', fontWeight: 700, borderBottom: '1px solid #e2e8f0' }}>
+                    ⚖️ All approvals are system-based and recorded with Name, Date & Time | Audit-ready NGO governance system.
+                </marquee>
+                <marquee direction="left" scrollamount="3" style={{ background: '#FFF5F5', color: '#C53030', padding: '8px 0', fontSize: '0.85rem', fontWeight: 700, borderBottom: '1px solid #FED7D7' }}>
+                    ❗ Any misuse of authority, funds, or data will attract strict disciplinary action as per Foundation policies.
+                </marquee>
                 <div className="tab-content-wrapper">{renderContent()}</div>
             </div>
 
@@ -1578,23 +1625,39 @@ const AdminDashboard = () => {
                                 initialStep={step || 1}
                                 onClose={() => { setIsModalOpen(false); setStep(1); }}
                                 onSave={async (newAdm) => {
+                                    // Step 1: Handle Authentication (New vs Existing)
                                     let linkedAuthId = null;
 
-                                    // If this is a new admin, create their Auth Login via secure RPC
-                                    if (!newAdm.id && newAdm.email && newAdm.password) {
-                                        const { data: authId, error: authError } = await supabase.rpc('provision_admin_auth', {
-                                            email_text: newAdm.email,
-                                            password_text: newAdm.password,
-                                            full_name_text: newAdm.full_name,
-                                            role_text: newAdm.role_type
-                                        });
+                                    if (!newAdm.id) {
+                                        // A: Creation Path
+                                        if (newAdm.email && newAdm.password) {
+                                            const { data: authId, error: authError } = await supabase.rpc('provision_admin_auth', {
+                                                email_text: newAdm.email,
+                                                password_text: newAdm.password,
+                                                full_name_text: newAdm.full_name,
+                                                role_text: newAdm.role_type
+                                            });
 
-                                        if (authError) {
-                                            console.error('Auth provisioning failed:', authError);
-                                            alert('Authentication Error: ' + authError.message);
-                                            return;
+                                            if (authError) {
+                                                console.error('Auth provisioning failed:', authError);
+                                                alert('Authentication Error: ' + authError.message);
+                                                return;
+                                            }
+                                            linkedAuthId = authId;
                                         }
-                                        linkedAuthId = authId;
+                                    } else {
+                                        // B: Update Path - Check if password needs reset
+                                        if (newAdm.password && newAdm.password.trim().length > 0) {
+                                            const { error: resetError } = await supabase.rpc('update_admin_password', {
+                                                target_user_id: newAdm.user_id,
+                                                new_password_text: newAdm.password
+                                            });
+                                            if (resetError) {
+                                                console.error('Password reset failed:', resetError);
+                                                alert('Password Security Update Failed: ' + resetError.message);
+                                                // We continue anyway to save profile data
+                                            }
+                                        }
                                     }
 
                                     const profileData = {
@@ -1605,43 +1668,63 @@ const AdminDashboard = () => {
                                         mobile: newAdm.mobile,
                                         dob: newAdm.dob,
                                         emergency: newAdm.emergency,
+                                        username: newAdm.username,
                                         user_id: newAdm.user_id || linkedAuthId // Use the Auth ID
                                     };
-
-                                    // Use the internal Profiles.ID for mapping to admin_controls
-                                    const profilesInternalId = newAdm.id || profileData.user_id;
 
                                     if (!profileData.user_id) {
                                         alert('CRITICAL: No identity found for this admin! Try refreshing the page.');
                                         return;
                                     }
 
-                                    // Step 1: Save Profile
-                                    const { error: pError } = await supabase
+                                    // Step 2: Save Profile (Identity Hub)
+                                    console.log('PUSHING TO REGISTRY:', profileData);
+
+                                    const { data: upsertedProfile, error: pError } = await supabase
                                         .from('profiles')
-                                        .upsert({
-                                            user_id: profileData.user_id,
-                                            full_name: newAdm.full_name,
-                                            email: newAdm.email,
-                                            role_type: newAdm.role_type,
-                                            department: newAdm.department,
-                                            mobile: newAdm.mobile,
-                                            dob: newAdm.dob,
-                                            emergency: newAdm.emergency,
-                                            updated_at: new Date().toISOString()
-                                        }, { onConflict: 'user_id' });
+                                        .upsert(profileData, { onConflict: 'user_id' })
+                                        .select('id')
+                                        .single();
 
                                     if (pError) {
                                         alert('Profile Save Failed: ' + pError.message);
                                         return;
                                     }
 
-                                    // Step 2: Save Permissions (Permissions Matrix)
-                                    // admin_profile_id points to the profile UUID (profiles.id)
+                                    // obtaining the correct Internal UUID for the Profile (must be the ID, NOT the User_ID)
+                                    let actualProfileId = upsertedProfile?.id;
+
+                                    // Fallback 1: Check if newAdm.id is already the Profile UUID (and not a user_id)
+                                    if (!actualProfileId && newAdm.id && newAdm.id.length === 36) {
+                                        // Simple heuristic: verify this isn't the user_id
+                                        if (newAdm.id !== (newAdm.user_id || linkedAuthId)) {
+                                            actualProfileId = newAdm.id;
+                                        }
+                                    }
+
+                                    // Fallback 2: Explicit lookup by user_id to resolve the real Internal ID
+                                    if (!actualProfileId) {
+                                        const { data: fetched, error: fErr } = await supabase
+                                            .from('profiles')
+                                            .select('id')
+                                            .eq('user_id', profileData.user_id)
+                                            .maybeSingle();
+
+                                        if (fErr) console.error('Verification Fetch failed:', fErr);
+                                        actualProfileId = fetched?.id;
+                                    }
+
+                                    if (!actualProfileId) {
+                                        console.error('CRITICAL: Resolution of Profile ID failed for:', profileData.user_id);
+                                        alert('IDENTITY RESOLUTION FAILED: The system created the account but could not find the internal profile to attach permissions. Please refresh the page and use the "Edit" function on the new user.');
+                                        return;
+                                    }
+
+                                    // Step 3: Save Permissions (Permissions Matrix)
                                     const { error: cError } = await supabase
                                         .from('admin_controls')
                                         .upsert({
-                                            admin_profile_id: profilesInternalId,
+                                            admin_profile_id: profileData.user_id, // Correctly link to the Auth UID as per schema
                                             authority_level: newAdm.authority_level || 'L3',
                                             perm_view_employees: !!newAdm.perms.view_employees,
                                             perm_edit_employees: !!newAdm.perms.edit_employees,
@@ -1656,18 +1739,26 @@ const AdminDashboard = () => {
                                             perm_vault_access: !!newAdm.perms.vault_access,
                                             perm_audit_logs: !!newAdm.perms.audit_logs,
                                             perm_org_master: !!newAdm.perms.org_master,
+                                            perm_governance: !!newAdm.perms.perm_governance,
+                                            perm_compliance: !!newAdm.perms.perm_compliance,
+                                            salary_approval_limit: Number(newAdm.salary_approval_limit) || 0,
+                                            expenditure_limit: Number(newAdm.expenditure_limit) || 0,
+                                            fund_utilization_auth: !!newAdm.fund_utilization_auth,
+                                            fin_reports_auth: !!newAdm.perms.fin_reports_auth,
+                                            statutory_docs_auth: !!newAdm.statutory_docs_auth,
                                             updated_at: new Date().toISOString()
                                         }, { onConflict: 'admin_profile_id' });
 
                                     if (cError) {
-                                        alert('Permissions Save Failed: ' + cError.message);
+                                        console.error('Permissions Save Error:', cError);
+                                        alert('Permissions Save Failed: ' + cError.message + '\n(Reference UID: ' + profileData.user_id + ')');
                                         return;
                                     }
 
                                     // Step 3: Finalize
-                                    await logActivity(`Configured Permissions for ${newAdm.full_name}`, 'Security');
+                                    await logActivity('Configured Permissions for ' + newAdm.full_name, 'Security');
                                     await fetchDashboardData();
-                                    alert(`DASHBOARD SYNCED: All permissions for ${newAdm.full_name} are now LIVE.`);
+                                    alert('DASHBOARD SYNCED: All permissions for ' + newAdm.full_name + ' are now LIVE.');
                                     setIsModalOpen(false);
                                     setStep(1);
                                 }}
@@ -1681,13 +1772,16 @@ const AdminDashboard = () => {
                                     const { error } = await supabase
                                         .from('admin_controls')
                                         .upsert({
-                                            admin_profile_id: adminProfile.id,
+                                            admin_profile_id: adminProfile.user_id, // Use Auth UID for consistency
                                             authority_level: newLevel.split(' ')[0]
                                         }, { onConflict: 'admin_profile_id' });
 
                                     if (!error) {
                                         logActivity(`Elevated/Modified Admin Level to ${newLevel}`, 'Security');
+                                        fetchDashboardData(); // Refresh to show new level
                                         setIsModalOpen(false);
+                                    } else {
+                                        alert('Authorization Level Upgrade Failed: ' + error.message);
                                     }
                                 }}
                             />
@@ -1760,7 +1854,23 @@ const AdminDashboard = () => {
                                 }}
                             />
                         )}
-                        {modalType === 'report' && <ReportForm onClose={() => setIsModalOpen(false)} />}
+                        {modalType === 'personal-leave' && (
+                            <LeaveRequestForm
+                                onClose={() => setIsModalOpen(false)}
+                                employeeId={currentEmployee?.id || adminProfile.id}
+                                employeeName={currentEmployee?.full_name || adminProfile.name}
+                                onRefresh={fetchDashboardData}
+                            />
+                        )}
+
+                        {modalType === 'report' && (
+                            <ReportForm
+                                onClose={() => setIsModalOpen(false)}
+                                postedBy={adminProfile.user_id}
+                                postedByName={adminProfile.name}
+                                onRefresh={fetchDashboardData}
+                            />
+                        )}
 
                         {modalType === 'submit-expense' && (
                             <ExpenseClaimForm
@@ -2023,7 +2133,10 @@ const AdminDashboard = () => {
                                         await logActivity(`Scheduled Compliance Task: ${task.task_name}`, 'Compliance');
                                         fetchTabData('compliance');
                                         setIsModalOpen(false);
-                                    } else alert(error.message);
+                                    } else {
+                                        console.error('Checklist Save Error:', error);
+                                        alert('Compliance Save Failed: ' + error.message);
+                                    }
                                 }}
                             />
                         )}
@@ -2169,7 +2282,34 @@ const OverviewTab = ({ adminProfile, employees, volunteers, requests, coAdmins, 
                 onCheckOut={onSelfCheckOut}
             />
 
-            {/* INJECT DIRECTOR'S REPORT IF APPLICABLE */}
+            {/* PERSONAL WORKSPACE (Employee + Admin Requirement) */}
+            <div className="content-panel animate-fade-in" style={{ marginBottom: '30px', background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)', border: '1.5px solid #e2e8f0', borderRadius: '24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 10px' }}>
+                    <div>
+                        <h4 style={{ margin: 0, color: '#1a365d', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <FaBriefcase style={{ color: '#3182ce' }} /> Personal Personnel Suite
+                        </h4>
+                        <p style={{ margin: '4px 0 0', color: '#718096', fontSize: '0.8rem' }}>Authority personnel portal for self-service actions.</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                        <button className="btn-small" onClick={() => {
+                            if (!currentEmployee) {
+                                alert("REGISTRY MISSING: Your profile is not yet linked to the Employee Registry. Please contact HR to enable leave self-service.");
+                                return;
+                            }
+                            setModalType('personal-leave');
+                            setIsModalOpen(true);
+                        }} style={{ background: '#fff', border: '1px solid #e2e8f0', color: '#4a5568' }}>
+                            <FaCalendarAlt /> Apply Leave
+                        </button>
+                        <button className="btn-small" onClick={() => { setModalType('report'); setIsModalOpen(true); }} style={{ background: '#fff', border: '1px solid #e2e8f0', color: '#4a5568' }}>
+                            <FaFileUpload /> File Work Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* INJECT DIRECTORS REPORT IF APPLICABLE */}
             {(adminProfile?.role?.includes('Director') || adminProfile?.role === 'Super Admin') && (
                 <DirectorsReportView
                     adminProfile={adminProfile}
@@ -2877,7 +3017,9 @@ const AttendanceTab = ({ attendance, employees, onAdd, onExport, onLock, onActio
     const filteredData = (attendance || []).filter(a => a.attendance_date === filterDate || !filterDate);
 
     const isDayLocked = filteredData.length > 0 && filteredData.every(a => a.is_locked);
-    const hasPermissionToLock = adminProfile.role === 'Super Admin' || adminProfile.role.includes('Director') || adminProfile.role === 'HR Manager';
+    const hasPermissionToLock = SUPER_ROLES.includes(adminProfile.role) || adminProfile.role === 'Admin Head';
+    const isSupervisor = adminProfile.role.includes('Supervisor') || SUPER_ROLES.includes(adminProfile.role);
+    const isHR = adminProfile.role.includes('HR') || SUPER_ROLES.includes(adminProfile.role);
 
     const getApprovalBadge = (a) => {
         const status = a.approval_status || 'Submitted';
@@ -2929,12 +3071,19 @@ const AttendanceTab = ({ attendance, employees, onAdd, onExport, onLock, onActio
                 </div>
             </div>
 
+            <marquee behavior="alternate" style={{ background: '#fffaf0', color: '#b7791f', padding: '10px 0', fontSize: '0.9rem', fontWeight: 'bold', borderBottom: '1px solid #feebc8' }}>
+                🕘 Employees must mark daily attendance before 10:00 AM | Attendance is linked to salary processing.
+            </marquee>
+            <marquee direction="right" style={{ background: '#f8fafc', color: '#1a365d', padding: '5px 0', fontSize: '0.85rem', fontWeight: 'bold', borderBottom: '1px solid #edf2f7' }}>
+                📄 Attendance once locked cannot be edited without Director approval.
+            </marquee>
+
             <div style={{ padding: '0 40px 40px' }}>
                 {isDayLocked && (
                     <div style={{ margin: '20px 0', padding: '15px 25px', background: '#fffaf0', border: '1.5px solid #feebc8', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '15px', color: '#9c4221' }}>
                         <FaLock style={{ fontSize: '1.2rem' }} />
                         <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>
-                            REGISTRY LOCKED: This day's attendance has been finalized and sanctioned. No further modifications allowed.
+                            REGISTRY LOCKED: This days attendance has been finalized and sanctioned. No further modifications allowed.
                         </div>
                     </div>
                 )}
@@ -2980,10 +3129,10 @@ const AttendanceTab = ({ attendance, employees, onAdd, onExport, onLock, onActio
                                 <td style={{ textAlign: 'center' }}>
                                     {!a.is_locked ? (
                                         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                                            {a.approval_status === 'Submitted' && (
+                                            {a.approval_status === 'Submitted' && isSupervisor && (
                                                 <button className="btn-small success" onClick={() => onAction(a.id, 'supervisor')} style={{ fontSize: '0.7rem' }}>Verify (Manager)</button>
                                             )}
-                                            {a.approval_status === 'Supervisor Reviewed' && (
+                                            {a.approval_status === 'Supervisor Reviewed' && isHR && (
                                                 <button className="btn-small" onClick={() => onAction(a.id, 'hr')} style={{ fontSize: '0.7rem', background: '#805AD5', color: 'white' }}>Audit (HR)</button>
                                             )}
                                             {a.approval_status === 'HR Verified' && (
@@ -3024,7 +3173,7 @@ const StudentTab = ({ students, onView, onDelete, handleAction, onExport }) => {
     });
 
     const allPrograms = [...new Set([...PROGRAM_TRACKS, ...(students || []).map(s => s.program).filter(Boolean)])].sort();
-    const allColleges = [...new Set([...COLLEGES, ...(students || []).map(s => s.college_org).filter(Boolean)])].sort();
+    const allColleges = [...COLLEGES].sort();
 
     return (
         <div className="content-panel">
@@ -3200,6 +3349,9 @@ const FinanceTab = ({ finances, onDelete, onExport }) => {
     return (
         <div className="content-panel">
             <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+                <marquee style={{ background: '#f8fafc', color: '#1a365d', padding: '10px 0', fontSize: '0.9rem', fontWeight: 'bold', borderRadius: '15px 15px 0 0' }}>
+                    🔐 Financial transactions, salaries & stipends are processed only through bank transfers as per policy.
+                </marquee>
                 <h3 style={{ margin: 0 }}>Treasury & Payroll Log</h3>
                 <div style={{ display: 'flex', gap: '12px' }}>
                     <select
@@ -3247,6 +3399,9 @@ const PayrollTab = ({ records, onView, onExport, onInitiate }) => {
 
     return (
         <div className="content-panel">
+            <marquee style={{ background: '#f8fafc', color: '#1a365d', padding: '10px 0', fontSize: '0.9rem', fontWeight: 'bold', borderRadius: '15px 15px 0 0' }}>
+                🔐 Financial transactions, salaries & stipends are processed only through bank transfers as per policy.
+            </marquee>
             <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
                 <div>
                     <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -3325,7 +3480,19 @@ const PayrollDetailsView = ({ record, onClose, onAction, onReopen, adminProfile 
     const nextStage = stages[currentIdx + 1];
 
     const isLocked = r.status === 'Director Approved' || r.status === 'Funds Disbursed' || r.status === 'Cycle Complete';
-    const canReopen = (adminProfile.role === 'Super Admin' || adminProfile.role.includes('Director')) && isLocked;
+    const isDirector = SUPER_ROLES.includes(adminProfile.role);
+    const isFinance = adminProfile.role.includes('Finance') || isDirector;
+    const isHR = adminProfile.role.includes('HR') || isDirector;
+
+    const canReopen = isDirector && isLocked;
+
+    const canActionStage = () => {
+        if (currentIdx === 0 || currentIdx === 1) return isHR;
+        if (currentIdx === 2) return isFinance;
+        if (currentIdx === 3) return isDirector;
+        if (currentIdx === 4) return isFinance || isDirector;
+        return isDirector;
+    };
 
     const handleReject = () => {
         const reason = prompt('Specify Strict Rejection Reason:\n- Attendance mismatch\n- Policy violation\n- Budget not approved');
@@ -3377,14 +3544,16 @@ const PayrollDetailsView = ({ record, onClose, onAction, onReopen, adminProfile 
                         </div>
                         <div style={{ display: 'flex', gap: '15px' }}>
                             <button className="btn-premium danger" onClick={handleReject}>Decline Request</button>
-                            <button className="btn-premium success" onClick={() => onAction('approve')}>
-                                {currentIdx === 0 ? 'Lock Attendance (HR)' :
-                                    currentIdx === 1 ? 'Verify Records (Audit)' :
-                                        currentIdx === 2 ? 'Compute Net Payout (Finance)' :
-                                            currentIdx === 3 ? 'Authorize Transfer (Director)' :
-                                                currentIdx === 4 ? 'Initiate Bank Transfer' :
-                                                    'Finalize Cycle'}
-                            </button>
+                            {canActionStage() && (
+                                <button className="btn-premium success" onClick={() => onAction('approve')}>
+                                    {currentIdx === 0 ? 'Lock Attendance (HR)' :
+                                        currentIdx === 1 ? 'Verify Records (Audit)' :
+                                            currentIdx === 2 ? 'Compute Net Payout (Finance)' :
+                                                currentIdx === 3 ? 'Authorize Transfer (Director)' :
+                                                    currentIdx === 4 ? 'Initiate Bank Transfer' :
+                                                        'Finalize Cycle'}
+                                </button>
+                            )}
                         </div>
                     </div>
                 )}
@@ -3863,151 +4032,84 @@ const OrgMasterTab = ({ org, refreshData }) => {
     );
 };
 
-const ApprovalsTab = ({ requests, handleAction }) => {
-    const rules = {
-        'Salary Processing': { init: 'Finance HR', stage1: 'Finance Verification', final: 'Director Approval' },
-        'Fellowship Stipend': { init: 'Program Head', stage1: 'Treasury Review', final: 'Director Approval' },
-        'Volunteer Certificate': { init: 'Coordinator', stage1: 'Program Head', final: 'Admin Approval' },
-        'Expense Claim': { init: 'Employee Submission', stage1: 'Finance Review', final: 'Director Final Approval' },
-        'Personnel Termination': { init: 'Admin Request', stage1: 'HR Manager', final: 'Director Final Approval' }
-    };
+const LeaveApprovalsTab = ({ requests, onAction }) => {
+    const pendingReqs = (requests || []).filter(r => r.status === 'Pending');
+    const historyReqs = (requests || []).filter(r => r.status !== 'Pending');
 
     return (
-        <div className="content-panel" style={{ animation: 'fadeIn 0.5s' }}>
+        <div style={{ animation: 'fadeIn 0.5s' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '30px' }}>
                 <div style={{ width: '45px', height: '45px', background: '#EBF8FF', color: '#2B6CB0', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
-                    <FaCheckDouble />
+                    <FaCalendarCheck />
                 </div>
                 <div>
-                    <h3 style={{ margin: 0 }}>Authority Approval Workflow Registry</h3>
-                    <p style={{ margin: '4px 0 0', color: '#718096', fontSize: '0.85rem' }}>Centralized oversight of organizational multi-stage approval paths.</p>
+                    <h3 style={{ margin: 0 }}>Staff Leave Management Registry</h3>
+                    <p style={{ margin: '4px 0 0', color: '#718096', fontSize: '0.85rem' }}>Authorize or reject leave applications submitted via employee self-service terminals.</p>
                 </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
-                {(requests || []).length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '60px', background: '#f8fafc', borderRadius: '20px', color: '#a0aec0' }}>
-                        <FaTasks fontSize="3rem" style={{ marginBottom: '15px', opacity: 0.5 }} />
-                        <p>No active approval workflows in the registry.</p>
+            <div className="content-panel" style={{ marginBottom: '30px' }}>
+                <h4 style={{ marginBottom: '20px', color: '#2D3748' }}>Pending Authorization Requests ({pendingReqs.length})</h4>
+                {pendingReqs.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '40px', background: '#f8fafc', borderRadius: '15px', color: '#a0aec0' }}>
+                        <FaCheckCircle fontSize="2rem" style={{ marginBottom: '10px', opacity: 0.5 }} />
+                        <p>All clear. No staff leave requests awaiting approval.</p>
                     </div>
                 ) : (
-                    requests.map(r => {
-                        const rule = rules[r.type] || { init: 'System', stage1: 'HR Step', stage2: 'Finance Step', final: 'Director' };
-                        const isStage1 = r.level_1_status === 'Pending';
-                        const isStage2 = r.level_1_status === 'Approved' && r.level_2_status === 'Pending';
-                        const isFinal = r.level_1_status === 'Approved' && r.level_2_status === 'Approved' && r.final_status === 'Pending';
-                        const isProcessed = r.final_status !== 'Pending';
-
-                        return (
-                            <div key={r.id} style={{ border: '1px solid #e2e8f0', borderRadius: '15px', overflow: 'hidden', background: 'white', transition: 'box-shadow 0.3s' }}>
-                                <div style={{ background: '#f8fafc', padding: '15px 25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0' }}>
-                                    <div>
-                                        <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Registry ID: {r.id.substring(0, 8)}</span>
-                                        <h4 style={{ margin: '5px 0 0', color: '#1a365d' }}>{r.type}</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px' }}>
+                        {pendingReqs.map(r => (
+                            <div key={r.id} style={{ padding: '20px', border: '1px solid #e2e8f0', borderRadius: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white' }}>
+                                <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+                                    <div style={{ width: '50px', height: '50px', background: '#3182CE', color: 'white', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800' }}>
+                                        {r.requester?.charAt(0)}
                                     </div>
-                                    <span className={`badge ${isProcessed ? (r.final_status === 'Approved' ? 'success' : 'red') : 'blue'}`}>
-                                        {isProcessed ? r.final_status : (isStage1 ? 'Step 1: Pending HR' : (isStage2 ? 'Step 2: Pending Finance' : 'Step 3: Pending Director'))}
-                                    </span>
+                                    <div>
+                                        <div style={{ fontWeight: '800', fontSize: '1.1rem', color: '#1A365D' }}>{r.requester}</div>
+                                        <div style={{ fontSize: '0.85rem', color: '#718096' }}>{r.type} • Commencement: {new Date(r.date || r.start_date || Date.now()).toLocaleDateString()}</div>
+                                        <div style={{ fontSize: '0.85rem', marginTop: '5px', color: '#4A5568', fontStyle: 'italic' }}>"{r.details || r.reason}"</div>
+                                    </div>
                                 </div>
-
-                                <div style={{ padding: '25px', display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '30px' }}>
-                                    <div>
-                                        <div style={{ marginBottom: '15px' }}>
-                                            <label style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700 }}>Initiated By</label>
-                                            <div style={{ fontWeight: 600, color: '#2d3748' }}>{r.requester_name || 'System Auto'}</div>
-                                        </div>
-                                        <div>
-                                            <label style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700 }}>Details / Amount</label>
-                                            <div style={{ fontSize: '0.9rem', color: '#4a5568', marginTop: '5px' }}>
-                                                {r.amount && <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#2d3748' }}>₹ {Number(r.amount).toLocaleString()}</div>}
-                                                {r.details && Object.entries(r.details).map(([k, v]) => (
-                                                    <div key={k} style={{ marginTop: '5px' }}><strong>{k}:</strong> {String(v)}</div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <div style={{ marginBottom: '20px' }}>
-                                            <label style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700, marginBottom: '15px', display: 'block' }}>Authority Path Tracking (Institutional Trace)</label>
-                                            <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <div style={{ position: 'absolute', top: '15px', left: '5%', right: '5%', height: '2px', background: '#e2e8f0', zIndex: 0 }}></div>
-
-                                                {/* Step 1: HR */}
-                                                <div style={{ textAlign: 'center', zIndex: 1, width: '25%' }}>
-                                                    <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: r.level_1_status === 'Approved' ? '#38a169' : (r.level_1_status === 'Declined' ? '#e53e3e' : '#edf2f7'), color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px', fontSize: '0.8rem', border: isStage1 ? '2px solid #3182ce' : 'none' }}>
-                                                        {r.level_1_status === 'Approved' ? '✔' : '1'}
-                                                    </div>
-                                                    <div style={{ fontSize: '0.7rem', fontWeight: 800 }}>HR VERIFIED</div>
-                                                    <div style={{ fontSize: '0.6rem', color: '#718096' }}>{r.level_1_status}</div>
-                                                </div>
-
-                                                {/* Step 2: Finance */}
-                                                <div style={{ textAlign: 'center', zIndex: 1, width: '25%' }}>
-                                                    <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: r.level_2_status === 'Approved' ? '#38a169' : (r.level_2_status === 'Declined' ? '#e53e3e' : '#edf2f7'), color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px', fontSize: '0.8rem', border: isStage2 ? '2px solid #3182ce' : 'none' }}>
-                                                        {r.level_2_status === 'Approved' ? '✔' : '2'}
-                                                    </div>
-                                                    <div style={{ fontSize: '0.7rem', fontWeight: 800 }}>FINANCE APPROVED</div>
-                                                    <div style={{ fontSize: '0.6rem', color: '#718096' }}>{r.level_2_status}</div>
-                                                </div>
-
-                                                {/* Step 3: Director */}
-                                                <div style={{ textAlign: 'center', zIndex: 1, width: '25%' }}>
-                                                    <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: r.final_status === 'Approved' ? '#38a169' : (r.final_status === 'Declined' ? '#e53e3e' : '#edf2f7'), color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px', fontSize: '0.8rem', border: isFinal ? '2px solid #3182ce' : 'none' }}>
-                                                        {r.final_status === 'Approved' ? '✔' : '3'}
-                                                    </div>
-                                                    <div style={{ fontSize: '0.7rem', fontWeight: 800 }}>DIRECTOR SIGNED</div>
-                                                    <div style={{ fontSize: '0.6rem', color: '#718096' }}>{r.final_status}</div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <ApprovalTimeline data={r} />
-
-                                        <div style={{ marginTop: '25px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                                            {(isStage1 || isStage2 || isFinal) ? (
-                                                <>
-                                                    <button className="btn-small danger-btn" onClick={() => {
-                                                        const reason = prompt('State the official grounds for declining this authority request (Mandatory for correction tracking):');
-                                                        if (reason) handleAction(r.id, 'decline', reason);
-                                                    }}>Decline & Route Back</button>
-                                                    <button className="btn-add" onClick={() => handleAction(r.id, 'approve')}>Digitally Sign & Advance</button>
-                                                </>
-                                            ) : (
-                                                <div style={{ fontSize: '0.85rem', color: '#718096', fontStyle: 'italic', background: '#f1f5f9', padding: '8px 15px', borderRadius: '8px' }}>
-                                                    Audit Trail: Workflow finalized on {new Date(r.updated_at || r.created_at).toLocaleDateString()}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <button className="btn-small" onClick={() => {
+                                        const reason = prompt('Specify grounds for rejection:');
+                                        if (reason) onAction('request', r.id, 'reject', reason);
+                                    }} style={{ background: '#FFF5F5', color: '#C53030', border: '1px solid #FED7D7' }}>Decline</button>
+                                    <button className="btn-add" onClick={() => onAction('request', r.id, 'approve')}>Digitally Authorize</button>
                                 </div>
                             </div>
-                        );
-                    })
+                        ))}
+                    </div>
                 )}
             </div>
 
-            <div style={{ marginTop: '50px' }}>
-                <h4 style={{ color: '#4A5568', fontSize: '1rem', marginBottom: '20px', fontWeight: 900 }}>Multi-Level Security Evidence (Historical Registry)</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '30px' }}>
-                    {requests.filter(r => r.level_1_status !== 'Pending' || r.final_status !== 'Pending').slice(0, 4).map(r => (
-                        <div key={`hist-reg-${r.id}`} style={{ border: '1px solid #E2E8F0', borderRadius: '15px', overflow: 'hidden', background: '#ffffff', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
-                            <div style={{ padding: '15px 25px', background: '#F8FAF9', borderBottom: '1px solid #E2E8F0', fontWeight: 800, fontSize: '0.8rem', color: '#1A365D' }}>
-                                {r.type} ARCHIVE ID: {(r.id || '').substring(0, 6)}
-                            </div>
-                            <div style={{ padding: '25px' }}>
-                                {r.level_1_status !== 'Pending' && <ApprovalBadge data={{ ...r, approved_by_name: r.level_1_approver_name, approved_by_designation: r.level_1_designation, approved_by_dept: r.level_1_dept, approved_at: r.level_1_at, approval_remarks: r.level_1_remarks }} level="Level 1 Authority" />}
-                                {r.final_status !== 'Pending' && <ApprovalBadge data={{ ...r, approved_by_name: r.final_approver_name, approved_by_designation: r.final_designation, approved_by_dept: r.final_dept, approved_at: r.final_at, approval_remarks: r.final_remarks }} level="Final Board Sanction" />}
-                            </div>
-                        </div>
-                    ))}
-                </div>
+            <div className="content-panel">
+                <h4 style={{ marginBottom: '20px', color: '#2D3748' }}>Historical Leave Registry (Recent Activity)</h4>
+                <table className="data-table">
+                    <thead>
+                        <tr>
+                            <th>Personnel</th>
+                            <th>Leave Description</th>
+                            <th>Lifecycle Status</th>
+                            <th>Decision Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {historyReqs.slice(0, 10).map(r => (
+                            <tr key={r.id}>
+                                <td><strong>{r.requester}</strong></td>
+                                <td>{r.type} • {r.date}</td>
+                                <td><span className={`badge ${r.status === 'Approved' ? 'success' : 'red'}`}>{r.status}</span></td>
+                                <td>{r.status === 'Approved' ? 'Authorized' : 'Rejected'}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
             </div>
         </div>
     );
 };
 
-const CoAdminTab = ({ admins, onAdd, onDelete, onEdit, onManage }) => (
+const CoAdminTab = ({ admins, adminProfile, onAdd, onDelete, onEdit, onManage }) => (
     <div className="content-panel">
         <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px' }}>
             <h3>Administrative Control Board</h3>
@@ -4076,7 +4178,10 @@ const AdminForm = ({ onClose, onSave, admin, initialStep = 1 }) => {
             report_approval: existingPerms.perm_report_approval ?? false,
             vault_access: existingPerms.perm_vault_access ?? false,
             audit_logs: existingPerms.perm_audit_logs ?? false,
-            org_master: existingPerms.perm_org_master ?? false
+            org_master: existingPerms.perm_org_master ?? false,
+            perm_governance: existingPerms.perm_governance ?? false,
+            perm_compliance: existingPerms.perm_compliance ?? false,
+            fin_reports_auth: existingPerms.fin_reports_auth ?? false
         },
         salary_approval_limit: existingPerms.salary_approval_limit || 0,
         expenditure_limit: existingPerms.expenditure_limit || 0,
@@ -4175,13 +4280,13 @@ const AdminForm = ({ onClose, onSave, admin, initialStep = 1 }) => {
                 {step === 3 && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '25px' }}>
                         <div>
-                            <h5 style={{ marginBottom: '15px', color: 'var(--primary)', fontSize: '0.85rem', textTransform: 'uppercase' }}>HR & Payroll Tabs</h5>
+                            <h5 style={{ marginBottom: '15px', color: 'var(--primary)', fontSize: '0.85rem', textTransform: 'uppercase' }}>Core Governance & HR</h5>
                             {[
-                                ['view_employees', 'Staff Directory Tab'],
-                                ['edit_employees', 'Modify Personnel (Rights)'],
-                                ['approve_leaves', 'OPS Control (Leaves)'],
-                                ['process_salary', 'Payroll (Fund Access)'],
-                                ['bank_access', 'Banking / KYC Access']
+                                ['perm_governance', 'Policies & SOPs Tab'],
+                                ['perm_compliance', 'Board & Resolutions Tab'],
+                                ['view_employees', 'Employees / Staff Tab'],
+                                ['edit_employees', 'Modify Personnel (Edit Rights)'],
+                                ['volunteer_approval', 'Volunteers Management Tab']
                             ].map(([key, label]) => (
                                 <label key={key} style={{ display: 'flex', gap: '10px', marginBottom: '10px', fontSize: '0.85rem', cursor: 'pointer' }}>
                                     <input type="checkbox" name={`perm_${key}`} checked={formData.perms[key]} onChange={handleChange} style={{ width: '18px', height: '18px' }} /> {label}
@@ -4189,13 +4294,13 @@ const AdminForm = ({ onClose, onSave, admin, initialStep = 1 }) => {
                             ))}
                         </div>
                         <div>
-                            <h5 style={{ marginBottom: '15px', color: 'var(--primary)', fontSize: '0.85rem', textTransform: 'uppercase' }}>Programs & Ops Tabs</h5>
+                            <h5 style={{ marginBottom: '15px', color: 'var(--primary)', fontSize: '0.85rem', textTransform: 'uppercase' }}>Finance & Operations</h5>
                             {[
-                                ['volunteer_approval', 'Volunteers Tab'],
-                                ['scholarship_verify', 'Scholarships Tab'],
-                                ['student_mgmt', 'Registrations Tab'],
-                                ['report_approval', 'Field Reports Tab'],
-                                ['vault_access', 'Digital Filing Tab']
+                                ['process_salary', 'Salary Processing Tab'],
+                                ['fin_reports_auth', 'Expenses & Budget Tab'],
+                                ['scholarship_verify', 'Stipend / Scholarship Tab'],
+                                ['approve_leaves', 'Leave Approvals Tab'],
+                                ['vault_access', 'e-Office Vault Tab']
                             ].map(([key, label]) => (
                                 <label key={key} style={{ display: 'flex', gap: '10px', marginBottom: '10px', fontSize: '0.85rem', cursor: 'pointer' }}>
                                     <input type="checkbox" name={`perm_${key}`} checked={formData.perms[key]} onChange={handleChange} style={{ width: '18px', height: '18px' }} /> {label}
@@ -4203,11 +4308,13 @@ const AdminForm = ({ onClose, onSave, admin, initialStep = 1 }) => {
                             ))}
                         </div>
                         <div>
-                            <h5 style={{ marginBottom: '15px', color: 'var(--primary)', fontSize: '0.85rem', textTransform: 'uppercase' }}>Registry & System Tabs</h5>
+                            <h5 style={{ marginBottom: '15px', color: 'var(--primary)', fontSize: '0.85rem', textTransform: 'uppercase' }}>System & Registry</h5>
                             {[
-                                ['org_master', 'Organization Master Tab'],
-                                ['audit_logs', 'Audit Trail Tab'],
-                                ['manage_admins', 'Admin Management Tab']
+                                ['student_mgmt', 'Fellows / Students Tab'],
+                                ['report_approval', 'Reports & Analytics Tab'],
+                                ['audit_logs', 'Audit Trail & Logs Tab'],
+                                ['manage_admins', 'Roles & Permissions Tab'],
+                                ['org_master', 'System Lock / Unlock Tab']
                             ].map(([key, label]) => (
                                 <label key={key} style={{ display: 'flex', gap: '10px', marginBottom: '10px', fontSize: '0.85rem', cursor: 'pointer' }}>
                                     <input type="checkbox" name={`perm_${key}`} checked={formData.perms[key]} onChange={handleChange} style={{ width: '18px', height: '18px' }} /> {label}
@@ -4218,10 +4325,9 @@ const AdminForm = ({ onClose, onSave, admin, initialStep = 1 }) => {
                 )}
                 {step === 4 && (
                     <div className="form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                        <div className="form-group"><label>Salary Approval Limit (₹)</label><input className="form-control" name="salary_approval_limit" value={formData.salary_approval_limit} onChange={handleChange} type="number" placeholder="50000" /></div>
-                        <div className="form-group"><label>One-time Expenditure Limit (₹)</label><input className="form-control" name="expenditure_limit" value={formData.expenditure_limit} onChange={handleChange} type="number" placeholder="100000" /></div>
+                        <div className="form-group"><label>Salary Approval Limit (Rupees)</label><input className="form-control" name="salary_approval_limit" value={formData.salary_approval_limit} onChange={handleChange} type="number" placeholder="50000" /></div>
+                        <div className="form-group"><label>One-time Expenditure Limit (Rupees)</label><input className="form-control" name="expenditure_limit" value={formData.expenditure_limit} onChange={handleChange} type="number" placeholder="100000" /></div>
                         <div className="form-group"><label>Fund Utilization Approval</label><select className="form-control" name="fund_utilization_auth" value={formData.fund_utilization_auth ? 'Yes' : 'No'} onChange={(e) => setFormData(prev => ({ ...prev, fund_utilization_auth: e.target.value === 'Yes' }))}><option>No</option><option>Yes</option></select></div>
-                        <div className="form-group"><label>Financial Report Generation</label><select className="form-control" name="fin_reports_auth" value={formData.fin_reports_auth ? 'Yes' : 'No'} onChange={(e) => setFormData(prev => ({ ...prev, fin_reports_auth: e.target.value === 'Yes' }))}><option>No</option><option>Yes</option></select></div>
                         <div className="form-group"><label>Statutory Doc Management</label><select className="form-control" name="statutory_docs_auth" value={formData.statutory_docs_auth ? 'Yes' : 'No'} onChange={(e) => setFormData(prev => ({ ...prev, statutory_docs_auth: e.target.value === 'Yes' }))}><option>No</option><option>Yes</option></select></div>
                         <div className="form-group" style={{ gridColumn: 'span 1' }}><label>Authorization Type</label><select className="form-control"><option>Institutional Admin</option><option>Program Specific</option></select></div>
                         <div className="form-group" style={{ gridColumn: 'span 2' }}><label>Upload Authorization Appointment Letter (Signed PDF)</label><input className="form-control" type="file" disabled /></div>
@@ -4680,7 +4786,7 @@ const EmployeeDetailsView = ({ emp, onClose, onAction }) => {
                         <div style={{ height: '4px', flex: 1, background: '#F1F5F9' }}></div>
                     </div>
 
-                    <Field icon={<FaFileInvoiceDollar />} label="Monthly Retainer" value={`₹ ${details.salary_amount || 0}`} />
+                    <Field icon={<FaFileInvoiceDollar />} label="Monthly Retainer" value={"Rs. " + (details.salary_amount || 0)} />
                     <Field icon={<FaUniversity />} label="Institution" value={details.bank_name} />
                     <Field icon={<FaFingerprint />} label="IFSC Protocol" value={details.ifsc_code} />
                     <Field icon={<FaUniversity />} label="Account Ending" value={details.acc_number_encrypted || (details.acc_number ? '****' + String(details.acc_number).slice(-4) : '—')} />
@@ -4903,54 +5009,151 @@ const VolunteerDetailsView = ({ volunteer, onClose, onApprove, onReject }) => {
     );
 };
 
-const ReportForm = ({ onClose }) => {
-    const [formData, setFormData] = useState({ title: '', category: 'Impact', status: 'Draft' });
+const ReportForm = ({ onClose, postedBy, postedByName, onRefresh }) => {
+    const [formData, setFormData] = useState({ title: '', category: 'Impact', status: 'Draft', content: '' });
 
     const handleSave = async () => {
-        const { error } = await supabase.from('field_reports').insert([formData]);
+        if (!formData.title || !formData.content) {
+            alert('Please provide a title and report content.');
+            return;
+        }
+
+        const { error } = await supabase.from('field_reports').insert([{
+            ...formData,
+            posted_by: postedBy,
+            posted_by_name: postedByName
+        }]);
+
         if (!error) {
-            alert('Report Uploaded Successfully');
+            alert('Operational Report Filed Successfully');
+            if (onRefresh) onRefresh();
             onClose();
         } else {
-            alert('Failed to upload report');
+            alert('Failed to file report: ' + error.message);
         }
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <div style={{ padding: '30px 30px 0' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                    <h3>Upload Field Report</h3>
-                    <button className="btn-icon" onClick={onClose}>&times;</button>
+        <div className="modal-overlay">
+            <div className="modal-content" style={{ maxWidth: '600px', borderRadius: '30px', padding: 0 }}>
+                <div style={{ background: 'linear-gradient(135deg, #1A365D 0%, #2D3748 100%)', padding: '30px', color: 'white', borderTopLeftRadius: '30px', borderTopRightRadius: '30px' }}>
+                    <h3 style={{ margin: 0 }}>Create Institutional Report</h3>
+                    <p style={{ margin: '5px 0 0', opacity: 0.8, fontSize: '0.9rem' }}>Official mission reporting for {postedByName}</p>
+                </div>
+
+                <div style={{ padding: '30px' }}>
+                    <div className="form-group" style={{ marginBottom: '20px' }}>
+                        <label>Report Title</label>
+                        <input className="form-control" type="text" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} placeholder="e.g. Field Visit - Bihar Program" />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                        <div className="form-group">
+                            <label>Mission Category</label>
+                            <select className="form-control" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
+                                <option>Impact</option>
+                                <option>Financial</option>
+                                <option>Rehab</option>
+                                <option>Operational</option>
+                                <option>General</option>
+                            </select>
+                        </div>
+                        <div className="form-group">
+                            <label>Visibility Status</label>
+                            <select className="form-control" value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
+                                <option>Draft</option>
+                                <option>Public</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div className="form-group" style={{ marginBottom: '30px' }}>
+                        <label>Detailed Content / Briefing</label>
+                        <textarea className="form-control" rows="6" value={formData.content} onChange={e => setFormData({ ...formData, content: e.target.value })} placeholder="Provide detailed operational insights here..." style={{ resize: 'none' }}></textarea>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px' }}>
+                        <button className="btn-small" onClick={onClose} style={{ background: '#f1f5f9' }}>Discard</button>
+                        <button className="btn-premium" onClick={handleSave} style={{ background: '#1a365d' }}>
+                            <FaFileUpload /> Commit to Registry
+                        </button>
+                    </div>
                 </div>
             </div>
+        </div>
+    );
+};
 
-            <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', padding: '0 30px' }}>
-                <div className="form-group" style={{ marginBottom: '20px' }}>
-                    <label>Report Title</label>
-                    <input className="form-control" type="text" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} />
-                </div>
-                <div className="form-group" style={{ marginBottom: '20px' }}>
-                    <label>Category</label>
-                    <select className="form-control" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
-                        <option>Impact</option>
-                        <option>Financial</option>
-                        <option>Rehab</option>
-                        <option>General</option>
-                    </select>
-                </div>
-                <div className="form-group" style={{ marginBottom: '30px' }}>
-                    <label>Status</label>
-                    <select className="form-control" value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
-                        <option>Draft</option>
-                        <option>Public</option>
-                    </select>
-                </div>
-            </div>
+const LeaveRequestForm = ({ onClose, employeeId, employeeName, onRefresh }) => {
+    const [formData, setFormData] = useState({
+        leave_type: 'Casual Leave',
+        start_date: '',
+        end_date: '',
+        reason: '',
+        status: 'Pending'
+    });
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px', padding: '30px', borderTop: '1px solid #f1f5f9' }}>
-                <button className="btn-small" onClick={onClose}>Cancel</button>
-                <button className="btn-add" onClick={handleSave}><FaFileUpload /> Upload Report</button>
+    const handleSave = async () => {
+        if (!formData.start_date || !formData.reason) {
+            alert('Mandatory Fields: Date and Reason required.');
+            return;
+        }
+
+        const { error } = await supabase.from('leave_requests').insert([{
+            ...formData,
+            employee_id: employeeId
+        }]);
+
+        if (!error) {
+            alert('Leave Application Transmitted');
+            if (onRefresh) onRefresh();
+            onClose();
+        } else {
+            alert('Transmission Failed: ' + error.message);
+        }
+    };
+
+    return (
+        <div className="modal-overlay">
+            <div className="modal-content" style={{ maxWidth: '500px', borderRadius: '30px', padding: 0 }}>
+                <div style={{ background: 'linear-gradient(135deg, #3182CE 0%, #2B6CB0 100%)', padding: '30px', color: 'white', borderTopLeftRadius: '30px', borderTopRightRadius: '30px' }}>
+                    <h3 style={{ margin: 0 }}>Apply for Leave</h3>
+                    <p style={{ margin: '5px 0 0', opacity: 0.8, fontSize: '0.9rem' }}>Institutional Leave Registry | {employeeName}</p>
+                </div>
+
+                <div style={{ padding: '30px' }}>
+                    <div className="form-group" style={{ marginBottom: '20px' }}>
+                        <label>Type of Leave</label>
+                        <select className="form-control" value={formData.leave_type} onChange={e => setFormData({ ...formData, leave_type: e.target.value })}>
+                            <option>Casual Leave</option>
+                            <option>Medical Leave</option>
+                            <option>Earned Leave</option>
+                            <option>Official Duty</option>
+                            <option>Compensatory Off</option>
+                        </select>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                        <div className="form-group">
+                            <label>Commencement Date</label>
+                            <input type="date" className="form-control" value={formData.start_date} onChange={e => setFormData({ ...formData, start_date: e.target.value })} />
+                        </div>
+                        <div className="form-group">
+                            <label>Conclusion Date</label>
+                            <input type="date" className="form-control" value={formData.end_date} onChange={e => setFormData({ ...formData, end_date: e.target.value })} />
+                        </div>
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '30px' }}>
+                        <label>Institutional Justification / Remarks</label>
+                        <textarea className="form-control" rows="4" value={formData.reason} onChange={e => setFormData({ ...formData, reason: e.target.value })} placeholder="State the reason for this application..." style={{ resize: 'none' }}></textarea>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px' }}>
+                        <button className="btn-small" onClick={onClose} style={{ background: '#f1f5f9' }}>Cancel</button>
+                        <button className="btn-premium" onClick={handleSave} style={{ background: '#3182CE' }}>
+                            Transmit Request
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     );
@@ -5366,7 +5569,7 @@ const TaskDetailsView = ({ task, onClose, onApprove, onAction }) => {
                     <div style={{ marginTop: '40px', padding: '30px', background: '#EBF8FF', borderRadius: '20px', border: '2px solid #3182CE', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
                             <h4 style={{ margin: 0, color: '#2B6CB0' }}>Verification Command</h4>
-                            <p style={{ margin: '5px 0 0', color: '#4A5568', fontSize: '0.9rem' }}>Review the artifact and certify this activity for the volunteer's record.</p>
+                            <p style={{ margin: '5px 0 0', color: '#4A5568', fontSize: '0.9rem' }}>Review the artifact and certify this activity for the volunteers record.</p>
                         </div>
                         <div style={{ display: 'flex', gap: '15px' }}>
                             <button className="btn-add" onClick={onApprove}>Verify Mission</button>
@@ -5382,7 +5585,7 @@ const TaskDetailsView = ({ task, onClose, onApprove, onAction }) => {
     );
 };
 
-const GovernanceTab = ({ policies, boardMembers, meetings, onAddPolicy, onEditPolicy, onAddMeeting, onEditMeeting, onAddMember, onDeletePolicy, onDeleteMember, onDeleteMeeting, refreshData }) => {
+const GovernanceTab = ({ policies, boardMembers, meetings, approvalRequests, onAddPolicy, onEditPolicy, onAddMeeting, onEditMeeting, onAddMember, onDeletePolicy, onDeleteMember, onDeleteMeeting, onApprovalAction, refreshData }) => {
     const [subTab, setSubTab] = useState('policies');
 
     return (
@@ -5391,6 +5594,7 @@ const GovernanceTab = ({ policies, boardMembers, meetings, onAddPolicy, onEditPo
                 <button className={`btn-small ${subTab === 'policies' ? 'active' : ''}`} onClick={() => setSubTab('policies')} style={{ background: subTab === 'policies' ? '#1a237e' : 'transparent', color: subTab === 'policies' ? 'white' : '#64748b' }}>Current Policies</button>
                 <button className={`btn-small ${subTab === 'board' ? 'active' : ''}`} onClick={() => setSubTab('board')} style={{ background: subTab === 'board' ? '#1a237e' : 'transparent', color: subTab === 'board' ? 'white' : '#64748b' }}>Board Meetings</button>
                 <button className={`btn-small ${subTab === 'members' ? 'active' : ''}`} onClick={() => setSubTab('members')} style={{ background: subTab === 'members' ? '#1a237e' : 'transparent', color: subTab === 'members' ? 'white' : '#64748b' }}>Board Registry</button>
+                <button className={`btn-small ${subTab === 'approvals' ? 'active' : ''}`} onClick={() => setSubTab('approvals')} style={{ background: subTab === 'approvals' ? '#1a237e' : 'transparent', color: subTab === 'approvals' ? 'white' : '#64748b' }}>Workflow Registry</button>
             </div>
 
             {subTab === 'policies' && (
@@ -5473,6 +5677,63 @@ const GovernanceTab = ({ policies, boardMembers, meetings, onAddPolicy, onEditPo
                                     </td>
                                 </tr>
                             ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {subTab === 'approvals' && (
+                <div className="content-panel">
+                    <div className="panel-header" style={{ marginBottom: '20px' }}>
+                        <h3>Authority Approval Workflow Registry</h3>
+                        <p style={{ color: '#718096', fontSize: '0.85rem' }}>Review high-privilege requests from employee terminals (ID Replicas, Official Letters, etc.)</p>
+                    </div>
+                    <table className="data-table">
+                        <thead>
+                            <tr>
+                                <th>Transmission Ref</th>
+                                <th>Request Type</th>
+                                <th>Personnel</th>
+                                <th>Payload / Context</th>
+                                <th>Status</th>
+                                <th>Decision Board</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {(approvalRequests || []).length === 0 ? (
+                                <tr><td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: '#a0aec0' }}>Workflow registry is currently clear.</td></tr>
+                            ) : (
+                                approvalRequests.map(apr => (
+                                    <tr key={apr.id}>
+                                        <td><small>{apr.id.substring(0, 8)}</small></td>
+                                        <td><strong>{apr.type}</strong></td>
+                                        <td>{apr.profiles?.full_name || apr.requester_name || 'System User'}</td>
+                                        <td style={{ maxWidth: '250px' }}>
+                                            <div style={{ fontSize: '0.8rem', color: '#4a5568' }}>
+                                                {apr.details ? (typeof apr.details === 'string' ? apr.details : JSON.stringify(apr.details)) : 'No payload found'}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span className={`badge ${apr.final_status === 'Approved' ? 'success' : (apr.final_status === 'Declined' ? 'red' : 'blue')}`}>
+                                                {apr.final_status}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {apr.final_status === 'Pending' ? (
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <button className="btn-icon" title="Reject" onClick={() => {
+                                                        const r = prompt('State rejection grounds:');
+                                                        if (r) onApprovalAction('approval_request', apr.id, 'reject', r);
+                                                    }} style={{ color: '#E53E3E' }}><FaUserLock /></button>
+                                                    <button className="btn-icon" title="Authorize" onClick={() => onApprovalAction('approval_request', apr.id, 'approve')} style={{ color: '#3182CE' }}><FaCheckDouble /></button>
+                                                </div>
+                                            ) : (
+                                                <small style={{ color: '#718096' }}>Closed Archive</small>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>
@@ -6102,6 +6363,19 @@ const ComplianceTaskForm = ({ onClose, onSave }) => {
 const ComplianceTab = ({ docs, csr, tax, checklist, onAddDoc, onAddCsr, onAddTax, onAddCheck, onExport }) => {
     const [subTab, setSubTab] = useState('vault');
 
+    const handleMarkDone = async (id, taskName) => {
+        const { error } = await supabase
+            .from('compliance_checklists')
+            .update({ status: 'Completed', completed_at: new Date().toISOString() })
+            .eq('id', id);
+
+        if (!error) {
+            // refreshData();
+        } else {
+            alert('Status update failed: ' + error.message);
+        }
+    };
+
     return (
         <div style={{ animation: 'fadeIn 0.5s' }}>
             <div style={{ display: 'flex', gap: '20px', marginBottom: '30px', borderBottom: '1px solid #edf2f7', paddingBottom: '15px' }}>
@@ -6225,7 +6499,11 @@ const ComplianceTab = ({ docs, csr, tax, checklist, onAddDoc, onAddCsr, onAddTax
                                     <td><span className={`badge ${item.status === 'Completed' ? 'success' : (item.status === 'Overdue' ? 'red' : 'warning')}`}>{item.status}</span></td>
                                     <td><small>{item.law_reference}</small></td>
                                     <td>
-                                        <button className="btn-small success-btn">Mark Done</button>
+                                        {item.status !== 'Completed' ? (
+                                            <button className="btn-small success-btn" onClick={() => handleMarkDone(item.id, item.task_name)}>Mark Done</button>
+                                        ) : (
+                                            <span style={{ color: '#38A169', fontWeight: 800, fontSize: '0.75rem' }}>✓ COMPLETED</span>
+                                        )}
                                     </td>
                                 </tr>
                             )) : (
@@ -6432,6 +6710,158 @@ const GovernanceReports = ({ attendance, employees, payrollRecords, activityLogs
                             <p>Configure and generate the report to extract institutional intelligence.</p>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const ConnectivityMapTab = () => {
+    const steps = [
+        {
+            id: 1,
+            stage: 'Employee Portal',
+            action: 'Mark Daily Attendance',
+            actor: 'Field Personnel',
+            status: 'Self-Check In/Out',
+            icon: <FaFingerprint />,
+            color: '#3182CE',
+            details: 'Captures presence via Self-Attendance terminal. Records check-in, check-out, and GPS metadata.'
+        },
+        {
+            id: 2,
+            stage: 'Supervision',
+            action: 'Verification',
+            actor: 'Operations Manager',
+            status: 'Verified (Manager)',
+            icon: <FaUserCheck />,
+            color: '#805AD5',
+            details: 'Managers review daily logs, tasks reported, and check-in times to verify operational truth.'
+        },
+        {
+            id: 3,
+            stage: 'HR Audit',
+            action: 'Policy Compliance',
+            actor: 'HR Head',
+            status: 'HR Verified',
+            icon: <FaShieldAlt />,
+            color: '#38A169',
+            details: 'HR audits verified records against institutional policies and leave approvals.'
+        },
+        {
+            id: 4,
+            stage: 'Locking Phase',
+            action: 'Registry Lockdown',
+            actor: 'Admin / HR',
+            status: 'LOCKED',
+            icon: <FaLock />,
+            color: '#2D3748',
+            details: 'Data is finalized. Once locked, the day is immutable and ready for financial sequencing.'
+        },
+        {
+            id: 5,
+            stage: 'Finance Run',
+            action: 'Payroll Sequencing',
+            actor: 'Finance Executive',
+            status: 'Draft Generated',
+            icon: <FaCalculator />,
+            color: '#3182CE',
+            details: 'System pulls LOCKED attendance into Finance Terminal. Calculates basic, per-day deductions, and net pay.'
+        },
+        {
+            id: 6,
+            stage: 'Final Sanction',
+            action: 'Disbursement Order',
+            actor: 'Founder / Director',
+            status: 'Director Approved',
+            icon: <FaCheckDouble />,
+            color: '#D69E2E',
+            details: 'Director reviews the institutional payroll registry and provides the final signature for funds release.'
+        },
+        {
+            id: 7,
+            stage: 'Payment Loop',
+            action: 'Bank Posting',
+            actor: 'Finance Head',
+            status: 'Cycle Complete',
+            icon: <FaMoneyCheckAlt />,
+            color: '#38A169',
+            details: 'Funds disbursed via Bank Transfer. Payslip artifact is instantly available in Employee Personnel File.'
+        }
+    ];
+
+    return (
+        <div className="content-panel animate-fade-in" style={{ padding: '40px' }}>
+            <div style={{ textAlign: 'center', marginBottom: '50px' }}>
+                <h2 style={{ fontSize: '2.4rem', fontWeight: 900, color: '#1A365D', margin: '0' }}>System Connectivity Hub</h2>
+                <p style={{ color: '#718096', fontSize: '1.2rem', marginTop: '10px' }}>Architecture: The End-to-End Institutional Workflow (Attendance → Salary)</p>
+            </div>
+
+            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '30px', maxWidth: '900px', margin: '0 auto' }}>
+                {/* Visual Line */}
+                <div style={{ position: 'absolute', left: '40px', top: '20px', bottom: '20px', width: '4px', background: 'linear-gradient(to bottom, #E2E8F0, #CBD5E0, #E2E8F0)' }}></div>
+
+                {steps.map((step, index) => {
+                    return (
+                        <div key={step.id} style={{ display: 'flex', gap: '40px', position: 'relative' }}>
+                            <div style={{
+                                width: '80px',
+                                height: '80px',
+                                borderRadius: '24px',
+                                background: step.color,
+                                color: 'white',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '2rem',
+                                zIndex: 2,
+                                boxShadow: `0 8px 16px ${step.color}30`
+                            }}>
+                                {step.icon}
+                            </div>
+                            <div style={{
+                                flex: 1,
+                                padding: '30px',
+                                background: 'white',
+                                borderRadius: '24px',
+                                border: '1.5px solid #EDF2F7',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+                                transition: 'all 0.3s ease',
+                                cursor: 'default'
+                            }} className="hover-lift">
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                                    <div>
+                                        <span style={{ fontSize: '0.75rem', fontWeight: 900, color: step.color, textTransform: 'uppercase', letterSpacing: '1.5px' }}>{step.stage}</span>
+                                        <h3 style={{ margin: '5px 0 0', fontSize: '1.4rem', color: '#2D3748' }}>{step.action}</h3>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#4A5568' }}>{step.actor}</div>
+                                        <div className="badge" style={{ background: `${step.color}15`, color: step.color }}>{step.status}</div>
+                                    </div>
+                                </div>
+                                <p style={{ margin: 0, color: '#718096', lineHeight: '1.6', fontSize: '0.95rem' }}>{step.details}</p>
+
+                                <div style={{ marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #F1F5F9', display: 'flex', gap: '20px', fontSize: '0.75rem', fontWeight: 700, color: '#A0AEC0' }}>
+                                    <span>✔ Forensic Audit Enabled</span>
+                                    <span>✔ Multi-Stage Authorization</span>
+                                    <span>✔ DB Consistency Locked</span>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            <div style={{ marginTop: '60px', padding: '40px', background: 'linear-gradient(135deg, #1A365D 0%, #2D3748 100%)', borderRadius: '30px', color: 'white', textAlign: 'center' }}>
+                <h3 style={{ fontSize: '1.8rem', marginBottom: '15px' }}>Real-Time Data Integrity</h3>
+                <p style={{ opacity: 0.8, maxWidth: '700px', margin: '0 auto 30px', lineHeight: '1.7' }}>
+                    Both Admin and Employee panels operate on the SAME source of truth. When an action is taken by anyone in the chain,
+                    the status propagates instantly across the entire foundations e-office ecosystem.
+                </p>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '40px' }}>
+                    <div><div style={{ fontSize: '2rem', fontWeight: 900 }}>100%</div><div style={{ opacity: 0.6, fontSize: '0.8rem' }}>Audit Traceability</div></div>
+                    <div><div style={{ fontSize: '2rem', fontWeight: 900 }}>Zero</div><div style={{ opacity: 0.6, fontSize: '0.8rem' }}>Data Redundancy</div></div>
+                    <div><div style={{ fontSize: '2rem', fontWeight: 900 }}>Live</div><div style={{ opacity: 0.6, fontSize: '0.8rem' }}>Sync Speed</div></div>
                 </div>
             </div>
         </div>

@@ -5,7 +5,7 @@ import {
     FaClock, FaCheckCircle, FaExclamationCircle, FaDownload, FaFileUpload, FaPlus,
     FaUserCircle, FaEdit, FaFileSignature, FaIdCard, FaPlane, FaEnvelopeOpenText,
     FaDatabase, FaUserPlus, FaHandsHelping, FaGraduationCap, FaUniversity, FaBriefcase, FaUserLock, FaMapMarkerAlt, FaPhone,
-    FaHeartbeat, FaBalanceScale, FaUserShield
+    FaHeartbeat, FaBalanceScale, FaUserShield, FaGavel, FaLock
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import '../Dashboard/Dashboard.css';
@@ -85,15 +85,16 @@ const EmployeeDashboard = () => {
                 const { data: fieldReports } = await supabase
                     .from('field_reports')
                     .select('*')
-                    .eq('employee_id', emp.id)
+                    .eq('posted_by', user.id)
                     .order('created_at', { ascending: false });
 
                 if (fieldReports) {
                     setReports(fieldReports.map(r => ({
                         id: r.id,
                         date: new Date(r.created_at).toLocaleDateString(),
-                        task: r.report_title || 'Field Report',
-                        status: 'Submitted'
+                        title: r.title,
+                        task: r.content,
+                        status: r.status || 'Submitted'
                     })));
                 }
 
@@ -103,23 +104,26 @@ const EmployeeDashboard = () => {
                 const todayStr = today.toISOString().split('T')[0];
 
                 const { data: attendanceLogs } = await supabase
-                    .from('attendance_logs')
+                    .from('attendance')
                     .select('*')
                     .eq('employee_id', emp.id)
-                    .gte('date', startOfMonth);
+                    .gte('attendance_date', startOfMonth);
 
                 let markedToday = false;
                 let presentDays = 0;
                 let history = Array.from({ length: 31 }, (_, i) => ({ day: i + 1, status: 'none' }));
 
                 if (attendanceLogs) {
-                    presentDays = attendanceLogs.length;
-                    markedToday = attendanceLogs.some(log => log.date === todayStr);
+                    presentDays = attendanceLogs.filter(log => log.status === 'Present').length;
+                    markedToday = attendanceLogs.some(log => log.attendance_date === todayStr);
 
                     history = history.map(d => {
-                        // Safe date parsing (YYYY-MM-DD -> DD)
-                        const isPresent = attendanceLogs.some(log => parseInt(log.date.split('-')[2]) === d.day);
-                        return { ...d, status: isPresent ? 'present' : 'none' };
+                        const log = attendanceLogs.find(l => parseInt(l.attendance_date.split('-')[2]) === d.day);
+                        return {
+                            ...d,
+                            status: log ? (log.status === 'Present' ? 'present' : 'absent') : 'none',
+                            isLocked: log?.is_locked || false
+                        };
                     });
                 }
 
@@ -132,20 +136,19 @@ const EmployeeDashboard = () => {
                     history
                 });
 
-                // Fetch Salary Slips (Finance Logs)
+                // Fetch Salary Slips (Payroll Records)
                 const { data: salaryData } = await supabase
-                    .from('finance_logs')
+                    .from('payroll_records')
                     .select('*')
-                    .eq('type', 'Payroll') // Assuming 'Payroll' logs are salary slips
-                    //.eq('reference_id', emp.id) // Uncomment if reference_id links to employee
-                    .order('transaction_date', { ascending: false });
+                    .eq('employee_id', emp.id)
+                    .order('created_at', { ascending: false });
 
                 if (salaryData) {
-                    // Filter locally if needed or rely on RLS/Specific Query
                     setSalarySlips(salaryData.map(s => ({
                         id: s.id,
-                        cycle: `${new Date(s.transaction_date).toLocaleString('default', { month: 'short', year: 'numeric' })} Cycle`,
-                        amount: s.amount
+                        cycle: s.month,
+                        amount: s.net_salary,
+                        status: s.status
                     })));
                 }
             }
@@ -178,10 +181,10 @@ const EmployeeDashboard = () => {
             try {
                 const todayStr = new Date().toISOString().split('T')[0];
                 const { error } = await supabase
-                    .from('attendance_logs')
+                    .from('attendance')
                     .insert([{
                         employee_id: employeeData.id,
-                        date: todayStr,
+                        attendance_date: todayStr,
                         status: 'Present'
                     }]);
 
@@ -194,6 +197,28 @@ const EmployeeDashboard = () => {
                 console.error('Attendance Error:', err);
                 alert('Failed to mark attendance. You may have already marked it today.');
             }
+        }
+    };
+
+    const submitGeneralRequest = async (type, details) => {
+        if (!employeeData) return;
+        setLoading(true);
+        try {
+            const { error } = await supabase.from('approval_requests').insert([{
+                type: type,
+                initiated_by: employeeData.user_id,
+                details: details,
+                level_1_status: 'Pending',
+                final_status: 'Pending'
+            }]);
+
+            if (error) throw error;
+            alert(`${type} Transmitted to Registry HQ Successfully.`);
+        } catch (err) {
+            console.error('Request Error:', err);
+            alert('Failed to transmit request: ' + err.message);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -222,17 +247,31 @@ const EmployeeDashboard = () => {
         }
     };
 
-    const submitReport = (e) => {
+    const submitReport = async (e) => {
         e.preventDefault();
-        const taskText = e.target.task.value;
-        const newReport = {
-            id: Date.now(),
-            date: new Date().toLocaleDateString('en-GB', { day: '2d', month: 'short', year: 'numeric' }),
-            task: taskText,
-            status: 'Pending'
-        };
-        setReports([newReport, ...reports]);
-        setIsModalOpen(false);
+        const formData = new FormData(e.target);
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            const { error } = await supabase
+                .from('field_reports')
+                .insert([{
+                    title: formData.get('title'),
+                    category: formData.get('category'),
+                    content: formData.get('content'),
+                    posted_by: user.id,
+                    status: 'Submitted'
+                }]);
+
+            if (error) throw error;
+
+            alert('Mission Report Logged Successfully');
+            setIsModalOpen(false);
+            fetchEmployeeDetails();
+        } catch (err) {
+            console.error('Report submission error:', err);
+            alert('Failed to log report. Please check your connection.');
+        }
     };
 
     const menuItems = [
@@ -254,11 +293,12 @@ const EmployeeDashboard = () => {
             case 'profile': return <ProfileTab data={employeeData} />;
             case 'reports': return <ReportsTab reports={reports} onAddNew={() => { setModalType('report'); setIsModalOpen(true); }} />;
             case 'attendance': return <AttendanceTab attendance={attendance} salarySlips={salarySlips} onMark={markAttendance} />;
-            case 'data-entry': return <DataEntryTab />;
+            case 'data-entry': return <DataEntryTab onOpenTerminal={(type) => { setModalType(type); setIsModalOpen(true); }} />;
             case 'benefits': return <BenefitsTab requests={requests} onApply={(type) => { setModalType(type); setIsModalOpen(true); }} />;
-            case 'official': return <OfficialLettersTab requests={[]} />;
-            case 'id-card': return <IDCardTab />;
+            case 'official': return <OfficialLettersTab onSubmit={(details) => submitGeneralRequest('Credentialing Authorization', details)} />;
+            case 'id-card': return <IDCardTab onReplicaRequest={() => submitGeneralRequest('ID Card Replication', { reason: 'Hardware Damaged', requested_at: new Date().toISOString() })} />;
             case 'policies': return <EmployeePoliciesTab />;
+            case 'scholarship-form': return <ScholarshipForm onClose={() => setIsModalOpen(false)} onRefresh={fetchEmployeeDetails} />;
             default: return <ProfileTab data={employeeData} />;
         }
     };
@@ -281,6 +321,12 @@ const EmployeeDashboard = () => {
             </div>
 
             <div className="main-content">
+                <marquee behavior="alternate" style={{ background: '#fffaf0', color: '#b7791f', padding: '10px 0', fontSize: '0.9rem', fontWeight: 'bold' }}>
+                    🕘 Employees must mark daily attendance before 10:00 AM | Attendance is linked to salary processing.
+                </marquee>
+                <marquee direction="right" style={{ background: '#f8fafc', color: '#1a365d', padding: '5px 0', fontSize: '0.85rem', fontWeight: 'bold', borderBottom: '1px solid #e2e8f0' }}>
+                    📄 Attendance once locked cannot be edited without Director approval.
+                </marquee>
                 <div className="dash-header">
                     <div className="header-title">
                         <h2>{menuItems.find(i => i.id === activeTab)?.label}</h2>
@@ -309,12 +355,40 @@ const EmployeeDashboard = () => {
                 <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
                     <div className="modal-content" onClick={e => e.stopPropagation()}>
                         <div style={{ padding: '30px' }}>
+                            {modalType === 'scholarship' && (
+                                <ScholarshipForm
+                                    onClose={() => setIsModalOpen(false)}
+                                    onRefresh={() => {
+                                        fetchEmployeeDetails();
+                                        setIsModalOpen(false);
+                                    }}
+                                />
+                            )}
                             {modalType === 'report' && (
                                 <form onSubmit={submitReport}>
                                     <h3 style={{ marginBottom: '20px' }}>Log Operation Activity</h3>
-                                    <div className="form-group" style={{ marginBottom: '20px' }}>
-                                        <textarea name="task" rows="5" className="form-control" style={{ width: '100%', padding: '15px', borderRadius: '10px', border: '1px solid #e2e8f0' }} placeholder="Detail your field work or beneficiary interaction..."></textarea>
+
+                                    <div className="form-group" style={{ marginBottom: '15px' }}>
+                                        <label>Report Title</label>
+                                        <input name="title" className="form-control" style={{ width: '100%', padding: '12px' }} placeholder="Summary of activity..." required />
                                     </div>
+
+                                    <div className="form-group" style={{ marginBottom: '15px' }}>
+                                        <label>Mission Category</label>
+                                        <select name="category" className="form-control" style={{ width: '100%', padding: '12px' }}>
+                                            <option>Education</option>
+                                            <option>Healthcare</option>
+                                            <option>Disaster Relief</option>
+                                            <option>Community Outreach</option>
+                                            <option>Administrative</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="form-group" style={{ marginBottom: '20px' }}>
+                                        <label>Substantive Content</label>
+                                        <textarea name="content" rows="5" className="form-control" style={{ width: '100%', padding: '15px', borderRadius: '10px', border: '1px solid #e2e8f0' }} placeholder="Detail your field work or beneficiary interaction..."></textarea>
+                                    </div>
+
                                     <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
                                         <button type="button" className="btn-small" onClick={() => setIsModalOpen(false)}>Cancel</button>
                                         <button type="submit" className="btn-add">Log Entry</button>
@@ -375,7 +449,7 @@ const ProfileTab = ({ data }) => (
         <div className="content-panel">
             <div style={{ display: 'flex', gap: '40px', alignItems: 'flex-start' }}>
                 <div className="profile-large-avatar" style={{ width: '140px', height: '140px', background: 'var(--primary)', color: 'white', borderRadius: '25px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3.5rem', fontWeight: '800' }}>
-                    VK
+                    {data.full_name.split(' ').map(n => n[0]).join('')}
                 </div>
                 <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
@@ -496,7 +570,10 @@ const ReportsTab = ({ reports, onAddNew }) => (
                 {reports.map((r) => (
                     <tr key={r.id}>
                         <td>{r.date}</td>
-                        <td style={{ fontWeight: '500' }}>{r.task}</td>
+                        <td>
+                            <div style={{ fontWeight: '600', color: 'var(--primary)' }}>{r.title}</div>
+                            <div style={{ fontSize: '0.85rem', color: '#666' }}>{r.task}</div>
+                        </td>
                         <td>
                             <span className={`badge ${r.status === 'Approved' ? 'success' : 'pending'}`}>
                                 {r.status === 'Approved' ? <FaCheckCircle /> : <FaClock />} {r.status}
@@ -525,8 +602,19 @@ const AttendanceTab = ({ attendance, salarySlips, onMark }) => (
                 </div>
                 <div className="mock-calendar-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '10px' }}>
                     {attendance.history.map(day => (
-                        <div key={day.day} style={{ padding: '15px', textAlign: 'center', borderRadius: '10px', background: day.status === 'present' ? '#e6fffa' : '#f7fafc', color: day.status === 'present' ? '#2c7a7b' : '#a0aec0', border: day.status === 'present' ? '1px solid #b2f5ea' : '1px solid #edf2f7', fontWeight: 'bold' }}>
+                        <div key={day.day} style={{
+                            padding: '15px',
+                            textAlign: 'center',
+                            borderRadius: '10px',
+                            background: day.status === 'present' ? '#e6fffa' : '#f7fafc',
+                            color: day.status === 'present' ? '#2c7a7b' : '#a0aec0',
+                            border: day.status === 'present' ? '1px solid #b2f5ea' : '1px solid #edf2f7',
+                            fontWeight: 'bold',
+                            position: 'relative',
+                            opacity: day.isLocked ? 0.8 : 1
+                        }}>
                             {day.day}
+                            {day.isLocked && <FaLock style={{ position: 'absolute', top: '5px', right: '5px', fontSize: '0.6rem', color: '#718096' }} title="Record Locked" />}
                         </div>
                     ))}
                 </div>
@@ -537,8 +625,8 @@ const AttendanceTab = ({ attendance, salarySlips, onMark }) => (
                     {salarySlips.length > 0 ? (
                         salarySlips.map(slip => (
                             <div key={slip.id} className="slip-item" style={{ display: 'flex', justifyContent: 'space-between', padding: '15px', border: '1px solid #eee', borderRadius: '12px', background: 'white' }}>
-                                <div><strong>{slip.cycle}</strong><br /><small style={{ color: 'green' }}>₹ {Number(slip.amount).toLocaleString()} Disbursed</small></div>
-                                <button className="btn-icon"><FaDownload /></button>
+                                <div><strong>{slip.cycle}</strong><br /><small style={{ color: 'green' }}>₹ {Number(slip.amount).toLocaleString()} • {slip.status}</small></div>
+                                <button className="btn-icon" onClick={() => alert(`Generating Secure PDF for ${slip.cycle}...`)}><FaDownload /></button>
                             </div>
                         ))
                     ) : (
@@ -550,18 +638,87 @@ const AttendanceTab = ({ attendance, salarySlips, onMark }) => (
     </>
 );
 
-const DataEntryTab = () => (
+const DataEntryTab = ({ onOpenTerminal }) => (
     <div className="content-panel">
         <h3 style={{ marginBottom: '30px' }}>Digital Field Data Terminals</h3>
         <div className="data-entry-options" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
             <div className="folder-vox" style={{ padding: '30px', border: '1px solid #edf2f7', borderRadius: '20px', textAlign: 'center', cursor: 'pointer', background: '#fcfcfc' }}>
                 <FaGraduationCap style={{ fontSize: '3rem', color: 'var(--primary)', marginBottom: '15px' }} />
                 <h4>Scholarship Registry</h4>
-                <button className="btn-add" style={{ margin: '20px auto' }}><FaPlus /> Open Terminal</button>
+                <button className="btn-add" style={{ margin: '20px auto' }} onClick={() => onOpenTerminal('scholarship')}><FaPlus /> Open Terminal</button>
             </div>
         </div>
     </div>
 );
+
+const ScholarshipForm = ({ onClose, onRefresh }) => {
+    const [loading, setLoading] = useState(false);
+    const [formData, setFormData] = useState({
+        applicant_name: '',
+        academic_score: '',
+        income_status: '',
+        college_name: '',
+        application_id: 'SCH-' + Math.floor(1000 + Math.random() * 9000),
+        status: 'Awaiting Approval'
+    });
+
+    const handleSave = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            const { error } = await supabase.from('scholarships').insert([formData]);
+            if (error) throw error;
+            alert('Scholarship Application Registered Successfully');
+            if (onRefresh) onRefresh();
+        } catch (err) {
+            console.error('Save Error:', err);
+            alert('Failed to save application: ' + err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <form onSubmit={handleSave}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+                <h3 style={{ margin: 0 }}>Scholarship Registry Entry</h3>
+                <span className="badge blue" style={{ padding: '8px 15px' }}>Ref: {formData.application_id}</span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                <div className="form-group">
+                    <label>Applicant Full Name</label>
+                    <input className="form-control" value={formData.applicant_name} onChange={e => setFormData({ ...formData, applicant_name: e.target.value })} required />
+                </div>
+                <div className="form-group">
+                    <label>Academic Score / CGPA</label>
+                    <input className="form-control" value={formData.academic_score} onChange={e => setFormData({ ...formData, academic_score: e.target.value })} placeholder="e.g. 85% or 8.5" required />
+                </div>
+                <div className="form-group">
+                    <label>Annual Family Income Status</label>
+                    <select className="form-control" value={formData.income_status} onChange={e => setFormData({ ...formData, income_status: e.target.value })} required>
+                        <option value="">Select Category</option>
+                        <option value="Below 1 Lakh">Below 1 Lakh</option>
+                        <option value="1-3 Lakhs">1-3 Lakhs</option>
+                        <option value="3-5 Lakhs">3-5 Lakhs</option>
+                        <option value="Above 5 Lakhs">Above 5 Lakhs</option>
+                    </select>
+                </div>
+                <div className="form-group">
+                    <label>Current Institution / College</label>
+                    <input className="form-control" value={formData.college_name} onChange={e => setFormData({ ...formData, college_name: e.target.value })} required />
+                </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end', marginTop: '30px' }}>
+                <button type="button" className="btn-small" onClick={onClose} disabled={loading}>Cancel</button>
+                <button type="submit" className="btn-add" disabled={loading}>
+                    {loading ? 'Transmitting...' : 'Register Application'}
+                </button>
+            </div>
+        </form>
+    );
+};
 
 const BenefitsTab = ({ requests, onApply }) => (
     <>
@@ -588,29 +745,23 @@ const BenefitsTab = ({ requests, onApply }) => (
     </>
 );
 
-const OfficialLettersTab = ({ requests }) => (
+const OfficialLettersTab = ({ onSubmit }) => (
     <div className="content-panel">
         <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px' }}>
             <h3>Credentialing & Authorizations</h3>
-            <button className="btn-small">Request Authorization</button>
+            <button className="btn-small" onClick={() => {
+                const subject = prompt('State the Subject/Purpose of Authorization:');
+                if (subject) onSubmit({ subject, requested_at: new Date().toISOString() });
+            }}>Request Authorization</button>
         </div>
-        <table className="data-table">
-            <thead><tr><th>Authorization Ref</th><th>Transmission Date</th><th>Status</th><th>Inspect</th></tr></thead>
-            <tbody>
-                {requests.map(r => (
-                    <tr key={r.id}>
-                        <td><strong>{r.title}</strong></td>
-                        <td>{r.date}</td>
-                        <td><span className="badge success">Verified</span></td>
-                        <td><button className="btn-icon"><FaFileSignature /></button></td>
-                    </tr>
-                ))}
-            </tbody>
-        </table>
+        <div style={{ textAlign: 'center', padding: '40px', background: '#f8fafc', borderRadius: '15px' }}>
+            <FaEnvelopeOpenText style={{ fontSize: '3rem', color: '#cbd5e0', marginBottom: '15px' }} />
+            <p style={{ color: '#718096' }}>Requests submitted here are routed to the Admin HQ for formal credentialing. Once signed, they will appear in your Digital Vault.</p>
+        </div>
     </div>
 );
 
-const IDCardTab = () => (
+const IDCardTab = ({ onReplicaRequest }) => (
     <div className="content-panel" style={{ maxWidth: '650px', margin: '0 auto' }}>
         <h3 className="text-center">Official Foundation Identity</h3>
         <div style={{ padding: '40px', border: '1px solid #edf2f7', borderRadius: '25px', marginTop: '30px', background: '#f8fafc' }}>
@@ -619,7 +770,13 @@ const IDCardTab = () => (
                 <div><h4 style={{ margin: 0, fontSize: '1.25rem' }}>Active Artifact Found</h4><p style={{ margin: 0, color: '#666' }}>Credential Ref: BCLL-ID-2024-X</p></div>
             </div>
             <p style={{ color: '#4a5568', lineHeight: '1.6' }}>Your digital identity is verified for field use. If physical hardware is damaged, initiate a replication request below.</p>
-            <div style={{ display: 'flex', gap: '20px', marginTop: '40px' }}><button className="btn-add full-width">Request Replica</button></div>
+            <div style={{ display: 'flex', gap: '20px', marginTop: '40px' }}>
+                <button className="btn-add full-width" onClick={() => {
+                    if (window.confirm("Verify: Requesting a physical hardware replica requires Director approval. Proceed?")) {
+                        onReplicaRequest();
+                    }
+                }}>Request Replica</button>
+            </div>
         </div>
     </div>
 );

@@ -70,6 +70,13 @@ const Home = () => {
                     </div>
                 </section>
 
+                <marquee style={{ background: '#1a365d', color: 'white', padding: '10px 0', fontSize: '1rem', fontWeight: 'bold' }}>
+                    🌍 Bharath Cares Life Line Foundation – Working towards a society without begging through rehabilitation, education & employment.
+                </marquee>
+                <marquee behavior="alternate" style={{ background: '#f8fafc', color: '#1a365d', padding: '5px 0', fontSize: '0.9rem', fontWeight: 'bold', borderBottom: '1px solid #e2e8f0' }}>
+                    🤝 Transparency | Accountability | Social Impact | Dignity for All
+                </marquee>
+
                 {/* Who We Are Section - Visual Update */}
                 <section className="section intro-section">
                     <div className="container">
@@ -517,10 +524,10 @@ const Home = () => {
                             />
                         </div>
                     </div>
-                </section >
+                </section>
 
                 {/* Trust Section */}
-                < section className="section trust-section" >
+                <section className="section trust-section">
                     <div className="container text-center">
                         <h2 className="section-title">Trust & Transparency</h2>
                         <div className="trust-grid">
@@ -558,6 +565,16 @@ const Home = () => {
                         </div>
                     </div>
                 </section>
+
+                <marquee style={{ background: '#1A365D', color: 'white', padding: '12px 0', fontSize: '1rem', fontWeight: 'bold' }}>
+                    📊 Thousands of lives impacted through food drives, scholarships, health camps & rehabilitation programs.
+                </marquee>
+                <marquee behavior="alternate" style={{ background: '#f8fafc', color: '#1A365D', padding: '8px 0', fontSize: '0.9rem', fontWeight: 'bold', borderTop: '1px solid #e2e8f0' }}>
+                    ❤️ Donate | Volunteer | Partner | Transform Lives
+                </marquee>
+                <marquee style={{ background: '#2C5282', color: 'white', padding: '10px 0', fontSize: '0.95rem', fontWeight: 'bold' }}>
+                    🏛️ CSR & Government collaboration welcome | Fully compliant with NGO audit & reporting norms.
+                </marquee>
             </div>
         </>
     );

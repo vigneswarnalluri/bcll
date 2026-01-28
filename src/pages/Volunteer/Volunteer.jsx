@@ -87,6 +87,13 @@ const Volunteer = () => {
                 </div>
             </div>
 
+            <marquee style={{ background: '#1a365d', color: 'white', padding: '10px 0', fontSize: '1rem', fontWeight: 'bold' }}>
+                👐 Volunteers are the backbone of our mission | Certificates issued only for verified service.
+            </marquee>
+            <marquee direction="right" style={{ background: '#f8fafc', color: '#1a365d', padding: '5px 0', fontSize: '0.9rem', fontWeight: 'bold', borderBottom: '1px solid #e2e8f0' }}>
+                📸 Upload valid work proof to receive volunteer recognition certificates.
+            </marquee>
+
             <div className="container section">
                 <div className="volunteer-layout">
 
