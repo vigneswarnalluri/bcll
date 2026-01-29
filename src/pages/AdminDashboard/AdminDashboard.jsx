@@ -1670,7 +1670,7 @@ const AdminDashboard = () => {
                                         mobile: newAdm.mobile,
                                         dob: newAdm.dob,
                                         emergency: newAdm.emergency,
-                                        username: newAdm.username,
+                                        username: newAdm.username?.trim() || null, // Convert empty to null for UNIQUE constraint
                                         user_id: newAdm.user_id || linkedAuthId // Use the Auth ID
                                     };
 
