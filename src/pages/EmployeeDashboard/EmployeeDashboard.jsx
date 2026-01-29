@@ -832,7 +832,8 @@ const UpdateCredentialsForm = ({ data, onClose, onRefresh }) => {
         emergency_mobile: data.emergency_mobile || '',
         blood_group: data.blood_group || 'O+',
         marital_status: data.marital_status || 'Single',
-        email: data.email || ''
+        email: data.email || '',
+        dob: data.dob || ''
     });
 
     const handleSave = async (e) => {
@@ -850,7 +851,11 @@ const UpdateCredentialsForm = ({ data, onClose, onRefresh }) => {
             if (data.user_id) {
                 await supabase
                     .from('profiles')
-                    .update({ email: formData.email, full_name: formData.full_name })
+                    .update({
+                        email: formData.email,
+                        full_name: formData.full_name,
+                        dob: formData.dob
+                    })
                     .eq('user_id', data.user_id);
             }
 
@@ -896,6 +901,10 @@ const UpdateCredentialsForm = ({ data, onClose, onRefresh }) => {
                     <select className="form-control" value={formData.marital_status} onChange={e => setFormData({ ...formData, marital_status: e.target.value })}>
                         <option>Single</option><option>Married</option><option>Divorced</option>
                     </select>
+                </div>
+                <div className="form-group">
+                    <label>Date of Birth</label>
+                    <input className="form-control" type="date" value={formData.dob} onChange={e => setFormData({ ...formData, dob: e.target.value })} required />
                 </div>
             </div>
 
