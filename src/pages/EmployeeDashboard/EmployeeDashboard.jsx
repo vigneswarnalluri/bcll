@@ -331,7 +331,7 @@ const EmployeeDashboard = () => {
             await fetchEmployeeDetails();
         } catch (err) {
             console.error('Vault Error:', err);
-            alert('Failed to vault artifact: ' + err.message);
+            alert(`Failed to vault artifact: ${err.message || 'Unknown error'}`);
         } finally {
             setLoading(false);
         }

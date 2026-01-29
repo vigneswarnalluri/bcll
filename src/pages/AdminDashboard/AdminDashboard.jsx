@@ -9,7 +9,7 @@ import {
     FaDownload, FaUserTie, FaFileContract, FaHandshake, FaRegIdCard, FaEnvelope,
     FaBuilding, FaGavel, FaUserTimes, FaClock, FaFingerprint, FaSearch,
     FaBalanceScaleLeft, FaCalendarAlt, FaCalendarCheck, FaHistory as FaAuditIcon, FaCheckDouble, FaSignature, FaLock, FaInfoCircle,
-    FaChartPie, FaFileDownload, FaTable, FaFilePdf, FaFileExcel, FaMoneyCheckAlt, FaCalculator, FaShareAlt
+    FaChartPie, FaFileDownload, FaTable, FaFilePdf, FaFileExcel, FaMoneyCheckAlt, FaCalculator, FaShareAlt, FaCloudUploadAlt
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { PROGRAM_TRACKS, COLLEGES } from '../../data/fellowshipOptions';
@@ -488,7 +488,13 @@ const AdminDashboard = () => {
 
             if (vt.data) setVolunteerTasks(vt.data);
 
-            if (e.data) setEmployees(e.data);
+            if (e.data) {
+                setEmployees(e.data);
+                if (selectedEmployee) {
+                    const updated = e.data.find(emp => emp.id === selectedEmployee.id);
+                    if (updated) setSelectedEmployee(updated);
+                }
+            }
             if (v.data) setVolunteers(v.data);
             if (s.data) setStudents(s.data);
             if (sc.data) setScholarships(sc.data);
@@ -775,6 +781,9 @@ const AdminDashboard = () => {
                 ...getApprovalSignature(reason)
             };
             setRequests(prev => prev.map(r => r.id === id ? { ...r, status: updateData.status, ...updateData } : r));
+        } else if (action === 'refresh') {
+            fetchDashboardData();
+            return;
         } else if (type === 'employee') {
             table = 'employees';
             const empRecord = employees.find(e => e.id === id);
@@ -4808,7 +4817,79 @@ const EmployeeDetailsView = ({ emp, onClose, onAction }) => {
                     <Field icon={<FaPhone />} label="Kin Hotline" value={details.emergency_mobile} color="#E53E3E" />
                     <Field icon={<FaGavel />} label="Policy Governance" value={details.signed_policy ? 'VERIFIED' : 'PENDING'} />
                     <Field icon={<FaUserCheck />} label="Security clearance" value="GRANTED" />
+
+                    {/* DIGITAL DOCUMENT VAULT (ADMIN VIEW) */}
+                    <div style={{ gridColumn: 'span 4', display: 'flex', alignItems: 'center', gap: '20px', margin: '40px 0 10px' }}>
+                        <div style={{ height: '4px', flex: 1, background: '#F1F5F9' }}></div>
+                        <h4 style={{ textTransform: 'uppercase', letterSpacing: '4px', color: '#94A3B8', fontWeight: '900', fontSize: '0.9rem' }}>Category 8: Digital Document Vault</h4>
+                        <div style={{ height: '4px', flex: 1, background: '#F1F5F9' }}></div>
+                    </div>
+
+                    <div style={{ gridColumn: 'span 4', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
+                        <AdminDocCard title="ID Card" icon={<FaIdCard />} url={details.doc_id_card} type="id_card" empId={details.id} onRefresh={() => onAction('refresh')} />
+                        <AdminDocCard title="Appt. Letter" icon={<FaFileSignature />} url={details.doc_appointment_letter} type="appt_letter" empId={details.id} onRefresh={() => onAction('refresh')} />
+                        <AdminDocCard title="Bank Passbook" icon={<FaUniversity />} url={details.doc_bank_passbook} type="bank_passbook" empId={details.id} onRefresh={() => onAction('refresh')} />
+                        <AdminDocCard title="Education" icon={<FaGraduationCap />} url={details.doc_education_certs} type="edu_certs" empId={details.id} onRefresh={() => onAction('refresh')} />
+                    </div>
                 </div>
+            </div>
+        </div>
+    );
+};
+
+const AdminDocCard = ({ title, icon, url, type, empId, onRefresh }) => {
+    const handleUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${empId}/admin_${type}_${Date.now()}.${fileExt}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('employee-docs')
+                .upload(fileName, file);
+
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('employee-docs')
+                .getPublicUrl(fileName);
+
+            const columnMap = {
+                'id_card': 'doc_id_card',
+                'appt_letter': 'doc_appointment_letter',
+                'bank_passbook': 'doc_bank_passbook',
+                'edu_certs': 'doc_education_certs'
+            };
+
+            const { error: updateError } = await supabase
+                .from('employees')
+                .update({ [columnMap[type]]: publicUrl })
+                .eq('id', empId);
+
+            if (updateError) throw updateError;
+            alert('Document Vaulted Successfully by Administrator.');
+            if (onRefresh) onRefresh();
+        } catch (err) {
+            console.error('Vault Error:', err);
+            alert('Failed to vault document: ' + err.message);
+        }
+    };
+
+    return (
+        <div style={{ padding: '20px', background: '#F8FAFC', borderRadius: '16px', border: '1px solid #EDF2F7', textAlign: 'center' }}>
+            <div style={{ fontSize: '2rem', color: url ? '#38A169' : '#CBD5E0', marginBottom: '10px' }}>{icon}</div>
+            <div style={{ fontWeight: '800', fontSize: '0.8rem', color: '#4A5568', textTransform: 'uppercase', marginBottom: '15px' }}>{title}</div>
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                {url ? (
+                    <button className="btn-icon" onClick={() => window.open(url, '_blank')} title="View Document" style={{ background: '#3182CE', color: 'white' }}><FaEye /></button>
+                ) : (
+                    <label className="btn-icon" style={{ background: '#718096', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Upload Missing Document">
+                        <FaCloudUploadAlt />
+                        <input type="file" style={{ display: 'none' }} onChange={handleUpload} />
+                    </label>
+                )}
             </div>
         </div>
     );
