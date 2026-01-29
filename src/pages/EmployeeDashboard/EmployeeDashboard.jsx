@@ -831,7 +831,8 @@ const UpdateCredentialsForm = ({ data, onClose, onRefresh }) => {
         emergency_relation: data.emergency_relation || '',
         emergency_mobile: data.emergency_mobile || '',
         blood_group: data.blood_group || 'O+',
-        marital_status: data.marital_status || 'Single'
+        marital_status: data.marital_status || 'Single',
+        email: data.email || ''
     });
 
     const handleSave = async (e) => {
@@ -844,6 +845,15 @@ const UpdateCredentialsForm = ({ data, onClose, onRefresh }) => {
                 .eq('id', data.id);
 
             if (error) throw error;
+
+            // Optional: Backup sync with profiles if user_id linked
+            if (data.user_id) {
+                await supabase
+                    .from('profiles')
+                    .update({ email: formData.email, full_name: formData.full_name })
+                    .eq('user_id', data.user_id);
+            }
+
             alert('Personnel credentials updated successfully in the digital registry.');
             if (onRefresh) onRefresh();
             onClose();
@@ -870,6 +880,10 @@ const UpdateCredentialsForm = ({ data, onClose, onRefresh }) => {
                 <div className="form-group">
                     <label>Mobile Number</label>
                     <input className="form-control" value={formData.mobile} onChange={e => setFormData({ ...formData, mobile: e.target.value })} required />
+                </div>
+                <div className="form-group">
+                    <label>Official Email Address</label>
+                    <input className="form-control" type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} required />
                 </div>
                 <div className="form-group">
                     <label>Blood Group</label>
