@@ -49,12 +49,33 @@ const EmployeeDashboard = () => {
                 return;
             }
 
-            // Fetch core employee record
-            const { data: emp, error } = await supabase
+            // Enhanced lookup: Try user_id first, then fallback to email
+            let { data: emp, error: empError } = await supabase
                 .from('employees')
                 .select('*')
-                .eq('email', user.email)
-                .single();
+                .eq('user_id', user.id)
+                .maybeSingle();
+
+            if (!emp) {
+                const cleanEmail = user.email?.trim().toLowerCase();
+                const { data: empByEmail } = await supabase
+                    .from('employees')
+                    .select('*')
+                    .ilike('email', cleanEmail)
+                    .maybeSingle();
+
+                if (empByEmail) {
+                    emp = empByEmail;
+                    // Auto-link to user_id if this is their first login
+                    if (!emp.user_id) {
+                        await supabase
+                            .from('employees')
+                            .update({ user_id: user.id })
+                            .eq('id', emp.id);
+                        emp.user_id = user.id;
+                    }
+                }
+            }
 
             if (emp) {
                 setEmployeeData(emp);
