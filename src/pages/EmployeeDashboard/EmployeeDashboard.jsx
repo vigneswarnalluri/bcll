@@ -311,7 +311,7 @@ const EmployeeDashboard = () => {
 
     const renderContent = () => {
         switch (activeTab) {
-            case 'profile': return <ProfileTab data={employeeData} />;
+            case 'profile': return <ProfileTab data={employeeData} onUpdate={() => { setModalType('edit-profile'); setIsModalOpen(true); }} />;
             case 'reports': return <ReportsTab reports={reports} onAddNew={() => { setModalType('report'); setIsModalOpen(true); }} />;
             case 'attendance': return <AttendanceTab attendance={attendance} salarySlips={salarySlips} onMark={markAttendance} />;
             case 'data-entry': return <DataEntryTab onOpenTerminal={(type) => { setModalType(type); setIsModalOpen(true); }} />;
@@ -378,6 +378,16 @@ const EmployeeDashboard = () => {
                         <div style={{ padding: '30px' }}>
                             {modalType === 'scholarship' && (
                                 <ScholarshipForm
+                                    onClose={() => setIsModalOpen(false)}
+                                    onRefresh={() => {
+                                        fetchEmployeeDetails();
+                                        setIsModalOpen(false);
+                                    }}
+                                />
+                            )}
+                            {modalType === 'edit-profile' && (
+                                <UpdateCredentialsForm
+                                    data={employeeData}
                                     onClose={() => setIsModalOpen(false)}
                                     onRefresh={() => {
                                         fetchEmployeeDetails();
@@ -465,7 +475,7 @@ const EmployeeDashboard = () => {
 
 /* --- ENHANCED PROFILE COMPONENT --- */
 
-const ProfileTab = ({ data }) => (
+const ProfileTab = ({ data, onUpdate }) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
         <div className="content-panel">
             <div style={{ display: 'flex', gap: '40px', alignItems: 'flex-start' }}>
@@ -480,8 +490,8 @@ const ProfileTab = ({ data }) => (
                             <span className="badge success">{data.status} Account</span>
                         </div>
                         <div style={{ display: 'flex', gap: '10px' }}>
-                            <button className="btn-small"><FaEdit /> Update Credentials</button>
-                            <button className="btn-small" style={{ background: '#718096' }}><FaDownload /> Full CV</button>
+                            <button className="btn-small" onClick={onUpdate}><FaEdit /> Update Credentials</button>
+                            <button className="btn-small" style={{ background: '#718096' }} onClick={() => alert('CV Artifact generation currently in queue.')}><FaDownload /> Full CV</button>
                         </div>
                     </div>
 
@@ -808,6 +818,108 @@ const StatCard = ({ title, count, color, icon }) => (
         <div className="stat-icon-overlay" style={{ fontSize: '3rem' }}>{icon}</div>
     </div>
 );
+
+/* --- CREDENTIALS UPDATE FORM --- */
+const UpdateCredentialsForm = ({ data, onClose, onRefresh }) => {
+    const [loading, setLoading] = useState(false);
+    const [formData, setFormData] = useState({
+        full_name: data.full_name || '',
+        mobile: data.mobile || '',
+        current_address: data.current_address || '',
+        permanent_address: data.permanent_address || '',
+        emergency_name: data.emergency_name || '',
+        emergency_relation: data.emergency_relation || '',
+        emergency_mobile: data.emergency_mobile || '',
+        blood_group: data.blood_group || 'O+',
+        marital_status: data.marital_status || 'Single'
+    });
+
+    const handleSave = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            const { error } = await supabase
+                .from('employees')
+                .update(formData)
+                .eq('id', data.id);
+
+            if (error) throw error;
+            alert('Personnel credentials updated successfully in the digital registry.');
+            if (onRefresh) onRefresh();
+            onClose();
+        } catch (err) {
+            console.error('Update Error:', err);
+            alert('Failed to update credentials: ' + err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <form onSubmit={handleSave}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+                <h3 style={{ margin: 0 }}>Update Personnel Credentials</h3>
+                <span className="badge blue" style={{ padding: '8px 15px' }}>Ref: {data.employee_id}</span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                <div className="form-group">
+                    <label>Full Name</label>
+                    <input className="form-control" value={formData.full_name} onChange={e => setFormData({ ...formData, full_name: e.target.value })} required />
+                </div>
+                <div className="form-group">
+                    <label>Mobile Number</label>
+                    <input className="form-control" value={formData.mobile} onChange={e => setFormData({ ...formData, mobile: e.target.value })} required />
+                </div>
+                <div className="form-group">
+                    <label>Blood Group</label>
+                    <select className="form-control" value={formData.blood_group} onChange={e => setFormData({ ...formData, blood_group: e.target.value })}>
+                        <option>O+</option><option>A+</option><option>B+</option><option>AB+</option><option>O-</option>
+                    </select>
+                </div>
+                <div className="form-group">
+                    <label>Marital Status</label>
+                    <select className="form-control" value={formData.marital_status} onChange={e => setFormData({ ...formData, marital_status: e.target.value })}>
+                        <option>Single</option><option>Married</option><option>Divorced</option>
+                    </select>
+                </div>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '15px' }}>
+                <label>Current Address</label>
+                <input className="form-control" value={formData.current_address} onChange={e => setFormData({ ...formData, current_address: e.target.value })} required />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '25px' }}>
+                <label>Permanent Address</label>
+                <textarea className="form-control" rows="2" value={formData.permanent_address} onChange={e => setFormData({ ...formData, permanent_address: e.target.value })} required />
+            </div>
+
+            <h4 style={{ borderTop: '1px solid #eee', paddingTop: '20px', marginBottom: '15px' }}>Emergency Contact Info</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
+                <div className="form-group">
+                    <label>Contact Name</label>
+                    <input className="form-control" value={formData.emergency_name} onChange={e => setFormData({ ...formData, emergency_name: e.target.value })} required />
+                </div>
+                <div className="form-group">
+                    <label>Relationship</label>
+                    <input className="form-control" value={formData.emergency_relation} onChange={e => setFormData({ ...formData, emergency_relation: e.target.value })} required />
+                </div>
+                <div className="form-group">
+                    <label>Mobile Number</label>
+                    <input className="form-control" value={formData.emergency_mobile} onChange={e => setFormData({ ...formData, emergency_mobile: e.target.value })} required />
+                </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end', marginTop: '30px' }}>
+                <button type="button" className="btn-small" onClick={onClose} disabled={loading}>Cancel</button>
+                <button type="submit" className="btn-add" disabled={loading}>
+                    {loading ? 'Updating Registry...' : 'Update Credentials'}
+                </button>
+            </div>
+        </form>
+    );
+};
 
 /* --- EMPLOYEE POLICY TAB (READ-ONLY) --- */
 const EmployeePoliciesTab = () => {
