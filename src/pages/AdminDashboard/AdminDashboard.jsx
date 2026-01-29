@@ -4,7 +4,7 @@ import {
     FaUsers, FaUserShield, FaHandHoldingUsd, FaFileAlt, FaSignOutAlt,
     FaUserPlus, FaCheckCircle, FaGraduationCap, FaFileInvoiceDollar,
     FaFolderOpen, FaClipboardCheck, FaChartLine, FaTrash, FaEdit, FaEye, FaFileUpload, FaTasks, FaPlus, FaPlusCircle,
-    FaIdCard, FaUniversity, FaBriefcase, FaUserLock, FaExclamationTriangle, FaHeartbeat, FaFileSignature,
+    FaIdCard, FaUniversity, FaBriefcase, FaUserLock, FaExclamationTriangle, FaHeartbeat, FaFileSignature, FaUser,
     FaMapMarkerAlt, FaPhone, FaUserCheck, FaBalanceScale, FaHistory, FaShieldAlt, FaDesktop, FaUnlockAlt,
     FaDownload, FaUserTie, FaFileContract, FaHandshake, FaRegIdCard, FaEnvelope, FaHandsHelping,
     FaBuilding, FaGavel, FaUserTimes, FaClock, FaFingerprint, FaSearch,
@@ -21,13 +21,13 @@ import '../Dashboard/Dashboard.css';
 /* --- CORE UI COMPONENTS (SHARED) --- */
 
 const ApprovalBadge = ({ data, level = 'Final Approval' }) => {
-    if (!data || (!data.approved_by_name && !data.final_approver_name)) return null;
+    if (!data || (!data.approved_by_name && !data.final_approver_name && !data.level_1_approver_name && !data.verifier_name)) return null;
 
     const isDeclined = data.status?.toLowerCase().includes('reject') || data.status?.toLowerCase().includes('decline') || data.final_status === 'Declined';
-    const name = data.approved_by_name || data.final_approver_name || data.level_1_approver_name;
-    const designation = data.approved_by_designation || data.final_designation || data.level_1_designation || 'Authority';
+    const name = data.approved_by_name || data.final_approver_name || data.level_1_approver_name || data.verifier_name;
+    const designation = data.approved_by_designation || data.final_designation || data.level_1_designation || data.verifier_designation || 'Authority';
     const dept = data.approved_by_dept || data.final_dept || data.level_1_dept || 'HQ Executive';
-    const timestamp = data.approved_at || data.final_at || data.level_1_at;
+    const timestamp = data.approved_at || data.final_at || data.level_1_at || data.verified_at;
     const remarks = data.approval_remarks || data.final_remarks || data.level_1_remarks || data.decline_reason;
 
     const dateObj = timestamp ? new Date(timestamp) : new Date();
@@ -218,6 +218,7 @@ const AdminDashboard = () => {
     const [boardMeetings, setBoardMeetings] = useState([]);
     const [approvalRequests, setApprovalRequests] = useState([]);
     const [volunteerTasks, setVolunteerTasks] = useState([]);
+    const [volunteerActivities, setVolunteerActivities] = useState([]);
     const [payrollRecords, setPayrollRecords] = useState([]);
     const [complianceDocs, setComplianceDocs] = useState([]);
     const [csrFunding, setCsrFunding] = useState([]);
@@ -272,6 +273,8 @@ const AdminDashboard = () => {
 
     useEffect(() => {
         fetchDashboardData();
+        const interval = setInterval(fetchDashboardData, 10000);
+        return () => clearInterval(interval);
     }, []);
 
     // --- MODULAR FETCHING ---
@@ -512,7 +515,7 @@ const AdminDashboard = () => {
             }
 
             // Summary Fetch for totals and initial load
-            const [e, v, s, sc, f, l, r, rep, vt, p, att, cEmp] = await Promise.all([
+            const [e, v, s, sc, f, l, r, rep, vt, va, p, att, cEmp] = await Promise.all([
                 supabase.from('employees').select('*'),
                 supabase.from('volunteers').select('*').order('created_at', { ascending: false }),
                 supabase.from('students').select('*'),
@@ -522,6 +525,7 @@ const AdminDashboard = () => {
                 supabase.from('leave_requests').select('*, employees(full_name)'),
                 supabase.from('field_reports').select('*').order('created_at', { ascending: false }),
                 supabase.from('volunteer_tasks').select('*, volunteers(full_name)').order('created_at', { ascending: false }),
+                supabase.from('volunteer_activities').select('*, volunteers(full_name)').order('created_at', { ascending: false }),
                 supabase.from('payroll_records').select('*, employees(full_name, designation, department)').order('created_at', { ascending: false }),
                 supabase.from('attendance').select('*, employees(full_name, employee_id, department)').order('attendance_date', { ascending: false }),
                 supabase.from('employees').select('*').eq('user_id', user.id).maybeSingle()
@@ -533,6 +537,7 @@ const AdminDashboard = () => {
             if (p.data) setPayrollRecords(p.data);
 
             if (vt.data) setVolunteerTasks(vt.data);
+            if (va.data) setVolunteerActivities(va.data);
 
             if (e.data) {
                 setEmployees(e.data);
@@ -863,10 +868,20 @@ const AdminDashboard = () => {
                 status: action === 'approve' ? 'Verified' : 'Rejected',
                 decline_reason: action === 'reject' ? reason : null,
                 verified_at: action === 'approve' ? new Date().toISOString() : null,
-                verified_by: adminProfile.id,
+                verified_by: adminProfile.user_id,
+                verifier_name: adminProfile.name,
+                verifier_designation: adminProfile.role,
                 ...getApprovalSignature(reason)
             };
             setVolunteerTasks(prev => prev.map(t => t.id === id ? { ...t, status: updateData.status, ...updateData } : t));
+        } else if (type === 'volunteer_activity') {
+            table = 'volunteer_activities';
+            updateData = {
+                status: action === 'approve' ? 'Approved' : 'Rejected',
+                admin_feedback: action === 'reject' ? reason : null,
+                updated_at: new Date().toISOString()
+            };
+            setVolunteerActivities(prev => prev.map(a => a.id === id ? { ...a, status: updateData.status, ...updateData } : a));
         } else if (type === 'request') { // Leave Request
             table = 'leave_requests';
             updateData = {
@@ -1405,6 +1420,7 @@ const AdminDashboard = () => {
                         <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', padding: '15px 5px' }}>
                             <button className={`btn-small ${selectedVolunteer === null ? 'active' : ''}`} onClick={() => setSelectedVolunteer(null)} style={{ background: selectedVolunteer === null ? '#1a365d' : 'white', color: selectedVolunteer === null ? 'white' : '#64748b' }}>Resource Registry</button>
                             <button className={`btn-small ${selectedVolunteer === 'tasks' ? 'active' : ''}`} onClick={() => setSelectedVolunteer('tasks')} style={{ background: selectedVolunteer === 'tasks' ? '#1a365d' : 'white', color: selectedVolunteer === 'tasks' ? 'white' : '#64748b' }}>Task Mastery Hub</button>
+                            <button className={`btn-small ${selectedVolunteer === 'activities' ? 'active' : ''}`} onClick={() => setSelectedVolunteer('activities')} style={{ background: selectedVolunteer === 'activities' ? '#1a365d' : 'white', color: selectedVolunteer === 'activities' ? 'white' : '#64748b' }}>Activity Log Approval</button>
                         </div>
                         {selectedVolunteer === 'tasks' ? (
                             <VolunteerTasksTab
@@ -1415,6 +1431,12 @@ const AdminDashboard = () => {
                                 onView={(t) => { setSelectedTask(t); setModalType('task-details'); setIsModalOpen(true); }}
                                 onAssign={() => { setModalType('assign-task'); setIsModalOpen(true); }}
                             />
+                        ) : selectedVolunteer === 'activities' ? (
+                            <VolunteerActivitiesTab
+                                activities={volunteerActivities}
+                                handleAction={handleAction}
+                                onExport={exportToCSV}
+                            />
                         ) : (
                             <VolunteerTab
                                 volunteers={volunteers}
@@ -1423,6 +1445,7 @@ const AdminDashboard = () => {
                                 onExport={exportToCSV}
                                 onView={(v) => { setSelectedVolunteer(v); setModalType('volunteer-details'); setIsModalOpen(true); }}
                                 onViewID={(v) => { setSelectedVolunteer(v); setModalType('volunteer-id'); setIsModalOpen(true); }}
+                                onEdit={(v) => { setSelectedVolunteer(v); setModalType('edit-volunteer'); setIsModalOpen(true); }}
                             />
                         )}
                     </>
@@ -1485,6 +1508,7 @@ const AdminDashboard = () => {
                 return <VolunteerIntelTab
                     volunteers={volunteers}
                     tasks={volunteerTasks}
+                    activities={volunteerActivities}
                     onExport={exportToCSV}
                     handleAction={handleAction}
                     onDelete={deleteVolunteer}
@@ -2042,6 +2066,44 @@ const AdminDashboard = () => {
                             />
                         )}
                         {modalType === 'volunteer-id' && <VolunteerIDCard volunteer={selectedVolunteer} onClose={() => setIsModalOpen(false)} />}
+                        {modalType === 'volunteer-id' && <VolunteerIDCard volunteer={selectedVolunteer} onClose={() => setIsModalOpen(false)} />}
+
+                        {modalType === 'edit-volunteer' && (
+                            <EditVolunteerModal
+                                volunteer={selectedVolunteer}
+                                onClose={() => setIsModalOpen(false)}
+                                onSave={async (updatedData) => {
+                                    try {
+                                        // If status is changed to Approved via Edit, we should trigger the formal approval flow
+                                        // to ensure credentials are provisioned and signatures are added.
+                                        if (updatedData.status === 'Approved' && selectedVolunteer.status !== 'Approved') {
+                                            await handleAction('volunteer', selectedVolunteer.id, 'approve');
+                                        }
+
+                                        // Update ALL fields to ensure photograph_url and other new fields are saved
+                                        const { error } = await supabase
+                                            .from('volunteers')
+                                            .update(updatedData)
+                                            .eq('id', selectedVolunteer.id);
+
+                                        if (error) {
+                                            console.error('Update Error:', error);
+                                            alert(`Registry Update Failed: ${error.message}\n\nNote: If you recently added new fields, ensure the database schema has been updated.`);
+                                            return;
+                                        }
+
+                                        logActivity(`Updated volunteer registry record: ${selectedVolunteer.full_name}`, 'Operations', `VOL-${selectedVolunteer.id.substring(0, 8)}`);
+                                        alert('Institutional Registry Updated Successfully!');
+                                        fetchDashboardData();
+                                        setIsModalOpen(false);
+                                    } catch (err) {
+                                        console.error('Critical Update Error:', err);
+                                        alert('A critical error occurred during registry commit.');
+                                    }
+                                }}
+                            />
+                        )}
+
                         {modalType === 'volunteer-details' && (
                             <VolunteerDetailsView
                                 volunteer={selectedVolunteer}
@@ -2408,32 +2470,7 @@ const OverviewTab = ({ adminProfile, employees, volunteers, requests, coAdmins, 
                 onCheckOut={onSelfCheckOut}
             />
 
-            {/* PERSONAL WORKSPACE (Employee + Admin Requirement) */}
-            <div className="content-panel animate-fade-in" style={{ marginBottom: '30px', background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)', border: '1.5px solid #e2e8f0', borderRadius: '24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 10px' }}>
-                    <div>
-                        <h4 style={{ margin: 0, color: '#1a365d', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <FaBriefcase style={{ color: '#3182ce' }} /> Personal Personnel Suite
-                        </h4>
-                        <p style={{ margin: '4px 0 0', color: '#718096', fontSize: '0.8rem' }}>Authority personnel portal for self-service actions.</p>
-                    </div>
-                    <div style={{ display: 'flex', gap: '12px' }}>
-                        <button className="btn-small" onClick={() => {
-                            if (!currentEmployee) {
-                                alert("REGISTRY MISSING: Your profile is not yet linked to the Employee Registry. Please contact HR to enable leave self-service.");
-                                return;
-                            }
-                            setModalType('personal-leave');
-                            setIsModalOpen(true);
-                        }} style={{ background: '#fff', border: '1px solid #e2e8f0', color: '#4a5568' }}>
-                            <FaCalendarAlt /> Apply Leave
-                        </button>
-                        <button className="btn-small" onClick={() => { setModalType('report'); setIsModalOpen(true); }} style={{ background: '#fff', border: '1px solid #e2e8f0', color: '#4a5568' }}>
-                            <FaFileUpload /> File Work Report
-                        </button>
-                    </div>
-                </div>
-            </div>
+
 
             {/* INJECT DIRECTORS REPORT IF APPLICABLE */}
             {(adminProfile?.role?.includes('Director') || adminProfile?.role === 'Super Admin') && (
@@ -3018,9 +3055,9 @@ const VolunteerTasksTab = ({ tasks, volunteers, handleAction, onExport, onAssign
                                 <div style={{ fontSize: '0.75rem', color: '#4a5568', marginTop: '4px' }}>{t.description?.substring(0, 60)}...</div>
                             </td>
                             <td>
-                                {t.proof_file_path ? (
-                                    <button className="btn-small" onClick={() => onView(t)} style={{ background: '#ebf8ff', color: '#2b6cb0' }}>
-                                        <FaEye /> Audit Registry
+                                {(t.proof_file_path || (t.proof_details && t.proof_details.includes('[Proof Image]:'))) ? (
+                                    <button className="btn-icon blue" onClick={() => onView(t)} title="View Proof & Task Details">
+                                        <FaEye />
                                     </button>
                                 ) : <span style={{ color: '#cbd5e0', fontSize: '0.8rem' }}>No Artifact</span>}
                             </td>
@@ -3053,22 +3090,123 @@ const VolunteerTasksTab = ({ tasks, volunteers, handleAction, onExport, onAssign
                     )}
                 </tbody>
             </table>
-            {/* Added for Task Verification Detail View */}
-            {filteredData.some(t => t.status === 'Verified' || t.status === 'Rejected') && (
-                <div style={{ marginTop: '30px' }}>
-                    <h4 style={{ color: '#4A5568', fontSize: '0.9rem', marginBottom: '15px' }}>Recent Decision Registry</h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
-                        {filteredData.filter(t => t.status === 'Verified' || t.status === 'Rejected').slice(0, 4).map(t => (
-                            <ApprovalBadge key={`badge-${t.id}`} data={t} level="Mission Verification" />
-                        ))}
-                    </div>
-                </div>
-            )}
+
         </div >
     );
 };
 
-const VolunteerTab = ({ volunteers, handleAction, onDelete, onView, onViewID, onExport }) => {
+const VolunteerActivitiesTab = ({ activities, handleAction, onExport }) => {
+    const [filterStatus, setFilterStatus] = useState('Pending');
+
+    const filteredData = (activities || []).filter(a =>
+        filterStatus === 'All' || a.status === filterStatus
+    );
+
+    return (
+        <div className="content-panel" style={{ animation: 'fadeIn 0.5s' }}>
+            <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+                <div>
+                    <h3 style={{ margin: 0 }}>Volunteer Activity Review</h3>
+                    <p style={{ margin: '5px 0 0', color: '#718096', fontSize: '0.85rem' }}>Authorize ad-hoc service hours and event participation logs.</p>
+                </div>
+                <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                    <select
+                        value={filterStatus}
+                        onChange={(e) => setFilterStatus(e.target.value)}
+                        style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.85rem', fontWeight: 600 }}
+                    >
+                        <option value="Pending">New Submissions</option>
+                        <option value="Approved">Verified Logs</option>
+                        <option value="Rejected">Rejected Logs</option>
+                        <option value="All">Complete History</option>
+                    </select>
+                    <button className="btn-small" onClick={() => onExport(filteredData, 'Volunteer_Activities')} style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}>
+                        <FaDownload /> Export CSV
+                    </button>
+                </div>
+            </div>
+
+            <table className="data-table">
+                <thead>
+                    <tr>
+                        <th>Volunteer</th>
+                        <th>Activity Type</th>
+                        <th>Timeline & Duration</th>
+                        <th>Work Description</th>
+                        <th>Proof Artifact</th>
+                        <th>Status / Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {filteredData.length > 0 ? filteredData.map(a => (
+                        <tr key={a.id}>
+                            <td>
+                                <strong>{a.volunteers?.full_name}</strong><br />
+                                <small style={{ color: '#718096' }}>Ref: {a.id.substring(0, 8)}</small>
+                            </td>
+                            <td><span className="badge blue">{a.activity_type}</span></td>
+                            <td>
+                                <div style={{ fontWeight: 600 }}>{new Date(a.activity_date).toLocaleDateString()}</div>
+                                <div style={{ fontSize: '0.85rem', color: '#3182ce' }}><FaClock /> {a.hours_spent} Hours</div>
+                            </td>
+                            <td>
+                                <div style={{ fontSize: '0.85rem', color: '#4a5568', fontStyle: 'italic' }}>"{a.description}"</div>
+                            </td>
+                            <td>
+                                {a.proof_url ? (
+                                    <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                                        {(() => {
+                                            try {
+                                                const urls = JSON.parse(a.proof_url);
+                                                return Array.isArray(urls) ? urls.map((url, i) => (
+                                                    <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                                                        <img src={url} alt={`Proof ${i}`} style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #e2e8f0' }} />
+                                                    </a>
+                                                )) : (
+                                                    <a href={a.proof_url} target="_blank" rel="noopener noreferrer">
+                                                        <img src={a.proof_url} alt="Proof" style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #e2e8f0' }} />
+                                                    </a>
+                                                );
+                                            } catch (e) {
+                                                return (
+                                                    <a href={a.proof_url} target="_blank" rel="noopener noreferrer">
+                                                        <img src={a.proof_url} alt="Proof" style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #e2e8f0' }} />
+                                                    </a>
+                                                );
+                                            }
+                                        })()}
+                                    </div>
+                                ) : <span style={{ color: '#cbd5e0', fontSize: '0.8rem' }}>No Artifact</span>}
+                            </td>
+                            <td>
+                                {a.status === 'Pending' ? (
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <button className="btn-small success-btn" onClick={() => handleAction('volunteer_activity', a.id, 'approve')}>Authorize</button>
+                                        <button className="btn-small danger-btn" onClick={() => {
+                                            const reason = prompt('Specify reason for rejection:');
+                                            if (reason) handleAction('volunteer_activity', a.id, 'reject', reason);
+                                        }}>Reject</button>
+                                    </div>
+                                ) : (
+                                    <span className={`badge ${a.status === 'Approved' ? 'success' : 'red'}`}>
+                                        {a.status}
+                                    </span>
+                                )}
+                            </td>
+                        </tr>
+                    )) : (
+                        <tr><td colSpan="6" style={{ textAlign: 'center', padding: '100px', color: '#94a3b8' }}>
+                            <FaClipboardCheck style={{ fontSize: '3rem', opacity: 0.1, marginBottom: '20px' }} /><br />
+                            No activity logs found for the selected status.
+                        </td></tr>
+                    )}
+                </tbody>
+            </table>
+        </div>
+    );
+};
+
+const VolunteerTab = ({ volunteers, handleAction, onDelete, onView, onViewID, onExport, onEdit }) => {
     const [filterStatus, setFilterStatus] = useState('New');
 
     const filteredData = (volunteers || []).filter(v =>
@@ -3120,6 +3258,7 @@ const VolunteerTab = ({ volunteers, handleAction, onDelete, onView, onViewID, on
                             </td>
                             <td style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <button className="btn-icon" onClick={() => onView(v)} title="Perform Coordinator Review"><FaEye /></button>
+                                <button className="btn-icon" onClick={() => onEdit(v)} title="Edit Record"><FaEdit /></button>
                                 {v.status === 'Approved' && (
                                     <button className="btn-small" onClick={() => onViewID(v)} style={{ background: '#ebf8ff', color: '#2b6cb0' }}><FaIdCard /> Get ID</button>
                                 )}
@@ -3890,12 +4029,17 @@ const ReportsTab = ({ reports, onAdd, onDelete, onView, employees }) => {
     );
 };
 
-const VolunteerIntelTab = ({ volunteers, tasks, onExport, handleAction, onDelete, onView, onViewID }) => {
+const VolunteerIntelTab = ({ volunteers, tasks, activities, onExport, handleAction, onDelete, onView, onViewID }) => {
+    const taskHours = tasks?.filter(t => t.status === 'Verified').length * 4;
+    const activityHours = (activities || []).filter(a => a.status === 'Approved').reduce((acc, curr) => acc + (parseFloat(curr.hours_spent) || 0), 0);
+    const totalImpactHours = taskHours + activityHours;
+
     const stats = {
         total: volunteers?.length || 0,
         active: volunteers?.filter(v => v.status === 'Approved').length || 0,
         tasks: tasks?.length || 0,
-        completed: tasks?.filter(t => t.status === 'Completed').length || 0
+        completed: tasks?.filter(t => t.status === 'Completed' || t.status === 'Verified').length || 0,
+        hours: totalImpactHours
     };
 
     return (
@@ -3929,6 +4073,11 @@ const VolunteerIntelTab = ({ volunteers, tasks, onExport, handleAction, onDelete
                     <div style={{ fontSize: '1.8rem', fontWeight: 900, marginTop: '10px' }}>{stats.completed}</div>
                     <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#4a5568', fontWeight: 700 }}>Successful Ops</div>
                 </div>
+                <div className="stat-card" style={{ background: '#f5feff', padding: '25px', borderRadius: '20px', border: '1px solid #cceef2' }}>
+                    <FaHistory style={{ color: '#008080', fontSize: '1.5rem' }} />
+                    <div style={{ fontSize: '1.8rem', fontWeight: 900, marginTop: '10px' }}>{stats.hours}</div>
+                    <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#4a5568', fontWeight: 700 }}>Service Hours</div>
+                </div>
             </div>
 
             <div className="table-wrapper">
@@ -3949,8 +4098,8 @@ const VolunteerIntelTab = ({ volunteers, tasks, onExport, handleAction, onDelete
                                 <td><strong>{t.volunteers?.full_name}</strong></td>
                                 <td>{t.title}</td>
                                 <td><span className={`badge ${t.priority === 'High' ? 'red' : (t.priority === 'Medium' ? 'blue' : 'gray')}`}>{t.priority}</span></td>
-                                <td><span className={`badge ${t.status === 'Completed' ? 'success' : 'pending'}`}>{t.status}</span></td>
-                                <td>{t.status === 'Completed' ? new Date(t.created_at).toLocaleDateString() : 'Awaiting Proof'}</td>
+                                <td><span className={`badge ${(t.status === 'Completed' || t.status === 'Verified') ? 'success' : 'pending'}`}>{t.status}</span></td>
+                                <td>{(t.status === 'Completed' || t.status === 'Verified') ? new Date(t.verified_at || t.created_at).toLocaleDateString() : 'Awaiting Proof'}</td>
                             </tr>
                         ))}
                         {(!tasks || tasks.length === 0) && (
@@ -5187,7 +5336,9 @@ const VolunteerDetailsView = ({ volunteer, onClose, onApprove, onReject }) => {
                         <div style={{
                             width: '160px',
                             height: '160px',
-                            background: 'rgba(255,255,255,0.15)',
+                            background: v.photograph_url ? `url(${v.photograph_url})` : 'rgba(255,255,255,0.15)',
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
                             backdropFilter: 'blur(15px)',
                             borderRadius: '45px',
                             display: 'flex',
@@ -5196,9 +5347,10 @@ const VolunteerDetailsView = ({ volunteer, onClose, onApprove, onReject }) => {
                             fontSize: '5rem',
                             border: '3px solid rgba(255,255,255,0.3)',
                             boxShadow: '0 25px 50px rgba(0,0,0,0.4)',
-                            transform: 'rotate(-5deg)'
+                            transform: 'rotate(-5deg)',
+                            overflow: 'hidden'
                         }}>
-                            <FaHandHoldingUsd />
+                            {!v.photograph_url && <FaHandHoldingUsd />}
                         </div>
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '25px' }}>
@@ -5258,6 +5410,11 @@ const VolunteerDetailsView = ({ volunteer, onClose, onApprove, onReject }) => {
                             <Field icon={<FaEnvelope />} label="Contact Email" value={v.email} />
                             <Field icon={<FaPhone />} label="Verified Mobile" value={v.phone} />
                             <Field icon={<FaClipboardCheck />} label="Date of Birth" value={v.dob} />
+                            <Field icon={<FaUser />} label="Gender" value={v.gender} />
+                            <Field icon={<FaRegIdCard />} label="Aadhaar Reference" value={v.aadhaar_number ? `**** **** ${v.aadhaar_number.slice(-4)}` : 'N/A'} />
+                            <Field icon={<FaUniversity />} label="College / Org" value={v.organization_name} />
+                            <Field icon={<FaMapMarkerAlt />} label="Preferred Location" value={v.preferred_location} />
+                            <Field icon={<FaClock />} label="Availability" value={v.availability} />
                             <Field icon={<FaHeartbeat />} label="Blood Group" value={v.blood_group} />
                             <Field icon={<FaMapMarkerAlt />} label="Primary Residency" value={v.address} />
                         </div>
@@ -5354,6 +5511,224 @@ const VolunteerDetailsView = ({ volunteer, onClose, onApprove, onReject }) => {
         </div>
     );
 };
+
+const EditVolunteerModal = ({ volunteer, onClose, onSave }) => {
+    const [formData, setFormData] = useState({ ...volunteer });
+
+    const SectionHeader = ({ icon, title }) => (
+        <h4 style={{
+            margin: '25px 0 15px',
+            color: '#2B6CB0',
+            fontSize: '1rem',
+            fontWeight: 800,
+            textTransform: 'uppercase',
+            letterSpacing: '1px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            borderBottom: '2px solid #EBF8FF',
+            paddingBottom: '8px'
+        }}>
+            {icon} {title}
+        </h4>
+    );
+
+    return (
+        <div className="modal-overlay">
+            <div className="modal-content" style={{ maxWidth: '850px', maxHeight: '95vh', overflowY: 'auto', borderRadius: '30px', padding: '40px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <div>
+                        <h2 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 900, color: '#1A365D' }}>Edit Institutional Personnel</h2>
+                        <p style={{ margin: '5px 0 0', color: '#718096', fontSize: '0.9rem' }}>Modifying registry for: <strong style={{ color: '#2D3748' }}>{volunteer.full_name}</strong> (RE-ID: {volunteer.id.substring(0, 8).toUpperCase()})</p>
+                    </div>
+                    <button className="btn-icon" onClick={onClose} style={{ fontSize: '1.5rem' }}>&times;</button>
+                </div>
+
+                <div style={{ marginTop: '30px' }}>
+                    <SectionHeader icon={<FaIdCard />} title="Identity & Governance" />
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
+                        <div className="form-group">
+                            <label>Full Name (Official)</label>
+                            <input className="form-control" value={formData.full_name || ''} onChange={e => setFormData(prev => ({ ...prev, full_name: e.target.value }))} />
+                        </div>
+                        <div className="form-group">
+                            <label>Gender</label>
+                            <select className="form-control" value={formData.gender || 'Male'} onChange={e => setFormData(prev => ({ ...prev, gender: e.target.value }))}>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div className="form-group">
+                            <label>Aadhaar Number</label>
+                            <input className="form-control" value={formData.aadhaar_number || ''} onChange={e => setFormData(prev => ({ ...prev, aadhaar_number: e.target.value }))} />
+                        </div>
+                        <div className="form-group">
+                            <label>Email Address</label>
+                            <input className="form-control" value={formData.email || ''} onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))} disabled />
+                        </div>
+                        <div className="form-group">
+                            <label>Mobile Number</label>
+                            <input className="form-control" value={formData.phone || ''} onChange={e => setFormData(prev => ({ ...prev, phone: e.target.value }))} />
+                        </div>
+                        <div className="form-group">
+                            <label>Date of Birth</label>
+                            <input type="date" className="form-control" value={formData.dob || ''} onChange={e => setFormData(prev => ({ ...prev, dob: e.target.value }))} />
+                        </div>
+                        <div className="form-group">
+                            <label>Blood Group</label>
+                            <input className="form-control" value={formData.blood_group || ''} onChange={e => setFormData(prev => ({ ...prev, blood_group: e.target.value }))} />
+                        </div>
+                        <div className="form-group">
+                            <label>Registry Status</label>
+                            <select className="form-control" value={formData.status || 'New'} onChange={e => setFormData(prev => ({ ...prev, status: e.target.value }))} style={{ border: '2px solid #E2E8F0', fontWeight: 700 }}>
+                                <option value="New">Review Queue</option>
+                                <option value="Approved">Verified Status</option>
+                                <option value="Rejected">Blacklisted / Rejected</option>
+                            </select>
+                        </div>
+                        <div className="form-group">
+                            <label>College / Organization</label>
+                            <input className="form-control" value={formData.organization_name || ''} onChange={e => setFormData(prev => ({ ...prev, organization_name: e.target.value }))} />
+                        </div>
+                    </div>
+
+                    <SectionHeader icon={<FaMapMarkerAlt />} title="Field Operations & Bio" />
+                    <div className="form-group">
+                        <label>Primary Residency Address</label>
+                        <textarea className="form-control" rows="2" value={formData.address || ''} onChange={e => setFormData({ ...formData, address: e.target.value })} style={{ resize: 'none' }} />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginTop: '15px' }}>
+                        <div className="form-group">
+                            <label>Strategic Area of Interest</label>
+                            <select className="form-control" value={formData.area_of_interest || ''} onChange={e => setFormData({ ...formData, area_of_interest: e.target.value })}>
+                                <option value="Food Distribution">Food Distribution</option>
+                                <option value="Education & Scholarships">Education & Scholarships</option>
+                                <option value="Beggar Rehabilitation">Beggar Rehabilitation</option>
+                                <option value="Health Camps">Health Camps</option>
+                                <option value="Field Surveys">Field Surveys</option>
+                                <option value="Digital / Office Support">Digital / Office Support</option>
+                                <option value="General Social Support">General Social Support</option>
+                            </select>
+                        </div>
+                        <div className="form-group">
+                            <label>Preferred Location</label>
+                            <input className="form-control" value={formData.preferred_location || ''} onChange={e => setFormData({ ...formData, preferred_location: e.target.value })} />
+                        </div>
+                        <div className="form-group">
+                            <label>Operational Availability</label>
+                            <select className="form-control" value={formData.availability || 'Weekends'} onChange={e => setFormData({ ...formData, availability: e.target.value })}>
+                                <option value="Weekdays">Weekdays</option>
+                                <option value="Weekends">Weekends</option>
+                                <option value="Both">Both</option>
+                            </select>
+                        </div>
+                        <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                            <label>Linguistic Proficiencies / Expertise</label>
+                            <input className="form-control" value={formData.languages || ''} onChange={e => setFormData({ ...formData, languages: e.target.value })} placeholder="e.g. Hindi, English, Bihar Dialects" />
+                        </div>
+                        <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                            <label>Prior Social Sector Experience / Impact History</label>
+                            <textarea className="form-control" rows="2" value={formData.experience || ''} onChange={e => setFormData({ ...formData, experience: e.target.value })} style={{ resize: 'none' }} />
+                        </div>
+                        <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                            <label>Photograph (Upload or URL)</label>
+                            <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                                <input className="form-control" value={formData.photograph_url || ''} onChange={e => setFormData({ ...formData, photograph_url: e.target.value })} placeholder="Enter image URL" style={{ flex: 1 }} />
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        id="photo-upload"
+                                        style={{ display: 'none' }}
+                                        onChange={async (e) => {
+                                            const file = e.target.files[0];
+                                            if (!file) return;
+
+                                            try {
+                                                const fileExt = file.name.split('.').pop();
+                                                const fileName = `${volunteer.id}-${Date.now()}.${fileExt}`;
+                                                const filePath = `photos/${fileName}`;
+
+                                                const { error: uploadError } = await supabase.storage
+                                                    .from('volunteer-uploads')
+                                                    .upload(filePath, file);
+
+                                                if (uploadError) throw uploadError;
+
+                                                const { data: { publicUrl } } = supabase.storage
+                                                    .from('volunteer-uploads')
+                                                    .getPublicUrl(filePath);
+
+                                                setFormData(prev => ({ ...prev, photograph_url: publicUrl }));
+                                                alert('Official Photograph Uploaded Successfully!');
+                                            } catch (err) {
+                                                alert('Upload failed: ' + err.message);
+                                            }
+                                        }}
+                                    />
+                                    <label htmlFor="photo-upload" className="btn-small" style={{ cursor: 'pointer', background: '#2D3748', color: 'white', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', margin: 0 }}>
+                                        <FaFileUpload /> Upload Photo
+                                    </label>
+                                </div>
+                            </div>
+                            {formData.photograph_url && (
+                                <div style={{ marginTop: '15px', display: 'flex', alignItems: 'center', gap: '20px', background: '#F7FAFC', padding: '15px', borderRadius: '15px', border: '1px solid #E2E8F0' }}>
+                                    <img src={formData.photograph_url} alt="Volunteer" style={{ width: '100px', height: '100px', borderRadius: '20px', objectFit: 'cover', border: '3px solid white', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
+                                    <div>
+                                        <p style={{ margin: 0, fontWeight: 700, color: '#2D3748' }}>Identity Preview</p>
+                                        <p style={{ margin: 0, fontSize: '0.8rem', color: '#718096' }}>Registry ID: {volunteer.id.substring(0, 8)}</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <SectionHeader icon={<FaGavel />} title="Compliance & Disciplinary" />
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                        <div className="form-group">
+                            <label>Disciplinary Level</label>
+                            <select className="form-control" value={formData.discipline_level || 'None'} onChange={e => setFormData({ ...formData, discipline_level: e.target.value })}>
+                                <option value="None">None (Clear Record)</option>
+                                <option value="Warning">Official Warning</option>
+                                <option value="Final Warning">Final Legal Warning</option>
+                                <option value="Temporary Block">Temporary Field Suspension</option>
+                                <option value="Blacklist">Permanent Blacklist</option>
+                            </select>
+                        </div>
+                        <div className="form-group">
+                            <label>Disciplinary / Rejection Grounds</label>
+                            <input className="form-control" value={formData.discipline_reason || formData.decline_reason || ''} onChange={e => setFormData({ ...formData, discipline_reason: e.target.value, decline_reason: e.target.value })} placeholder="Document reasons for status changes here" />
+                        </div>
+                    </div>
+
+                    <SectionHeader icon={<FaBriefcase />} title="Crisis Protocol (Next of Kin)" />
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', background: '#F8F9FA', padding: '25px', borderRadius: '20px', border: '1px solid #EDF2F7' }}>
+                        <div className="form-group" style={{ margin: 0 }}>
+                            <label>Emergency Contact Name</label>
+                            <input className="form-control" value={formData.emergency_contact_name || ''} onChange={e => setFormData({ ...formData, emergency_contact_name: e.target.value })} />
+                        </div>
+                        <div className="form-group" style={{ margin: 0 }}>
+                            <label>Emergency Phone Link</label>
+                            <input className="form-control" value={formData.emergency_contact_phone || ''} onChange={e => setFormData({ ...formData, emergency_contact_phone: e.target.value })} />
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px', marginTop: '40px', borderTop: '1px solid #E2E8F0', paddingTop: '30px' }}>
+                    <button className="btn-small" onClick={onClose} style={{ padding: '12px 30px', borderRadius: '12px', background: '#F1F5F9', color: '#475569', fontWeight: 700 }}>
+                        Cancel Operations
+                    </button>
+                    <button className="btn-premium" onClick={() => onSave(formData)} style={{ padding: '12px 40px' }}>
+                        <FaFileUpload /> Commit Registry Updates
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
 
 const ReportForm = ({ onClose, postedBy, postedByName, onRefresh }) => {
     const [formData, setFormData] = useState({ title: '', category: 'Impact', status: 'Draft', content: '' });
@@ -5876,7 +6251,7 @@ const TaskDetailsView = ({ task, onClose, onApprove, onAction }) => {
         <div className="details-view-container animate-fade-in custom-scroll" style={{ height: '100%', overflowY: 'auto' }}>
             <div className="details-header" style={{ background: 'linear-gradient(135deg, #1A365D 0%, #2D3748 100%)', padding: '40px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <h2 style={{ fontSize: '2rem', marginBottom: '10px' }}>{t.title}</h2>
+                    <h2 style={{ fontSize: '2rem', marginBottom: '10px', color: 'white' }}>{t.title}</h2>
                     <div style={{ display: 'flex', gap: '15px' }}>
                         <span className="badge" style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}>{t.volunteers?.full_name}</span>
                         <span className={`badge ${t.status === 'Verified' ? 'success' : (t.status === 'Completed' ? 'blue' : 'warning')}`}>{t.status}</span>
@@ -5901,11 +6276,18 @@ const TaskDetailsView = ({ task, onClose, onApprove, onAction }) => {
                         <div style={{ background: 'white', padding: '20px', borderRadius: '15px', border: '1px solid #E2E8F0' }}>
                             <label style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 900, textTransform: 'uppercase' }}>Submission Proof</label>
                             <div style={{ marginTop: '10px' }}>
-                                {t.proof_file_path ? (
-                                    <button className="btn-small" style={{ width: '100%', justifyContent: 'center', background: '#EBF8FF', color: '#2B6CB0' }}>
+                                <p style={{ fontSize: '0.9rem', color: '#2D3748', whiteSpace: 'pre-line', marginBottom: '15px' }}>
+                                    {t.proof_details ? t.proof_details.split('[Proof Image]:')[0] : 'No details provided.'}
+                                </p>
+                                {t.proof_details && t.proof_details.includes('[Proof Image]:') ? (
+                                    <button
+                                        className="btn-small"
+                                        style={{ width: '100%', justifyContent: 'center', background: '#EBF8FF', color: '#2B6CB0' }}
+                                        onClick={() => window.open(t.proof_details.split('[Proof Image]:')[1].trim(), '_blank')}
+                                    >
                                         <FaEye /> View Artifact
                                     </button>
-                                ) : <span style={{ color: '#CBD5E0' }}>No proof uploaded yet</span>}
+                                ) : <span style={{ color: '#CBD5E0', fontSize: '0.85rem', fontStyle: 'italic' }}>No visual artifact attached</span>}
                             </div>
                         </div>
                     </div>

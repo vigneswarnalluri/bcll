@@ -20,6 +20,8 @@ const EmployeeDashboard = () => {
 
     useEffect(() => {
         fetchEmployeeDetails();
+        const interval = setInterval(fetchEmployeeDetails, 10000);
+        return () => clearInterval(interval);
     }, []);
 
     const fetchEmployeeDetails = async () => {

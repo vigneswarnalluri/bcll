@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FaMapMarkerAlt, FaPhone, FaEnvelope } from 'react-icons/fa';
 import './Contact.css';
+import { supabase } from '../../lib/supabase';
 
 const Contact = () => {
     const [formData, setFormData] = useState({
@@ -12,14 +13,37 @@ const Contact = () => {
     });
 
     const [isSubmitted, setIsSubmitted] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        setIsSubmitted(true);
+        setIsSubmitting(true);
+
+        try {
+            const { error } = await supabase
+                .from('contact_messages')
+                .insert([
+                    {
+                        name: formData.name,
+                        mobile: formData.mobile,
+                        email: formData.email,
+                        subject: formData.subject,
+                        message: formData.message
+                    }
+                ]);
+
+            if (error) throw error;
+            setIsSubmitted(true);
+        } catch (error) {
+            console.error('Error submitting form:', error);
+            alert('Failed to send message. Please try again.');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     if (isSubmitted) {
@@ -120,7 +144,9 @@ const Contact = () => {
                                 <textarea name="message" value={formData.message} onChange={handleChange} rows="5" required></textarea>
                             </div>
 
-                            <button type="submit" className="btn btn-primary">Submit Message</button>
+                            <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+                                {isSubmitting ? 'Sending...' : 'Submit Message'}
+                            </button>
                         </form>
                     </div>
                 </div>

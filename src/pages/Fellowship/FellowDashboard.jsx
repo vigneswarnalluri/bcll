@@ -11,6 +11,8 @@ const FellowDashboard = () => {
 
     useEffect(() => {
         fetchFellowData();
+        const interval = setInterval(fetchFellowData, 10000);
+        return () => clearInterval(interval);
     }, []);
 
     const fetchFellowData = async () => {

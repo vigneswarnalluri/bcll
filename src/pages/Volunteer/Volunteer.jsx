@@ -17,9 +17,15 @@ const Volunteer = () => {
         email: '',
         mobile: '',
         bg: '',
+        gender: 'Male',
         dob: '',
         address: '',
-        interest: 'Food Distribution'
+        aadhaar: '',
+        organization: '',
+        interest: 'Food Distribution',
+        location: '',
+        availability: 'Weekends',
+        photo: ''
     });
     const [isSubmitted, setIsSubmitted] = useState(false);
 
@@ -35,10 +41,16 @@ const Volunteer = () => {
                 full_name: formData.name,
                 email: formData.email,
                 phone: formData.mobile,
+                gender: formData.gender,
                 dob: formData.dob,
                 blood_group: formData.bg,
                 address: formData.address,
+                aadhaar_number: formData.aadhaar,
+                organization_name: formData.organization,
                 area_of_interest: formData.interest,
+                preferred_location: formData.location,
+                availability: formData.availability,
+                photograph_url: formData.photo,
                 status: 'New'
             }]).select().single();
 
@@ -231,6 +243,33 @@ const Volunteer = () => {
                                         <input type="text" name="name" value={formData.name} onChange={handleChange} required placeholder="As per Aadhaar" />
                                     </div>
 
+                                    <div className="form-group">
+                                        <label>Photograph</label>
+                                        <input type="text" name="photo" value={formData.photo} onChange={handleChange} placeholder="Image URL / Link" />
+                                    </div>
+
+                                    <div className="form-row">
+                                        <div className="form-group">
+                                            <label>Gender</label>
+                                            <select name="gender" value={formData.gender} onChange={handleChange}>
+                                                <option value="Male">Male</option>
+                                                <option value="Female">Female</option>
+                                                <option value="Other">Other</option>
+                                            </select>
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Blood Group</label>
+                                            <select name="bg" value={formData.bg} onChange={handleChange}>
+                                                <option value="">Select</option>
+                                                <option value="A+">A+</option>
+                                                <option value="B+">B+</option>
+                                                <option value="O+">O+</option>
+                                                <option value="AB+">AB+</option>
+                                                <option value="Other">Other</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
                                     <div className="form-row">
                                         <div className="form-group">
                                             <label>Mobile</label>
@@ -248,33 +287,46 @@ const Volunteer = () => {
                                             <input type="date" name="dob" value={formData.dob} onChange={handleChange} required />
                                         </div>
                                         <div className="form-group">
-                                            <label>Blood Group</label>
-                                            <select name="bg" value={formData.bg} onChange={handleChange}>
-                                                <option value="">Select</option>
-                                                <option value="A+">A+</option>
-                                                <option value="B+">B+</option>
-                                                <option value="O+">O+</option>
-                                                <option value="AB+">AB+</option>
-                                                <option value="Other">Other</option>
-                                            </select>
+                                            <label>Aadhaar Number</label>
+                                            <input type="text" name="aadhaar" value={formData.aadhaar} onChange={handleChange} required placeholder="12-digit number" />
                                         </div>
                                     </div>
 
                                     <div className="form-group">
-                                        <label>Address</label>
+                                        <label>College / Organization</label>
+                                        <input type="text" name="organization" value={formData.organization} onChange={handleChange} placeholder="If applicable" />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>Permanent Address</label>
                                         <textarea name="address" value={formData.address} onChange={handleChange} rows="2" required></textarea>
                                     </div>
 
                                     <div className="form-group">
-                                        <label>Interested Role</label>
+                                        <label>Area of Interest</label>
                                         <select name="interest" value={formData.interest} onChange={handleChange}>
                                             <option value="Food Distribution">Food Distribution</option>
-                                            <option value="Education Support">Education Support</option>
-                                            <option value="Beggar Rehab">Beggar Rehab</option>
+                                            <option value="Education & Scholarships">Education & Scholarships</option>
+                                            <option value="Beggar Rehabilitation">Beggar Rehabilitation</option>
                                             <option value="Health Camps">Health Camps</option>
                                             <option value="Field Surveys">Field Surveys</option>
-                                            <option value="Digital Support">Digital Support</option>
+                                            <option value="Digital / Office Support">Digital / Office Support</option>
                                         </select>
+                                    </div>
+
+                                    <div className="form-row">
+                                        <div className="form-group">
+                                            <label>Preferred Location</label>
+                                            <input type="text" name="location" value={formData.location} onChange={handleChange} placeholder="City/Area" required />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Availability</label>
+                                            <select name="availability" value={formData.availability} onChange={handleChange}>
+                                                <option value="Weekdays">Weekdays</option>
+                                                <option value="Weekends">Weekends</option>
+                                                <option value="Both">Both</option>
+                                            </select>
+                                        </div>
                                     </div>
 
                                     <button type="submit" className="btn btn-primary full-width">Register & Pay ₹100</button>
