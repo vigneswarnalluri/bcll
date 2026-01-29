@@ -5,7 +5,7 @@ import {
     FaClock, FaCheckCircle, FaExclamationCircle, FaDownload, FaFileUpload, FaPlus,
     FaUserCircle, FaEdit, FaFileSignature, FaIdCard, FaPlane, FaEnvelopeOpenText,
     FaDatabase, FaUserPlus, FaHandsHelping, FaGraduationCap, FaUniversity, FaBriefcase, FaUserLock, FaMapMarkerAlt, FaPhone,
-    FaHeartbeat, FaBalanceScale, FaUserShield, FaGavel, FaLock
+    FaHeartbeat, FaBalanceScale, FaUserShield, FaGavel, FaLock, FaEye, FaCloudUploadAlt
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import '../Dashboard/Dashboard.css';
@@ -295,6 +295,48 @@ const EmployeeDashboard = () => {
         }
     };
 
+    const handleFileUpload = async (type, file) => {
+        if (!employeeData || !file) return;
+        setLoading(true);
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${employeeData.id}/${type}_${Date.now()}.${fileExt}`;
+            const filePath = `${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('employee-docs')
+                .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('employee-docs')
+                .getPublicUrl(filePath);
+
+            const columnMap = {
+                'id_card': 'doc_id_card',
+                'appt_letter': 'doc_appointment_letter',
+                'bank_passbook': 'doc_bank_passbook',
+                'edu_certs': 'doc_education_certs'
+            };
+
+            const { error: updateError } = await supabase
+                .from('employees')
+                .update({ [columnMap[type]]: publicUrl })
+                .eq('id', employeeData.id);
+
+            if (updateError) throw updateError;
+
+            alert('Mission Artifact Vaulted Successfully.');
+            await fetchEmployeeDetails();
+        } catch (err) {
+            console.error('Vault Error:', err);
+            alert('Failed to vault artifact: ' + err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const menuItems = [
         { id: 'profile', icon: <FaUserCircle />, label: 'My Personnel File' },
         { id: 'reports', icon: <FaTasks />, label: 'Daily Work Log' },
@@ -311,7 +353,7 @@ const EmployeeDashboard = () => {
 
     const renderContent = () => {
         switch (activeTab) {
-            case 'profile': return <ProfileTab data={employeeData} onUpdate={() => { setModalType('edit-profile'); setIsModalOpen(true); }} />;
+            case 'profile': return <ProfileTab data={employeeData} onUpdate={() => { setModalType('edit-profile'); setIsModalOpen(true); }} onUpload={handleFileUpload} />;
             case 'reports': return <ReportsTab reports={reports} onAddNew={() => { setModalType('report'); setIsModalOpen(true); }} />;
             case 'attendance': return <AttendanceTab attendance={attendance} salarySlips={salarySlips} onMark={markAttendance} />;
             case 'data-entry': return <DataEntryTab onOpenTerminal={(type) => { setModalType(type); setIsModalOpen(true); }} />;
@@ -475,113 +517,145 @@ const EmployeeDashboard = () => {
 
 /* --- ENHANCED PROFILE COMPONENT --- */
 
-const ProfileTab = ({ data, onUpdate }) => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
-        <div className="content-panel">
-            <div style={{ display: 'flex', gap: '40px', alignItems: 'flex-start' }}>
-                <div className="profile-large-avatar" style={{ width: '140px', height: '140px', background: 'var(--primary)', color: 'white', borderRadius: '25px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3.5rem', fontWeight: '800' }}>
-                    {data.full_name.split(' ').map(n => n[0]).join('')}
-                </div>
-                <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                        <div>
-                            <h2 style={{ margin: 0, color: 'var(--primary)' }}>{data.full_name}</h2>
-                            <p style={{ color: '#666', fontSize: '1.1rem', margin: '5px 0' }}>{data.designation} • {data.department}</p>
-                            <span className="badge success">{data.status} Account</span>
+const ProfileTab = ({ data, onUpdate, onUpload }) => {
+    const triggerFileSelect = (type) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.pdf,.jpg,.jpeg,.png';
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) onUpload(type, file);
+        };
+        input.click();
+    };
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+            <div className="content-panel">
+                <div style={{ display: 'flex', gap: '40px', alignItems: 'flex-start' }}>
+                    <div className="profile-large-avatar" style={{ width: '140px', height: '140px', background: 'var(--primary)', color: 'white', borderRadius: '25px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3.5rem', fontWeight: '800' }}>
+                        {data.full_name?.split(' ').map(n => n[0]).join('') || '?'}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                            <div>
+                                <h2 style={{ margin: 0, color: 'var(--primary)' }}>{data.full_name}</h2>
+                                <p style={{ color: '#666', fontSize: '1.1rem', margin: '5px 0' }}>{data.designation} • {data.department}</p>
+                                <span className="badge success">{data.status} Account</span>
+                            </div>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <button className="btn-small" onClick={onUpdate}><FaEdit /> Update Credentials</button>
+                                <button className="btn-small" style={{ background: '#718096' }} onClick={() => alert('CV Artifact generation currently in queue.')}><FaDownload /> Full CV</button>
+                            </div>
                         </div>
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                            <button className="btn-small" onClick={onUpdate}><FaEdit /> Update Credentials</button>
-                            <button className="btn-small" style={{ background: '#718096' }} onClick={() => alert('CV Artifact generation currently in queue.')}><FaDownload /> Full CV</button>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', background: '#f8fafc', padding: '20px', borderRadius: '15px' }}>
+                            <div><strong>Gender:</strong><br />{data.gender}</div>
+                            <div><strong>DOB:</strong><br />{data.dob}</div>
+                            <div><strong>Marital Status:</strong><br />{data.marital_status}</div>
+                            <div><strong>Blood Group:</strong><br />{data.blood_group}</div>
+                            <div><strong>Mobile:</strong><br />{data.mobile}</div>
+                            <div><strong>Official Email:</strong><br />{data.email}</div>
                         </div>
                     </div>
+                </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', background: '#f8fafc', padding: '20px', borderRadius: '15px' }}>
-                        <div><strong>Gender:</strong><br />{data.gender}</div>
-                        <div><strong>DOB:</strong><br />{data.dob}</div>
-                        <div><strong>Marital Status:</strong><br />{data.marital_status}</div>
-                        <div><strong>Blood Group:</strong><br />{data.blood_group}</div>
-                        <div><strong>Mobile:</strong><br />{data.mobile}</div>
-                        <div><strong>Official Email:</strong><br />{data.email}</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginTop: '30px' }}>
+                    <div>
+                        <strong>Current Address:</strong><p style={{ margin: '5px 0', fontSize: '0.9rem' }}>{data.current_address}</p>
+                    </div>
+                    <div>
+                        <strong>Permanent Address:</strong><p style={{ margin: '5px 0', fontSize: '0.9rem' }}>{data.permanent_address}</p>
                     </div>
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginTop: '30px' }}>
-                <div>
-                    <strong>Current Address:</strong><p style={{ margin: '5px 0', fontSize: '0.9rem' }}>{data.current_address}</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '30px' }}>
+                {/* EMPLOYMENT DETAIL CATEGORY 3 & 7 */}
+                <div className="content-panel">
+                    <h3 style={{ borderBottom: '1px solid #eee', paddingBottom: '15px', marginBottom: '20px' }}><FaBriefcase /> Employment & System Info</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                        <div><strong>Reporting Manager:</strong><br />{data.reporting_manager_id || 'Foundation HQ'}</div>
+                        <div><strong>Location:</strong><br />{data.work_location}</div>
+                        <div><strong>Joining Date:</strong><br />{data.date_of_joining}</div>
+                        <div><strong>Employment Type:</strong><br />{data.employment_type}</div>
+                        <div><strong>Attendance Mode:</strong><br />{data.attendance_type}</div>
+                        <div><strong>Office Timings:</strong><br />{data.office_timings}</div>
+                        <div><strong>Access Level:</strong><br />Personnel</div>
+                        <div><strong>Account Since:</strong><br />{new Date(data.created_at).toLocaleDateString()}</div>
+                    </div>
                 </div>
-                <div>
-                    <strong>Permanent Address:</strong><p style={{ margin: '5px 0', fontSize: '0.9rem' }}>{data.permanent_address}</p>
+
+                {/* IDENTITY & FINANCIAL CATEGORY 2 & 4 */}
+                <div className="content-panel" style={{ border: '1px solid #ecc94b', background: '#fffaf0' }}>
+                    <h3 style={{ borderBottom: '1px solid #ecc94b', paddingBottom: '15px', marginBottom: '20px', color: '#b7791f' }}><FaUserLock /> Secure KYC & Financials</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                        <div><strong>Aadhaar No:</strong><br />{data.aadhaar_masked}</div>
+                        <div><strong>PAN Card:</strong><br />{data.pan_number}</div>
+                        <div><strong>Voter ID:</strong><br />{data.voter_id}</div>
+                        <div><strong>Passport:</strong><br />{data.passport_number}</div>
+                        <div><strong>Bank Name:</strong><br />{data.bank_name}</div>
+                        <div><strong>Acc Holder:</strong><br />{data.acc_holder_name}</div>
+                        <div><strong>UPI ID:</strong><br />{data.upi_id}</div>
+                        <div><strong>Pay Mode:</strong><br />{data.payment_mode}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '30px' }}>
+                {/* EMERGENCY CATEGORY 9 */}
+                <div className="content-panel" style={{ border: '1px solid #bee3f8', background: '#ebf8ff' }}>
+                    <h4 style={{ marginBottom: '15px' }}><FaHeartbeat /> Emergency Contact</h4>
+                    <p><strong>{data.emergency_name}</strong> ({data.emergency_relation})<br />{data.emergency_mobile}<br /><small>Verified Registry Contact</small></p>
+                </div>
+
+                {/* PERFORMANCE CATEGORY 10 */}
+                <div className="content-panel">
+                    <h4 style={{ marginBottom: '15px' }}><FaBalanceScale /> Performance Audit</h4>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>Rating: <strong>{data.performance_rating || 'N/A'}</strong></span>
+                        <span className="badge success">Good Standing</span>
+                    </div>
+                    <p style={{ fontSize: '0.85rem', marginTop: '10px' }}>Remarks: {data.performance_remarks || 'No active remarks'}<br />Warnings: {data.warning_notices || 0}</p>
+                </div>
+
+                {/* COMPLIANCE CATEGORY 11 */}
+                <div className="content-panel">
+                    <h4 style={{ marginBottom: '15px' }}><FaCheckCircle /> Policy Compliance</h4>
+                    <p style={{ fontSize: '0.85rem' }}>Status: <strong>{data.signed_policy ? 'Accepted' : 'Pending'}</strong><br />Acknowledged on: {data.policy_signed_date || 'Pending'}</p>
+                    <button className="btn-small" style={{ width: '100%', marginTop: '5px' }}>View NGO Handbook</button>
+                </div>
+            </div>
+
+            {/* DOCUMENTS CATEGORY 8 */}
+            <div className="content-panel">
+                <h3 style={{ marginBottom: '20px' }}><FaFileUpload /> Category 8: Digital Document Vault</h3>
+                <div style={{ display: 'flex', gap: '20px' }}>
+                    <DocumentCard title="ID Card Copy" icon={<FaIdCard />} url={data.doc_id_card} onUpload={() => triggerFileSelect('id_card')} />
+                    <DocumentCard title="Appt. Letter" icon={<FaFileSignature />} url={data.doc_appointment_letter} onUpload={() => triggerFileSelect('appt_letter')} />
+                    <DocumentCard title="Bank Passbook" icon={<FaUniversity />} url={data.doc_bank_passbook} onUpload={() => triggerFileSelect('bank_passbook')} />
+                    <DocumentCard title="Edu certificates" icon={<FaGraduationCap />} url={data.doc_education_certs} onUpload={() => triggerFileSelect('edu_certs')} />
                 </div>
             </div>
         </div>
+    );
+};
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '30px' }}>
-            {/* EMPLOYMENT DETAIL CATEGORY 3 & 7 */}
-            <div className="content-panel">
-                <h3 style={{ borderBottom: '1px solid #eee', paddingBottom: '15px', marginBottom: '20px' }}><FaBriefcase /> Employment & System Info</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                    <div><strong>Reporting Manager:</strong><br />{data.reporting_manager_id || 'Foundation HQ'}</div>
-                    <div><strong>Location:</strong><br />{data.work_location}</div>
-                    <div><strong>Joining Date:</strong><br />{data.date_of_joining}</div>
-                    <div><strong>Employment Type:</strong><br />{data.employment_type}</div>
-                    <div><strong>Attendance Mode:</strong><br />{data.attendance_type}</div>
-                    <div><strong>Office Timings:</strong><br />{data.office_timings}</div>
-                    <div><strong>Access Level:</strong><br />Personnel</div>
-                    <div><strong>Account Since:</strong><br />{new Date(data.created_at).toLocaleDateString()}</div>
-                </div>
-            </div>
-
-            {/* IDENTITY & FINANCIAL CATEGORY 2 & 4 */}
-            <div className="content-panel" style={{ border: '1px solid #ecc94b', background: '#fffaf0' }}>
-                <h3 style={{ borderBottom: '1px solid #ecc94b', paddingBottom: '15px', marginBottom: '20px', color: '#b7791f' }}><FaUserLock /> Secure KYC & Financials</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                    <div><strong>Aadhaar No:</strong><br />{data.aadhaar_masked}</div>
-                    <div><strong>PAN Card:</strong><br />{data.pan_number}</div>
-                    <div><strong>Voter ID:</strong><br />{data.voter_id}</div>
-                    <div><strong>Passport:</strong><br />{data.passport_number}</div>
-                    <div><strong>Bank Name:</strong><br />{data.bank_name}</div>
-                    <div><strong>Acc Holder:</strong><br />{data.acc_holder_name}</div>
-                    <div><strong>UPI ID:</strong><br />{data.upi_id}</div>
-                    <div><strong>Pay Mode:</strong><br />{data.payment_mode}</div>
-                </div>
-            </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '30px' }}>
-            {/* EMERGENCY CATEGORY 9 */}
-            <div className="content-panel" style={{ border: '1px solid #bee3f8', background: '#ebf8ff' }}>
-                <h4 style={{ marginBottom: '15px' }}><FaHeartbeat /> Emergency Contact</h4>
-                <p><strong>{data.emergency_name}</strong> ({data.emergency_relation})<br />{data.emergency_mobile}<br /><small>Verified Registry Contact</small></p>
-            </div>
-
-            {/* PERFORMANCE CATEGORY 10 */}
-            <div className="content-panel">
-                <h4 style={{ marginBottom: '15px' }}><FaBalanceScale /> Performance Audit</h4>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>Rating: <strong>{data.performance_rating}</strong></span>
-                    <span className="badge success">Good Standing</span>
-                </div>
-                <p style={{ fontSize: '0.85rem', marginTop: '10px' }}>Remarks: {data.performance_remarks}<br />Warnings: {data.warning_notices}</p>
-            </div>
-
-            {/* COMPLIANCE CATEGORY 11 */}
-            <div className="content-panel">
-                <h4 style={{ marginBottom: '15px' }}><FaCheckCircle /> Policy Compliance</h4>
-                <p style={{ fontSize: '0.85rem' }}>Status: <strong>{data.signed_policy ? 'Accepted' : 'Pending'}</strong><br />Acknowledged on: {data.policy_signed_date || 'Pending'}</p>
-                <button className="btn-small" style={{ width: '100%', marginTop: '5px' }}>View NGO Handbook</button>
-            </div>
-        </div>
-
-        {/* DOCUMENTS CATEGORY 8 */}
-        <div className="content-panel">
-            <h3 style={{ marginBottom: '20px' }}><FaFileUpload /> Category 8: Digital Document Vault</h3>
-            <div style={{ display: 'flex', gap: '20px' }}>
-                <div style={{ flex: 1, padding: '15px', border: '1px solid #ddd', borderRadius: '12px', textAlign: 'center' }}><FaIdCard /> ID Card Copy</div>
-                <div style={{ flex: 1, padding: '15px', border: '1px solid #ddd', borderRadius: '12px', textAlign: 'center' }}><FaFileSignature /> Appt. Letter</div>
-                <div style={{ flex: 1, padding: '15px', border: '1px solid #ddd', borderRadius: '12px', textAlign: 'center' }}><FaUniversity /> Bank Passbook</div>
-                <div style={{ flex: 1, padding: '15px', border: '1px solid #ddd', borderRadius: '12px', textAlign: 'center' }}><FaGraduationCap /> Edu certificates</div>
-            </div>
+const DocumentCard = ({ title, icon, url, onUpload }) => (
+    <div style={{ flex: 1, padding: '20px', border: '1px solid #edf2f7', borderRadius: '16px', textAlign: 'center', background: url ? '#f0fff4' : '#fff', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+        <div style={{ fontSize: '2rem', color: url ? '#38a169' : '#cbd5e0', marginBottom: '10px' }}>{icon}</div>
+        <div style={{ fontWeight: '700', fontSize: '0.85rem', marginBottom: '15px', color: '#4a5568' }}>{title}</div>
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+            {url ? (
+                <>
+                    <button className="btn-icon blue" onClick={() => window.open(url, '_blank')} title="View Document"><FaEye /></button>
+                    <button className="btn-icon" onClick={() => onUpload()} title="Replace Document"><FaCloudUploadAlt /></button>
+                </>
+            ) : (
+                <button className="btn-add" style={{ padding: '5px 12px', fontSize: '0.75rem' }} onClick={() => onUpload()}>
+                    <FaCloudUploadAlt /> Vault it
+                </button>
+            )}
         </div>
     </div>
 );
