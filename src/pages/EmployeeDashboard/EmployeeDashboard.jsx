@@ -49,13 +49,46 @@ const EmployeeDashboard = () => {
                 return;
             }
 
-            // Enhanced lookup: Try user_id first, then fallback to email
-            let { data: emp, error: empError } = await supabase
+            // Enhanced lookup: Try multiple tables based on potential role or just search all
+            let emp = null;
+            let dataSource = '';
+
+            // 1. Try Employees Table
+            const { data: empData, error: empError } = await supabase
                 .from('employees')
                 .select('*')
                 .eq('user_id', user.id)
                 .maybeSingle();
 
+            if (empData) {
+                emp = empData;
+                dataSource = 'employee';
+            } else {
+                // 2. Try Volunteers Table
+                const { data: volData } = await supabase
+                    .from('volunteers')
+                    .select('*')
+                    .eq('email', user.email) // Volunteers might not have user_id linked initially
+                    .maybeSingle();
+
+                if (volData) {
+                    emp = {
+                        ...volData,
+                        designation: 'Certified Volunteer',
+                        employee_id: `VOL-${volData.id}`,
+                        department: 'Community Service',
+                        joining_date: volData.created_at
+                    };
+                    dataSource = 'volunteer';
+
+                    // Link user_id if missing
+                    if (!volData.user_id) {
+                        await supabase.from('volunteers').update({ user_id: user.id }).eq('id', volData.id);
+                    }
+                }
+            }
+
+            // Fallback for email matching if user_id lookup failed in employees
             if (!emp) {
                 const cleanEmail = user.email?.trim().toLowerCase();
                 const { data: empByEmail } = await supabase
@@ -66,6 +99,7 @@ const EmployeeDashboard = () => {
 
                 if (empByEmail) {
                     emp = empByEmail;
+                    dataSource = 'employee';
                     // Auto-link to user_id if this is their first login
                     if (!emp.user_id) {
                         await supabase

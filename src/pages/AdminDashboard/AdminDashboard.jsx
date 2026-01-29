@@ -6,7 +6,7 @@ import {
     FaFolderOpen, FaClipboardCheck, FaChartLine, FaTrash, FaEdit, FaEye, FaFileUpload, FaTasks, FaPlus, FaPlusCircle,
     FaIdCard, FaUniversity, FaBriefcase, FaUserLock, FaExclamationTriangle, FaHeartbeat, FaFileSignature,
     FaMapMarkerAlt, FaPhone, FaUserCheck, FaBalanceScale, FaHistory, FaShieldAlt, FaDesktop, FaUnlockAlt,
-    FaDownload, FaUserTie, FaFileContract, FaHandshake, FaRegIdCard, FaEnvelope,
+    FaDownload, FaUserTie, FaFileContract, FaHandshake, FaRegIdCard, FaEnvelope, FaHandsHelping,
     FaBuilding, FaGavel, FaUserTimes, FaClock, FaFingerprint, FaSearch,
     FaBalanceScaleLeft, FaCalendarAlt, FaCalendarCheck, FaHistory as FaAuditIcon, FaCheckDouble, FaSignature, FaLock, FaInfoCircle,
     FaChartPie, FaFileDownload, FaTable, FaFilePdf, FaFileExcel, FaMoneyCheckAlt, FaCalculator, FaShareAlt, FaCloudUploadAlt
@@ -456,6 +456,52 @@ const AdminDashboard = () => {
         }
     };
 
+    const autoGenerateAttendanceReport = async (currentAttendance, currentEmployees) => {
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            const reportTitle = `Daily Attendance Report - ${today}`;
+
+            // Check if a report for today already exists in the table
+            const { data: existing } = await supabase
+                .from('field_reports')
+                .select('id')
+                .eq('title', reportTitle)
+                .maybeSingle();
+
+            if (existing) return;
+
+            // Calculate metrics for the report
+            const todayLogs = (currentAttendance || []).filter(a => a.attendance_date === today);
+            const activeEmps = (currentEmployees || []).filter(e => e.status === 'Active');
+            const presentCount = todayLogs.filter(a => a.status === 'Present').length;
+            const leaveCount = todayLogs.filter(a => a.status === 'Leave Approved').length;
+            const absentCount = activeEmps.length - presentCount - leaveCount;
+
+            const presentNames = todayLogs.filter(a => a.status === 'Present').map(a => a.employees?.full_name).filter(Boolean);
+            const leaveNames = todayLogs.filter(a => a.status === 'Leave Approved').map(a => a.employees?.full_name).filter(Boolean);
+            const activeNames = activeEmps.map(e => e.full_name);
+            const absentNames = activeNames.filter(name => !presentNames.includes(name) && !leaveNames.includes(name));
+
+            const reportContent = `SYSTEM GENERATED ATTENDANCE SUMMARY | DATE: ${today}\n--------------------------------------------------\nTotal Active Personnel: ${activeEmps.length}\nPresent: ${presentCount}\nOn Leave: ${leaveCount}\nAbsent/Loss of Pay: ${absentCount >= 0 ? absentCount : 0}\n--------------------------------------------------\nDETAILED BREAKDOWN:\n✅ PRESENT: ${presentNames.join(', ') || 'None'}\n🗓️ LEAVE: ${leaveNames.join(', ') || 'None'}\n❌ ABSENT: ${absentNames.join(', ') || 'None'}\n--------------------------------------------------\nThis report was automatically synthesized by the Operational Audit Engine.\nFull digital logs available in the Attendance Approval module.`;
+
+            const { error: insertError } = await supabase.from('field_reports').insert([{
+                title: reportTitle,
+                category: 'Attendance',
+                content: reportContent,
+                status: 'Public',
+                created_at: new Date().toISOString()
+            }]);
+
+            if (!insertError) {
+                // Refresh the local reports state
+                const { data: updatedReports } = await supabase.from('field_reports').select('*').order('created_at', { ascending: false });
+                if (updatedReports) setReports(updatedReports);
+            }
+        } catch (err) {
+            console.error('Auto-generation logic error:', err);
+        }
+    };
+
     const fetchDashboardData = async () => {
         try {
             setLoading(true);
@@ -624,6 +670,11 @@ const AdminDashboard = () => {
                         setCoAdmins(enriched);
                     }
                 }
+
+                // Start Auto-generation checks for Audit Compliance (Daily Attendance Reports)
+                if (SUPER_ROLES.includes(userRoleType) || (pData?.role_type?.includes('Supervisor'))) {
+                    autoGenerateAttendanceReport(att.data, e.data);
+                }
             }
 
             // Initial Categories
@@ -746,6 +797,49 @@ const AdminDashboard = () => {
                 decline_reason: action === 'reject' ? reason : null,
                 ...getApprovalSignature(reason)
             };
+
+            // AUTO-PROVISIONING FOR APPROVED VOLUNTEERS
+            if (action === 'approve') {
+                const vol = volunteers.find(v => v.id === id);
+                if (vol) {
+                    const tempPassword = `Vol@${new Date().getFullYear()}!`;
+                    try {
+                        // 1. Create Auth User
+                        const { data: authId, error: authError } = await supabase.rpc('provision_admin_auth', {
+                            email_text: vol.email,
+                            password_text: tempPassword,
+                            full_name_text: vol.full_name,
+                            role_text: 'Volunteer'
+                        });
+
+                        if (authError) {
+                            console.error('Volunteer Auth Provisioning Failed:', authError);
+                            alert(`Warning: Could not create login credentials. ${authError.message}`);
+                        } else {
+                            // 2. Create Profile Entry (Required for Login.jsx to work)
+                            const { error: profileError } = await supabase.from('profiles').insert([{
+                                user_id: authId,
+                                full_name: vol.full_name,
+                                email: vol.email,
+                                role_type: 'Volunteer',
+                                mobile: vol.phone,
+                                address: vol.address,
+                                dob: vol.dob,
+                                status: 'Active'
+                            }]);
+
+                            if (profileError) {
+                                console.error('Profile Creation Failed:', profileError);
+                            } else {
+                                alert(`✅ VOLUNTEER AUTHORIZED!\n\nCredentials Generated:\nID: ${vol.email}\nPASS: ${tempPassword}\n\nPlease share these securely with the volunteer.`);
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Provisioning Error:', err);
+                    }
+                }
+            }
+
             setVolunteers(prev => prev.map(v => v.id === id ? { ...v, status: updateData.status, ...updateData } : v));
         } else if (type === 'scholarship') {
             table = 'scholarships';
@@ -1216,6 +1310,7 @@ const AdminDashboard = () => {
                 { id: "activity-logs", icon: <FaHistory />, label: "Approval Logs", permission: "audit_logs" },
                 { id: "connectivity", icon: <FaShareAlt />, label: "System Connectivity", permission: "audit_logs" },
                 { id: "reports", icon: <FaFileAlt />, label: "Attendance Reports", permission: "report_approval" },
+                { id: "volunteer-intel", icon: <FaHandsHelping />, label: "Volunteer Mission Reports", permission: "volunteer_approval" },
                 { id: "institutional-reports", icon: <FaChartPie />, label: "Salary Reports", permission: "fin_reports_auth" }
             ]
         },
@@ -1347,7 +1442,15 @@ const AdminDashboard = () => {
             case 'scholarships':
                 return <ScholarshipTab scholarships={scholarships} handleAction={handleAction} onDelete={deleteScholarship} onExport={exportToCSV} onView={(s) => { setSelectedScholarship(s); setModalType('scholarship-details'); setIsModalOpen(true); }} />;
             case 'finance': return <FinanceTab finances={finances} onDelete={deleteFinanceEntry} onExport={exportToCSV} />;
-            case 'reports': return <ReportsTab reports={reports} onDelete={deleteReport} onAdd={() => { setModalType('report'); setIsModalOpen(true); }} onView={(r) => { setSelectedReport(r); setModalType('report-details'); setIsModalOpen(true); }} />;
+            case 'reports': return (
+                <ReportsTab
+                    reports={reports}
+                    employees={employees}
+                    onDelete={deleteReport}
+                    onAdd={() => { setModalType('report'); setIsModalOpen(true); }}
+                    onView={(r) => { setSelectedReport(r); setModalType('report-details'); setIsModalOpen(true); }}
+                />
+            );
             case 'payroll':
                 return (
                     <PayrollTab
@@ -1377,6 +1480,16 @@ const AdminDashboard = () => {
                     employees={employees}
                     payrollRecords={payrollRecords}
                     activityLogs={activityLogs}
+                />;
+            case 'volunteer-intel':
+                return <VolunteerIntelTab
+                    volunteers={volunteers}
+                    tasks={volunteerTasks}
+                    onExport={exportToCSV}
+                    handleAction={handleAction}
+                    onDelete={deleteVolunteer}
+                    onView={(v) => { setSelectedVolunteer(v); setModalType('volunteer-details'); setIsModalOpen(true); }}
+                    onViewID={(v) => { setSelectedVolunteer(v); setModalType('volunteer-id'); setIsModalOpen(true); }}
                 />;
             case 'co-admins':
                 return (
@@ -3696,36 +3809,171 @@ const InitiatePayrollModal = ({ onClose, onInitiate }) => {
     );
 };
 
-const ReportsTab = ({ reports, onAdd, onDelete, onView }) => (
-    <div className="content-panel">
-        <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px' }}>
-            <h3>Impact & Program Reports</h3>
-            <button className="btn-premium" onClick={onAdd}><FaFileUpload /> Upload New Report</button>
-        </div>
-        <div className="reports-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-            {(reports || []).length > 0 ? reports.map(report => (
-                <div key={report.id} className="report-card" style={{ padding: '25px', border: '1px solid #edf2f7', borderRadius: '20px', background: 'white', position: 'relative', transition: 'all 0.3s ease', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
-                    <div style={{ position: 'absolute', top: '15px', right: '15px', display: 'flex', gap: '5px' }}>
-                        <button className="btn-icon blue" onClick={() => onView(report)} title="View Proof / Details"><FaEye style={{ fontSize: '0.8rem' }} /></button>
-                        <button className="btn-icon danger" onClick={() => onDelete(report.id, report.title)} title="Delete Report"><FaTrash style={{ fontSize: '0.8rem' }} /></button>
+const ReportsTab = ({ reports, onAdd, onDelete, onView, employees }) => {
+    const [selectedCategory, setSelectedCategory] = useState('All');
+    const [selectedEmployee, setSelectedEmployee] = useState('All');
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const categories = ['All', ...new Set((reports || []).map(r => r.category).filter(Boolean))];
+
+    const filteredReports = (reports || []).filter(report => {
+        const matchesCategory = selectedCategory === 'All' || report.category === selectedCategory;
+        const matchesEmployee = selectedEmployee === 'All' ||
+            report.title.toLowerCase().includes(selectedEmployee.toLowerCase()) ||
+            report.content?.toLowerCase().includes(selectedEmployee.toLowerCase());
+        const matchesSearch = report.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            report.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            report.content?.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesCategory && matchesEmployee && matchesSearch;
+    });
+
+    return (
+        <div className="content-panel">
+            <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px', alignItems: 'center' }}>
+                <h3>Institutional & Attendance Reports</h3>
+                <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                        <FaSearch style={{ position: 'absolute', left: '12px', color: '#94a3b8' }} />
+                        <input
+                            type="text"
+                            placeholder="Search names or titles..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            style={{ padding: '10px 10px 10px 35px', borderRadius: '12px', border: '1px solid #e2e8f0', minWidth: '220px', fontSize: '0.9rem' }}
+                        />
                     </div>
-                    <FaFileAlt style={{ fontSize: '2.5rem', color: '#1a365d', marginBottom: '15px', opacity: 0.8 }} />
-                    <h4 style={{ fontSize: '1.1rem', fontWeight: '800', marginBottom: '8px', color: '#2d3748' }}>{report.title}</h4>
-                    <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                        <span className="badge" style={{ background: '#ebf8ff', color: '#2b6cb0' }}>{report.category}</span>
-                        <span className={`badge ${report.status === 'Public' ? 'success' : 'pending'}`}>{report.status}</span>
+                    <select
+                        value={selectedEmployee}
+                        onChange={(e) => setSelectedEmployee(e.target.value)}
+                        style={{ padding: '10px 15px', borderRadius: '12px', border: '1px solid #e2e8f0', background: 'white', fontWeight: '800', fontSize: '0.85rem', color: '#4a5568' }}
+                    >
+                        <option value="All">All Personnel</option>
+                        {(employees || []).map(emp => (
+                            <option key={emp.id} value={emp.full_name}>{emp.full_name}</option>
+                        ))}
+                    </select>
+                    <select
+                        value={selectedCategory}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        style={{ padding: '10px 15px', borderRadius: '12px', border: '1px solid #e2e8f0', background: 'white', fontWeight: '800', fontSize: '0.85rem', color: '#4a5568' }}
+                    >
+                        {categories.map(cat => (
+                            <option key={cat} value={cat}>{cat} Reports</option>
+                        ))}
+                    </select>
+                    <button className="btn-premium" onClick={onAdd}><FaFileUpload /> Upload Impact Artifact</button>
+                </div>
+            </div>
+            <div className="reports-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+                {filteredReports.length > 0 ? filteredReports.map(report => (
+                    <div key={report.id} className="report-card" style={{ padding: '25px', border: '1px solid #edf2f7', borderRadius: '20px', background: 'white', position: 'relative', transition: 'all 0.3s ease', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+                        <div style={{ position: 'absolute', top: '15px', right: '15px', display: 'flex', gap: '5px' }}>
+                            <button className="btn-icon blue" onClick={() => onView(report)} title="View Proof / Details"><FaEye style={{ fontSize: '0.8rem' }} /></button>
+                            <button className="btn-icon danger" onClick={() => onDelete(report.id, report.title)} title="Delete Report"><FaTrash style={{ fontSize: '0.8rem' }} /></button>
+                        </div>
+                        <FaFileAlt style={{ fontSize: '2.5rem', color: report.category === 'Attendance' ? '#3182ce' : '#1a365d', marginBottom: '15px', opacity: 0.8 }} />
+                        <h4 style={{ fontSize: '1.1rem', fontWeight: '800', marginBottom: '8px', color: '#2d3748' }}>{report.title}</h4>
+                        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                            <span className="badge" style={{ background: report.category === 'Attendance' ? '#ebf8ff' : '#f0fff4', color: report.category === 'Attendance' ? '#2b6cb0' : '#2f855a' }}>{report.category}</span>
+                            <span className={`badge ${report.status === 'Public' ? 'success' : 'pending'}`}>{report.status}</span>
+                        </div>
+                        <p style={{ fontSize: '0.85rem', color: '#718096' }}>Filed: {new Date(report.created_at).toLocaleDateString()}</p>
                     </div>
-                    <p style={{ fontSize: '0.85rem', color: '#718096' }}>Filed: {new Date(report.created_at).toLocaleDateString()}</p>
-                </div>
-            )) : (
-                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '60px', background: '#f8fafc', borderRadius: '20px', border: '2px dashed #e2e8f0' }}>
-                    <FaFileAlt style={{ fontSize: '3rem', color: '#cbd5e0', marginBottom: '15px' }} />
-                    <p style={{ color: '#718096' }}>No field reports found. Post one to begin.</p>
-                </div>
-            )}
+                )) : (
+                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '60px', background: '#f8fafc', borderRadius: '20px', border: '2px dashed #e2e8f0' }}>
+                        <FaFileAlt style={{ fontSize: '3rem', color: '#cbd5e0', marginBottom: '15px' }} />
+                        <p style={{ color: '#718096' }}>No reports found matching your selected filters.</p>
+                    </div>
+                )}
+            </div>
         </div>
-    </div>
-);
+    );
+};
+
+const VolunteerIntelTab = ({ volunteers, tasks, onExport, handleAction, onDelete, onView, onViewID }) => {
+    const stats = {
+        total: volunteers?.length || 0,
+        active: volunteers?.filter(v => v.status === 'Approved').length || 0,
+        tasks: tasks?.length || 0,
+        completed: tasks?.filter(t => t.status === 'Completed').length || 0
+    };
+
+    return (
+        <div className="content-panel">
+            <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px', alignItems: 'center' }}>
+                <div>
+                    <h3>Volunteer Service Intelligence</h3>
+                    <p style={{ color: '#718096', fontSize: '0.85rem' }}>Global Service Logs: Real-time Mission Tracking & Impact Analytics</p>
+                </div>
+                <button className="btn-premium" onClick={() => onExport(tasks, 'Volunteer_Mission_Export')}><FaDownload /> Service Export</button>
+            </div>
+
+            <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '30px' }}>
+                <div className="stat-card" style={{ background: '#ebf8ff', padding: '25px', borderRadius: '20px', border: '1px solid #bee3f8' }}>
+                    <FaHandsHelping style={{ color: '#3182ce', fontSize: '1.5rem' }} />
+                    <div style={{ fontSize: '1.8rem', fontWeight: 900, marginTop: '10px' }}>{stats.total}</div>
+                    <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#4a5568', fontWeight: 700 }}>Registry Total</div>
+                </div>
+                <div className="stat-card" style={{ background: '#f0fff4', padding: '25px', borderRadius: '20px', border: '1px solid #c6f6d5' }}>
+                    <FaCheckCircle style={{ color: '#38a169', fontSize: '1.5rem' }} />
+                    <div style={{ fontSize: '1.8rem', fontWeight: 900, marginTop: '10px' }}>{stats.active}</div>
+                    <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#4a5568', fontWeight: 700 }}>Active Personnel</div>
+                </div>
+                <div className="stat-card" style={{ background: '#fffaf0', padding: '25px', borderRadius: '20px', border: '1px solid #feebc8' }}>
+                    <FaTasks style={{ color: '#dd6b20', fontSize: '1.5rem' }} />
+                    <div style={{ fontSize: '1.8rem', fontWeight: 900, marginTop: '10px' }}>{stats.tasks}</div>
+                    <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#4a5568', fontWeight: 700 }}>Missions Logged</div>
+                </div>
+                <div className="stat-card" style={{ background: '#fff5f5', padding: '25px', borderRadius: '20px', border: '1px solid #fed7d7' }}>
+                    <FaClock style={{ color: '#e53e3e', fontSize: '1.5rem' }} />
+                    <div style={{ fontSize: '1.8rem', fontWeight: 900, marginTop: '10px' }}>{stats.completed}</div>
+                    <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#4a5568', fontWeight: 700 }}>Successful Ops</div>
+                </div>
+            </div>
+
+            <div className="table-wrapper">
+                <h4 style={{ margin: '0 0 20px', fontSize: '1.2rem', color: '#2d3748' }}>Live Mission Log</h4>
+                <table className="data-table">
+                    <thead>
+                        <tr>
+                            <th>Mission Agent</th>
+                            <th>Operation Title</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Completion Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {tasks?.map(t => (
+                            <tr key={t.id}>
+                                <td><strong>{t.volunteers?.full_name}</strong></td>
+                                <td>{t.title}</td>
+                                <td><span className={`badge ${t.priority === 'High' ? 'red' : (t.priority === 'Medium' ? 'blue' : 'gray')}`}>{t.priority}</span></td>
+                                <td><span className={`badge ${t.status === 'Completed' ? 'success' : 'pending'}`}>{t.status}</span></td>
+                                <td>{t.status === 'Completed' ? new Date(t.created_at).toLocaleDateString() : 'Awaiting Proof'}</td>
+                            </tr>
+                        ))}
+                        {(!tasks || tasks.length === 0) && (
+                            <tr><td colSpan="5" style={{ textAlign: 'center', opacity: 0.6 }}>No active missions recorded.</td></tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+
+            <div style={{ margin: '40px 0', height: '1px', background: '#e2e8f0' }}></div>
+
+            {/* INTEGRATED MANAGEMENT QUEUE */}
+            <VolunteerTab
+                volunteers={volunteers}
+                handleAction={handleAction}
+                onDelete={onDelete}
+                onView={onView}
+                onViewID={onViewID}
+                onExport={onExport}
+            />
+        </div>
+    );
+};
 
 
 
@@ -5064,7 +5312,17 @@ const VolunteerDetailsView = ({ volunteer, onClose, onApprove, onReject }) => {
                                         <div style={{ background: '#F0FFF4', padding: '30px', borderRadius: '25px', color: '#2F855A', fontWeight: '800' }}>
                                             <FaIdCard style={{ fontSize: '3rem', marginBottom: '15px', color: '#38a169' }} /><br />
                                             CREDENTIALS LIVE
-                                            <p style={{ fontSize: '0.75rem', fontWeight: 'normal', margin: '10px 0 0' }}>Volunteer ID card has been cryptographically generated and is ready for dispatch.</p>
+                                            <p style={{ fontSize: '0.75rem', fontWeight: 'normal', margin: '10px 0 15px' }}>Volunteer ID card has been cryptographically generated and is ready for dispatch.</p>
+
+                                            <div style={{ background: 'white', padding: '15px', borderRadius: '15px', border: '1px dashed #48BB78', textAlign: 'left' }}>
+                                                <div style={{ fontSize: '0.7rem', color: '#718096', textTransform: 'uppercase' }}>Login ID (Email)</div>
+                                                <div style={{ fontSize: '0.9rem', color: '#2D3748', marginBottom: '10px', wordBreak: 'break-all' }}>{v.email}</div>
+
+                                                <div style={{ fontSize: '0.7rem', color: '#718096', textTransform: 'uppercase' }}>Default Password</div>
+                                                <div style={{ fontSize: '0.9rem', color: '#2D3748', fontFamily: 'monospace', background: '#EDF2F7', padding: '4px 8px', borderRadius: '5px', display: 'inline-block' }}>
+                                                    Vol@{new Date().getFullYear()}!
+                                                </div>
+                                            </div>
                                         </div>
                                     ) : (
                                         <div style={{ background: '#FFF5F5', padding: '30px', borderRadius: '25px', color: '#C53030', fontWeight: '800' }}>

@@ -47,21 +47,46 @@ const Login = () => {
 
             // 2. Initial Auth Gate
             const { data: { user }, error: authError } = await supabase.auth.signInWithPassword({
-                email: emailToUse,
-                password: password,
+                email: emailToUse.trim(),
+                password: password.trim(),
             });
 
             if (authError) throw authError;
 
             const { data: profile, error: profileError } = await supabase
                 .from('profiles')
-                .select('role_type, full_name')
+                .select('*')
                 .eq('user_id', user.id)
                 .maybeSingle();
 
             console.log('Terminal Auth Profile Verified:', profile);
 
-            if (profileError) throw profileError;
+            // FALLBACK LOGIC: If profile table is broken or RLS fails, check User Metadata
+            let userRole = profile?.role_type?.trim();
+            const displayName = profile?.full_name || user.user_metadata?.full_name_text || user.user_metadata?.full_name || 'User';
+
+            if (!userRole) {
+                // Try to get role from metadata if profile query failed
+                console.log('Profile lookup failed/empty. Checking metadata...');
+                if (user.user_metadata?.role_text) userRole = user.user_metadata.role_text;
+                else if (user.user_metadata?.role) userRole = user.user_metadata.role;
+            }
+
+            // EXTRA ROBUSTNESS: If role is still unknown, check Volunteer Registry directly
+            if (!userRole) {
+                const { data: isVol } = await supabase
+                    .from('volunteers')
+                    .select('id')
+                    .eq('email', emailToUse)
+                    .maybeSingle();
+
+                if (isVol) {
+                    console.log('Detected User in Volunteer Registry. Assigning Role: Volunteer');
+                    userRole = 'Volunteer';
+                }
+            }
+
+            console.log('Access Authorization Result:', { userRole, metadata: user.user_metadata });
 
             const adminRoles = [
                 'Super Admin', 'Admin', 'Co-Admin',
@@ -70,9 +95,7 @@ const Login = () => {
                 'Finance Head', 'HR Manager', 'Supervisor', 'Finance Executive'
             ];
 
-            const userRole = profile?.role_type?.trim();
             const isAdmin = adminRoles.some(r => r.toLowerCase() === userRole?.toLowerCase());
-
             console.log('Access Authorization Result:', { isAdmin, userRole });
 
             if (isAdmin) {
@@ -128,6 +151,10 @@ const Login = () => {
                     console.error('SEC-MFA-SUBSYSTEM-ERROR:', mfaErr);
                     throw new Error(`MFA Security Subsystem Error: ${mfaErr.message || 'Unknown Failure'}`);
                 }
+            } else if (userRole?.toLowerCase() === 'volunteer') {
+                navigate('/volunteer-dashboard');
+            } else if (userRole?.toLowerCase() === 'fellow' || userRole?.toLowerCase() === 'student') {
+                navigate('/fellow-dashboard');
             } else {
                 // Direct access for standard personnel
                 navigate('/employee-dashboard');
