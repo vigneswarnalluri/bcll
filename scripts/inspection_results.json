@@ -51,31 +51,6 @@
   ],
   "controls": [
     {
-      "id": "7c2d0607-3e26-4fd1-84e9-b5c2879a00bd",
-      "admin_profile_id": "8ca6b326-9e75-4f1c-9b06-7f269bcfa760",
-      "authority_level": "L1",
-      "perm_view_employees": false,
-      "perm_edit_employees": true,
-      "perm_approve_leaves": true,
-      "perm_process_salary": false,
-      "perm_bank_access": false,
-      "perm_volunteer_approval": true,
-      "perm_scholarship_verify": true,
-      "perm_manage_admins": true,
-      "perm_student_mgmt": true,
-      "perm_report_approval": true,
-      "perm_vault_access": true,
-      "perm_audit_logs": false,
-      "perm_org_master": true,
-      "fin_reports_auth": false,
-      "statutory_docs_auth": false,
-      "salary_approval_limit": 0,
-      "expenditure_limit": 0,
-      "fund_utilization_auth": false,
-      "updated_at": "2026-01-28T16:15:05.835745+00:00",
-      "perm_compliance": false
-    },
-    {
       "id": "de535a93-75b1-4609-a6ea-15b12552304f",
       "admin_profile_id": "40bc9769-9c9a-4e5b-b3d4-c13a0138acb1",
       "authority_level": "L1",
@@ -98,7 +73,8 @@
       "expenditure_limit": 0,
       "fund_utilization_auth": false,
       "updated_at": "2026-01-28T16:15:05.835745+00:00",
-      "perm_compliance": false
+      "perm_compliance": false,
+      "perm_governance": false
     },
     {
       "id": "50387d62-454a-4ee7-8808-4ea067d97d74",
@@ -123,7 +99,34 @@
       "expenditure_limit": 0,
       "fund_utilization_auth": false,
       "updated_at": "2026-01-28T16:15:05.835745+00:00",
-      "perm_compliance": false
+      "perm_compliance": false,
+      "perm_governance": false
+    },
+    {
+      "id": "7c2d0607-3e26-4fd1-84e9-b5c2879a00bd",
+      "admin_profile_id": "8ca6b326-9e75-4f1c-9b06-7f269bcfa760",
+      "authority_level": "L3",
+      "perm_view_employees": false,
+      "perm_edit_employees": false,
+      "perm_approve_leaves": false,
+      "perm_process_salary": false,
+      "perm_bank_access": false,
+      "perm_volunteer_approval": true,
+      "perm_scholarship_verify": false,
+      "perm_manage_admins": false,
+      "perm_student_mgmt": false,
+      "perm_report_approval": false,
+      "perm_vault_access": false,
+      "perm_audit_logs": false,
+      "perm_org_master": false,
+      "fin_reports_auth": false,
+      "statutory_docs_auth": false,
+      "salary_approval_limit": 0,
+      "expenditure_limit": 0,
+      "fund_utilization_auth": false,
+      "updated_at": "2026-01-29T02:28:16.245+00:00",
+      "perm_compliance": false,
+      "perm_governance": false
     }
   ]
 }

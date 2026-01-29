@@ -413,10 +413,12 @@ const AdminDashboard = () => {
                     if (cAdmsRes.data) {
                         const enriched = cAdmsRes.data.map(adm => {
                             const lastLog = (cLogsRes.data || []).find(l => l.actor_id === adm.user_id);
+                            const controls = (Array.isArray(adm.admin_controls) ? adm.admin_controls[0] : adm.admin_controls) || {};
                             return {
                                 ...adm,
                                 last_activity: lastLog?.created_at || adm.updated_at,
-                                has_activity: !!lastLog
+                                has_activity: !!lastLog,
+                                admin_controls: [controls] // Normalize to array for form consistency
                             };
                         });
                         setCoAdmins(enriched);
@@ -1724,7 +1726,7 @@ const AdminDashboard = () => {
                                     const { error: cError } = await supabase
                                         .from('admin_controls')
                                         .upsert({
-                                            admin_profile_id: profileData.user_id, // Correctly link to the Auth UID as per schema
+                                            admin_profile_id: profileData.user_id, // Link to the Auth UUID as per active DB schema
                                             authority_level: newAdm.authority_level || 'L3',
                                             perm_view_employees: !!newAdm.perms.view_employees,
                                             perm_edit_employees: !!newAdm.perms.edit_employees,
@@ -1769,12 +1771,14 @@ const AdminDashboard = () => {
                                 currentLevel={adminProfile.level}
                                 onClose={() => setIsModalOpen(false)}
                                 onSave={async (newLevel) => {
+                                    // Fix: Use update instead of upsert for partial changes to avoid wiping other permissions
                                     const { error } = await supabase
                                         .from('admin_controls')
-                                        .upsert({
-                                            admin_profile_id: adminProfile.user_id, // Use Auth UID for consistency
-                                            authority_level: newLevel.split(' ')[0]
-                                        }, { onConflict: 'admin_profile_id' });
+                                        .update({
+                                            authority_level: newLevel.split(' ')[0],
+                                            updated_at: new Date().toISOString()
+                                        })
+                                        .eq('admin_profile_id', adminProfile.user_id);
 
                                     if (!error) {
                                         logActivity(`Elevated/Modified Admin Level to ${newLevel}`, 'Security');
@@ -4149,7 +4153,10 @@ const CoAdminTab = ({ admins, adminProfile, onAdd, onDelete, onEdit, onManage })
 
 const AdminForm = ({ onClose, onSave, admin, initialStep = 1 }) => {
     const [step, setStep] = useState(initialStep);
-    const existingPerms = admin?.admin_controls?.[0] || {};
+
+    // Robustly extract controls whether Supabase returns an object or array
+    const rawControls = admin?.admin_controls;
+    const existingPerms = (Array.isArray(rawControls) ? rawControls[0] : rawControls) || {};
 
     const [formData, setFormData] = useState({
         id: admin?.id || null, // Profiles table Primary Key (UUID)
