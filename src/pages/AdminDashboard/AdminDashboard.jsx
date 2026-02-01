@@ -272,8 +272,8 @@ const AdminDashboard = () => {
     ];
 
     useEffect(() => {
-        fetchDashboardData();
-        const interval = setInterval(fetchDashboardData, 10000);
+        fetchDashboardData(true); // Initial load with visible spinner
+        const interval = setInterval(() => fetchDashboardData(false), 10000); // Silent background refresh
         return () => clearInterval(interval);
     }, []);
 
@@ -505,9 +505,9 @@ const AdminDashboard = () => {
         }
     };
 
-    const fetchDashboardData = async () => {
+    const fetchDashboardData = async (showLoading = false) => {
         try {
-            setLoading(true);
+            if (showLoading) setLoading(true);
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
                 navigate('/login');
@@ -699,7 +699,7 @@ const AdminDashboard = () => {
         } catch (error) {
             console.error('Core Refresh Failed:', error);
         } finally {
-            setLoading(false);
+            if (showLoading) setLoading(false);
         }
     };
     const [tabSearchTerms, setTabSearchTerms] = useState({
@@ -1154,11 +1154,7 @@ const AdminDashboard = () => {
                 amount: req.amount || 0,
                 transaction_date: new Date().toISOString(),
                 status: 'Funds Disbursed',
-                metadata: {
-                    claim_id: req.id,
-                    employee_id: req.initiated_by,
-                    approved_by: req.final_approver_name
-                }
+                status: 'Funds Disbursed'
             }]);
         }
     };
@@ -1452,19 +1448,18 @@ const AdminDashboard = () => {
                 );
             case 'students':
                 return (
-                    <>
-                        <marquee style={{ background: '#2c5282', color: 'white', padding: '10px 0', fontSize: '0.9rem', fontWeight: 800, borderRadius: '15px 15px 0 0' }}>
-                            🎓 Viksit Bharath Fellowship – Empowering youth leaders for grassroots social transformation.
-                        </marquee>
-                        <marquee behavior="alternate" style={{ background: '#f8fafc', color: '#2c5282', padding: '5px 0', fontSize: '0.8rem', fontWeight: 700, borderBottom: '1.5px solid #e2e8f0' }}>
-                            📑 Fellowship stipend is performance & attendance based and subject to multi-level approval.
-                        </marquee>
-                        <StudentTab students={students} onDelete={deleteStudent} handleAction={handleAction} onExport={exportToCSV} onView={(s) => { setSelectedStudent(s); setModalType('student-details'); setIsModalOpen(true); }} />
-                    </>
+                    <StudentTab
+                        students={students}
+                        onDelete={deleteStudent}
+                        handleAction={handleAction}
+                        onExport={exportToCSV}
+                        onView={(s) => { setSelectedStudent(s); setModalType('student-details'); setIsModalOpen(true); }}
+                        onAdd={() => { setModalType('manual-fellow'); setIsModalOpen(true); }}
+                    />
                 );
             case 'scholarships':
                 return <ScholarshipTab scholarships={scholarships} handleAction={handleAction} onDelete={deleteScholarship} onExport={exportToCSV} onView={(s) => { setSelectedScholarship(s); setModalType('scholarship-details'); setIsModalOpen(true); }} />;
-            case 'finance': return <FinanceTab finances={finances} onDelete={deleteFinanceEntry} onExport={exportToCSV} />;
+            case 'finance': return <FinanceTab finances={finances} onDelete={deleteFinanceEntry} onExport={exportToCSV} onAdd={() => { setModalType('cash-payment'); setIsModalOpen(true); }} />;
             case 'reports': return (
                 <ReportsTab
                     reports={reports}
@@ -1763,6 +1758,26 @@ const AdminDashboard = () => {
                                     } else {
                                         if (error.code === '23505') alert('CONFLICT: Attendance for this employee on this date already exists.');
                                         else alert('Logging failed: ' + error.message);
+                                    }
+                                }}
+                            />
+                        )}
+                        {modalType === 'cash-payment' && (
+                            <CashPaymentForm
+                                onClose={() => setIsModalOpen(false)}
+                                onSave={async (cashData) => {
+                                    const { payment_mode, ...insertData } = cashData;
+                                    const finalData = {
+                                        ...insertData,
+                                        category_context: `[${payment_mode || 'Cash'}] ${insertData.category_context}`
+                                    };
+                                    const { error } = await supabase.from('finance_logs').insert([finalData]);
+                                    if (!error) {
+                                        await logActivity(`Manual Cash Entry: ${finalData.category_context}`, 'Treasury');
+                                        fetchDashboardData();
+                                        setIsModalOpen(false);
+                                    } else {
+                                        alert('Cash entry failed: ' + error.message);
                                     }
                                 }}
                             />
@@ -2296,6 +2311,50 @@ const AdminDashboard = () => {
                                         fetchTabData('compliance');
                                         setIsModalOpen(false);
                                     } else alert(error.message);
+                                }}
+                            />
+                        )}
+                        {modalType === 'manual-fellow' && (
+                            <ManualFellowForm
+                                onClose={() => setIsModalOpen(false)}
+                                onSave={async (fellowData) => {
+                                    const { payment_amount, payment_date, ...student } = fellowData;
+
+                                    // 1. Insert into students
+                                    const { data: newStudent, error: studError } = await supabase
+                                        .from('students')
+                                        .insert([{
+                                            ...student,
+                                            status: 'Approved',
+                                            student_id: `BCLL-F-${Math.floor(1000 + Math.random() * 9000)}`
+                                        }])
+                                        .select()
+                                        .single();
+
+                                    if (studError) {
+                                        alert('Student registration failed: ' + studError.message);
+                                        return;
+                                    }
+
+                                    // 2. Insert into finance_logs
+                                    const { error: finError } = await supabase
+                                        .from('finance_logs')
+                                        .insert([{
+                                            transaction_date: payment_date,
+                                            category_context: `[CASH] Fellowship Fee: ${fellowData.student_name} (${newStudent.student_id})`,
+                                            amount: payment_amount,
+                                            type: 'Donation',
+                                            status: 'Audited'
+                                        }]);
+
+                                    if (finError) {
+                                        alert('Student registered but payment log failed: ' + finError.message);
+                                    } else {
+                                        await logActivity(`Manual Intake: Registered ${fellowData.student_name} (Cash Payment)`, 'Operations');
+                                        fetchDashboardData();
+                                        setIsModalOpen(false);
+                                        alert('Fellow registered and payment logged successfully!');
+                                    }
                                 }}
                             />
                         )}
@@ -3425,7 +3484,7 @@ const AttendanceTab = ({ attendance, employees, onAdd, onExport, onLock, onActio
     );
 };
 
-const StudentTab = ({ students, onView, onDelete, handleAction, onExport }) => {
+const StudentTab = ({ students, onView, onDelete, handleAction, onExport, onAdd }) => {
     const [filterStatus, setFilterStatus] = useState('All');
     const [filterProgram, setFilterProgram] = useState('All');
     const [filterCollege, setFilterCollege] = useState('All');
@@ -3442,9 +3501,18 @@ const StudentTab = ({ students, onView, onDelete, handleAction, onExport }) => {
 
     return (
         <div className="content-panel">
-            <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-                <h3 style={{ margin: 0 }}>Academic Registrations</h3>
+            <marquee style={{ background: '#2c5282', color: 'white', padding: '10px 0', fontSize: '0.9rem', fontWeight: 800, borderRadius: '15px 15px 0 0' }}>
+                🎓 Viksit Bharath Fellowship – Empowering youth leaders for grassroots social transformation.
+            </marquee>
+            <marquee behavior="alternate" style={{ background: '#f8fafc', color: '#2c5282', padding: '5px 0', fontSize: '0.8rem', fontWeight: 700, borderBottom: '1.5px solid #e2e8f0' }}>
+                📑 Fellowship stipend is performance & attendance based and subject to multi-level approval.
+            </marquee>
+            <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', marginTop: '15px' }}>
+                <h3 style={{ margin: 0 }}>Academic Registrations (Fellows)</h3>
                 <div style={{ display: 'flex', gap: '12px' }}>
+                    <button className="btn-premium" onClick={onAdd} style={{ background: '#2D3748', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <FaUserPlus /> Manually Register Fellow (Cash)
+                    </button>
                     <button
                         className="btn-small"
                         onClick={() => onExport(filteredData, 'Student_Registrations')}
@@ -3607,7 +3675,7 @@ const ScholarshipTab = ({ scholarships, handleAction, onDelete, onExport, onView
     );
 };
 
-const FinanceTab = ({ finances, onDelete, onExport }) => {
+const FinanceTab = ({ finances, onDelete, onExport, onAdd }) => {
     const [filterType, setFilterType] = useState('All');
     const filteredData = (finances || []).filter(f => filterType === 'All' || f.type === filterType);
 
@@ -3615,42 +3683,50 @@ const FinanceTab = ({ finances, onDelete, onExport }) => {
         <div className="content-panel">
             <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
                 <marquee style={{ background: '#f8fafc', color: '#1a365d', padding: '10px 0', fontSize: '0.9rem', fontWeight: 'bold', borderRadius: '15px 15px 0 0' }}>
-                    🔐 Financial transactions, salaries & stipends are processed only through bank transfers as per policy.
+                    🔐 Financial transactions, salaries & stipends are typically processed through bank transfers. Cash entries are for petty expenses & authorized manual receipts.
                 </marquee>
-                <h3 style={{ margin: 0 }}>Treasury & Payroll Log</h3>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                    <select
-                        value={filterType}
-                        onChange={(e) => setFilterType(e.target.value)}
-                        style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.85rem' }}
-                    >
-                        <option value="All">All Types</option>
-                        <option value="Donation">Donation</option>
-                        <option value="Salary">Salary</option>
-                        <option value="Expense">Expense</option>
-                    </select>
-                    <button className="btn-small" onClick={() => onExport(filteredData, 'Finance_Log')} style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}>
-                        <FaDownload /> Export
-                    </button>
-                    <button className="btn-small"><FaFileInvoiceDollar /> Generate Slips</button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center', marginTop: '10px' }}>
+                    <h3 style={{ margin: 0 }}>Treasury & Payroll Log</h3>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                        <select
+                            value={filterType}
+                            onChange={(e) => setFilterType(e.target.value)}
+                            style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.85rem' }}
+                        >
+                            <option value="All">All Types</option>
+                            <option value="Donation">Donation</option>
+                            <option value="Salary">Salary</option>
+                            <option value="Expense">Expense</option>
+                        </select>
+                        <button className="btn-small" onClick={() => onExport(filteredData, 'Finance_Log')} style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}>
+                            <FaDownload /> Export
+                        </button>
+                        <button className="btn-premium" onClick={onAdd} style={{ background: '#B7791F' }}><FaPlusCircle /> Add Cash Entry</button>
+                        <button className="btn-small"><FaFileInvoiceDollar /> Generate Slips</button>
+                    </div>
                 </div>
             </div>
             <table className="data-table" role="table">
-                <thead><tr><th>Date</th><th>Type</th><th>Allocation Context</th><th>Amount</th><th>Audit</th><th>Actions</th></tr></thead>
+                <thead><tr><th>Date</th><th>Type</th><th>Mode</th><th>Allocation Context</th><th>Amount</th><th>Audit</th><th>Actions</th></tr></thead>
                 <tbody>
                     {filteredData.length > 0 ? filteredData.map(f => (
                         <tr key={f.id} role="row">
                             <td>{f.transaction_date || f.date}</td>
                             <td>{f.type}</td>
+                            <td>
+                                <span className={`badge ${(f.payment_mode === 'Cash' || f.metadata?.payment_mode === 'Cash' || f.category_context?.includes('[CASH]')) ? 'warning' : 'blue'}`}>
+                                    {f.payment_mode || f.metadata?.payment_mode || (f.category_context?.includes('[CASH]') ? 'Cash' : 'Bank')}
+                                </span>
+                            </td>
                             <td>{f.category_context || '-'}</td>
                             <td><strong>₹ {Number(f.amount).toLocaleString()}</strong></td>
-                            <td><span className="badge success">{f.status || 'Audited'}</span></td>
+                            <td><span className={`badge ${f.status === 'Audited' ? 'success' : 'warning'}`}>{f.status || 'Audited'}</span></td>
                             <td>
                                 <button className="btn-icon danger" onClick={() => onDelete(f.id, f.category_context || f.type)} title="Delete entry"><FaTrash /></button>
                             </td>
                         </tr>
                     )) : (
-                        <tr><td colSpan="6" style={{ textAlign: 'center', padding: '40px' }}>No financial records found.</td></tr>
+                        <tr><td colSpan="7" style={{ textAlign: 'center', padding: '40px' }}>No financial records found.</td></tr>
                     )}
                 </tbody>
             </table>
@@ -7018,6 +7094,190 @@ const CsrProjectForm = ({ onClose, onSave }) => {
             <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end', marginTop: '30px' }}>
                 <button className="btn-small" onClick={onClose}>Cancel</button>
                 <button className="btn-add" style={{ background: '#2C5282' }} onClick={() => onSave(formData)}>Initiate Project Tracking</button>
+            </div>
+        </div>
+    );
+};
+
+const CashPaymentForm = ({ onClose, onSave }) => {
+    const [formData, setFormData] = useState({
+        transaction_date: new Date().toISOString().split('T')[0],
+        category_context: '',
+        amount: '',
+        type: 'Expense',
+        status: 'Audited',
+        payment_mode: 'Cash'
+    });
+
+    return (
+        <div style={{ padding: '40px' }}>
+            <h3 style={{ marginBottom: '25px', color: '#1a365d' }}>Institutional Cash Transaction Registry</h3>
+            <div style={{ background: '#fffaf0', border: '1px solid #feebc8', padding: '15px', borderRadius: '12px', marginBottom: '25px', color: '#9c4221', fontSize: '0.9rem' }}>
+                <strong>⚠️ COMPLIANCE NOTE:</strong> Direct cash transactions are restricted to petty expenses and manual inflows. Large scale transfers must be done via Bank Portal.
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px', marginBottom: '20px' }}>
+                <div className="form-group">
+                    <label>Accounting Type</label>
+                    <select className="form-control" value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })}>
+                        <option value="Expense">Expense (Outflow)</option>
+                        <option value="Donation">Donation (Inflow)</option>
+                        <option value="Salary">Salary (Petty Cash)</option>
+                    </select>
+                </div>
+                <div className="form-group">
+                    <label>Transaction Date</label>
+                    <input className="form-control" type="date" value={formData.transaction_date} onChange={e => setFormData({ ...formData, transaction_date: e.target.value })} />
+                </div>
+                <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                    <label>Allocation Context / Master Description</label>
+                    <input className="form-control" placeholder="e.g. Purchase of local logistics, Refreshments for Board Meeting, etc." value={formData.category_context} onChange={e => setFormData({ ...formData, category_context: e.target.value })} />
+                </div>
+                <div className="form-group">
+                    <label>Amount (₹)</label>
+                    <input className="form-control" type="number" placeholder="0.00" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} />
+                </div>
+                <div className="form-group">
+                    <label>Verification Status</label>
+                    <select className="form-control" value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
+                        <option value="Audited">Audited & Finalized</option>
+                        <option value="Pending Review">Pending Audit</option>
+                    </select>
+                </div>
+            </div>
+            <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end', marginTop: '30px' }}>
+                <button className="btn-small" onClick={onClose}>Cancel</button>
+                <button className="btn-premium" style={{ background: '#2d3748' }} onClick={() => onSave(formData)}>
+                    <FaPlusCircle /> Formalize Cash Entry
+                </button>
+            </div>
+        </div>
+    );
+};
+
+const ManualFellowForm = ({ onClose, onSave }) => {
+    const [formData, setFormData] = useState({
+        student_name: '',
+        phone: '',
+        email: '',
+        dob: '',
+        aadhaar_no: '',
+        college_org: '',
+        program: '',
+        academic_year: '',
+        acc_holder: '',
+        bank_name: '',
+        ifsc_code: '',
+        acc_no: '',
+        payment_amount: '',
+        payment_date: new Date().toISOString().split('T')[0],
+        status: 'Approved'
+    });
+
+    return (
+        <div style={{ padding: '40px', overflowY: 'auto', maxHeight: '80vh' }}>
+            <h3 style={{ marginBottom: '25px', color: '#1a365d' }}>Manual Fellow Intake (Complete Registration)</h3>
+            <div style={{ background: '#f0fff4', border: '1px solid #c6f6d5', padding: '15px', borderRadius: '12px', marginBottom: '25px', color: '#2f855a', fontSize: '0.9rem' }}>
+                <strong>✅ COMPREHENSIVE REGISTRY:</strong> This form performs a full intake, including personal, academic, and financial data for payroll.
+            </div>
+
+            <div style={{ marginBottom: '30px' }}>
+                <h4 style={{ fontSize: '0.8rem', color: '#718096', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '15px', borderBottom: '1px solid #e2e8f0', paddingBottom: '5px' }}>Personal Information</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                        <label>Full Legal Name</label>
+                        <input className="form-control" placeholder="Enter name as per Aadhaar" value={formData.student_name} onChange={e => setFormData({ ...formData, student_name: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                        <label>Mobile Number</label>
+                        <input className="form-control" placeholder="+91 XXXXX XXXXX" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                        <label>Personal Email</label>
+                        <input className="form-control" type="email" placeholder="example@email.com" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                        <label>Date of Birth</label>
+                        <input className="form-control" type="date" value={formData.dob} onChange={e => setFormData({ ...formData, dob: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                        <label>Aadhaar ID (Last 4 Digits or Full)</label>
+                        <input className="form-control" placeholder="XXXX XXXX XXXX" value={formData.aadhaar_no} onChange={e => setFormData({ ...formData, aadhaar_no: e.target.value })} />
+                    </div>
+                </div>
+            </div>
+
+            <div style={{ marginBottom: '30px' }}>
+                <h4 style={{ fontSize: '0.8rem', color: '#718096', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '15px', borderBottom: '1px solid #e2e8f0', paddingBottom: '5px' }}>Academic Context</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div className="form-group">
+                        <label>Assigned Program / Track</label>
+                        <select className="form-control" value={formData.program} onChange={e => setFormData({ ...formData, program: e.target.value })}>
+                            <option value="">Select Track</option>
+                            {PROGRAM_TRACKS.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                    </div>
+                    <div className="form-group">
+                        <label>College / Organization</label>
+                        <select className="form-control" value={formData.college_org} onChange={e => setFormData({ ...formData, college_org: e.target.value })}>
+                            <option value="">Select Institution</option>
+                            {COLLEGES.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                    </div>
+                    <div className="form-group">
+                        <label>Current Academic Year</label>
+                        <select className="form-control" value={formData.academic_year} onChange={e => setFormData({ ...formData, academic_year: e.target.value })}>
+                            <option value="">Select Year</option>
+                            <option value="1st Year">1st Year</option>
+                            <option value="2nd Year">2nd Year</option>
+                            <option value="3rd Year">3rd Year</option>
+                            <option value="4th Year">4th Year</option>
+                            <option value="Completed">Completed / Alumni</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div style={{ marginBottom: '30px' }}>
+                <h4 style={{ fontSize: '0.8rem', color: '#718096', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '15px', borderBottom: '1px solid #e2e8f0', paddingBottom: '5px' }}>Financial & Remittance Details</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div className="form-group">
+                        <label>Bank Account Holder Name <span style={{ color: '#a0aec0', fontSize: '0.7rem', fontWeight: 'normal' }}>(Optional)</span></label>
+                        <input className="form-control" placeholder="Name as per Bank Record" value={formData.acc_holder} onChange={e => setFormData({ ...formData, acc_holder: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                        <label>Bank Institution Name <span style={{ color: '#a0aec0', fontSize: '0.7rem', fontWeight: 'normal' }}>(Optional)</span></label>
+                        <input className="form-control" placeholder="e.g. HDFC, ICICI, SBI" value={formData.bank_name} onChange={e => setFormData({ ...formData, bank_name: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                        <label>Bank Account Number <span style={{ color: '#a0aec0', fontSize: '0.7rem', fontWeight: 'normal' }}>(Optional)</span></label>
+                        <input className="form-control" placeholder="XXXX XXXX XXXX XXXX" value={formData.acc_no} onChange={e => setFormData({ ...formData, acc_no: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                        <label>IFSC Code <span style={{ color: '#a0aec0', fontSize: '0.7rem', fontWeight: 'normal' }}>(Optional)</span></label>
+                        <input className="form-control" placeholder="HDFC0001234" value={formData.ifsc_code} onChange={e => setFormData({ ...formData, ifsc_code: e.target.value })} />
+                    </div>
+                </div>
+            </div>
+
+            <div style={{ marginBottom: '10px' }}>
+                <h4 style={{ fontSize: '0.8rem', color: '#718096', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '15px', borderBottom: '1px solid #e2e8f0', paddingBottom: '5px' }}>Admission Fee Payment (Cash)</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div className="form-group">
+                        <label>Cash Amount Received (₹)</label>
+                        <input className="form-control" type="number" placeholder="5000" value={formData.payment_amount} onChange={e => setFormData({ ...formData, payment_amount: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                        <label>Payment Registry Date</label>
+                        <input className="form-control" type="date" value={formData.payment_date} onChange={e => setFormData({ ...formData, payment_date: e.target.value })} />
+                    </div>
+                </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end', marginTop: '30px', borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
+                <button className="btn-small" onClick={onClose}>Cancel</button>
+                <button className="btn-premium" style={{ background: '#2D3748' }} onClick={() => onSave(formData)}>
+                    <FaCheckCircle /> Register Fellow & Authorize Payment
+                </button>
             </div>
         </div>
     );
