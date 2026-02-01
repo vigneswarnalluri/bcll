@@ -8,7 +8,9 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
+# dist (uncommented to track build output)
+# dist
+
 
 dist-ssr
 *.local
