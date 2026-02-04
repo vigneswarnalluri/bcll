@@ -16,6 +16,7 @@ import {
     HiOutlineBadgeCheck,
     HiOutlinePhone,
     HiOutlineMail,
+    HiOutlineDownload,
 } from 'react-icons/hi';
 import { FaWhatsapp } from 'react-icons/fa';
 import './Fellowship.css';
@@ -541,6 +542,8 @@ const Fellowship = () => {
                         <BenefitItem icon={<HiOutlineUserGroup />} title="P4 Model" desc="Ensuring collaborative participation (P-P-P-P)." />
                         <BenefitItem icon={<HiOutlineShieldCheck />} title="Digital Inclusion" desc="Technological empowerment across academic ecosystems." />
                     </div>
+
+
                 </div>
             </section>
 
@@ -819,6 +822,26 @@ const Fellowship = () => {
                                         </div>
                                     </div>
                                 )}
+
+                                <div style={{ marginBottom: '16px', textAlign: 'center' }}>
+                                    <a
+                                        href="/documents/APSCHE_Fellowship_Notification.pdf"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            fontSize: '0.85rem',
+                                            color: 'var(--f-primary)',
+                                            fontWeight: 600,
+                                            textDecoration: 'underline'
+                                        }}
+                                    >
+                                        <HiOutlineDownload style={{ fontSize: '1rem' }} />
+                                        Download Official APSCHE Notification (PDF)
+                                    </a>
+                                </div>
 
                                 <div className="form-support-notice">
                                     <HiOutlinePhone className="support-mini-icon" />

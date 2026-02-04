@@ -55,7 +55,7 @@
 /* Professional Buttons */
 .fellowship-page .f-btn {
     padding: 16px 40px;
-    border-radius: 12px;
+    border-radius: 0;
     font-weight: 700;
     cursor: pointer;
     border: none;
@@ -896,9 +896,10 @@ body.modal-open {
 .modal-container {
     background: white;
     width: 95%;
-    max-width: 950px;
-    /* Extra large form layout */
-    border-radius: 24px;
+    max-width: 750px;
+    /* Reduced width */
+    border-radius: 0;
+    /* Sharp corners */
     box-shadow: 0 40px 80px rgba(0, 0, 0, 0.4);
     margin: 30px auto;
     overflow: hidden;
@@ -936,7 +937,7 @@ body.modal-open {
     cursor: pointer;
     color: #1e293b;
     line-height: 1;
-    border-radius: 50%;
+    border-radius: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -970,7 +971,7 @@ body.modal-open {
     cursor: pointer;
     color: var(--f-primary);
     line-height: 1;
-    border-radius: 50%;
+    border-radius: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -988,8 +989,8 @@ body.modal-open {
 
 
 .modal-body {
-    padding: 40px 50px;
-    /* Very spacious padding */
+    padding: 24px 32px;
+    /* Reduced padding */
 }
 
 .formal-form {
@@ -1043,11 +1044,11 @@ body.modal-open {
 .form-group input,
 .form-group select {
     width: 100%;
-    padding: 18px 20px;
-    /* Extra large inputs */
+    padding: 12px 16px;
+    /* Reduced padding */
     border: 1.5px solid var(--f-border);
-    border-radius: 14px;
-    font-size: 1.05rem;
+    border-radius: 0;
+    font-size: 1rem;
     font-weight: 500;
     transition: all 0.2s ease;
     background: #fcfcfc;
@@ -1088,7 +1089,7 @@ body.modal-open {
     width: 24px;
     height: 4px;
     background: var(--f-border);
-    border-radius: 2px;
+    border-radius: 0;
     transition: all 0.3s ease;
 }
 
