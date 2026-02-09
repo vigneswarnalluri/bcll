@@ -41,12 +41,12 @@ const Reports = () => {
 const ReportSection = ({ title, items }) => {
     const handleDownload = (item) => {
         if (item.url && item.url !== '#') {
-             const link = document.createElement('a');
-             link.href = item.url;
-             link.download = item.label;
-             document.body.appendChild(link);
-             link.click();
-             document.body.removeChild(link);
+            const link = document.createElement('a');
+            link.href = item.url;
+            link.download = item.label;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         } else {
             alert(`Starting download for: ${item.label}.\nNote: This is a demo. Actual files will be available on the production server.`);
         }
@@ -61,12 +61,12 @@ const ReportSection = ({ title, items }) => {
                         <div className="file-info">
                             <FaFilePdf className="file-icon" />
                             <span>{item.label}</span>
-                        </div>
+                        </div >
                         <button className="download-btn" onClick={() => handleDownload(item)}><FaDownload /></button>
-                    </li>
+                    </li >
                 ))}
-            </ul>
-        </div>
+            </ul >
+        </div >
     );
 };
 

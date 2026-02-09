@@ -12,7 +12,6 @@
   "dependencies": {
     "@glidejs/glide": "^3.7.1",
     "@supabase/supabase-js": "^2.90.0",
-    "all": "^0.0.0",
     "jspdf": "^4.0.0",
     "jspdf-autotable": "^5.0.7",
     "react": "^19.2.0",
