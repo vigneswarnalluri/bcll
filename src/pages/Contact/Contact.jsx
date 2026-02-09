@@ -80,6 +80,16 @@ const Contact = () => {
                                 <p>Bharath Cares Life Line Foundation</p>
                                 <p>Guntur D.No: 135-3-38, 7th line, Vijayapuri Colony</p>
                                 <p>JKC Road, Guntur-522006, Andhra Pradesh, India</p>
+                                <p style={{ marginTop: '10px' }}>
+                                    <a
+                                        href="https://www.google.com/maps/dir/?api=1&destination=BHARATH+CARES+LIFELINE+FOUNDATION"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{ color: 'var(--primary)', fontWeight: 'bold' }}
+                                    >
+                                        Get Directions
+                                    </a>
+                                </p>
                             </div>
                         </div>
 
