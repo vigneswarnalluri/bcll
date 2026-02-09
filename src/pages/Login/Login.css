@@ -1,0 +1,228 @@
+.login-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #1a237e;
+    /* Deep branding blue */
+    background-image: radial-gradient(circle at 50% 50%, #1a237e 0%, #0d1238 100%);
+    padding: 20px;
+    font-family: 'Inter', sans-serif;
+    position: relative;
+    /* For absolute positioning of child */
+}
+
+.back-btn-top {
+    position: absolute;
+    top: 30px;
+    left: 30px;
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+
+.back-btn-top:hover {
+    color: #ffffff;
+    transform: translateX(-5px);
+}
+
+.login-box {
+    background: #ffffff;
+    width: 100%;
+    max-width: 440px;
+    padding: 50px 40px;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 35px;
+}
+
+.login-header h2 {
+    color: #1a237e;
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+}
+
+.login-header p {
+    color: #666;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.role-switch {
+    display: flex;
+    background: #ebebeb;
+    padding: 4px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+}
+
+.role-btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: #666;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.role-btn.active {
+    background: #ffffff;
+    color: #1a237e;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.login-form .form-group {
+    margin-bottom: 24px;
+}
+
+.login-form label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #444;
+}
+
+.login-form input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 1rem;
+    color: #1f2937;
+    transition: all 0.2s;
+    background-color: #fff;
+}
+
+.login-form input:focus {
+    border-color: #1a237e;
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(26, 35, 126, 0.05);
+}
+
+.login-form input::placeholder {
+    color: #9ca3af;
+}
+
+.btn-secure {
+    width: 100%;
+    background-color: #1a237e;
+    color: #ffffff;
+    padding: 16px;
+    border-radius: 50px;
+    /* Pill shape like high-end apps */
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 10px;
+    box-shadow: 0 4px 20px rgba(26, 35, 126, 0.2);
+}
+
+.btn-secure:hover:not(:disabled) {
+    background-color: #121858;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(26, 35, 126, 0.3);
+}
+
+.btn-secure:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.btn-secure:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    background-color: #9ca3af;
+}
+
+.login-footer {
+    margin-top: 35px;
+    text-align: center;
+    border-top: none;
+    /* Premium looks often skip explicit border if spacing is good */
+}
+
+.login-footer p {
+    font-size: 0.85rem;
+    color: #888;
+    font-weight: 500;
+}
+
+/* Error Message Styling */
+.login-error {
+    background-color: #fee2e2;
+    color: #b91c1c;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-align: center;
+    border: 1px solid #fecaca;
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-4px);
+    }
+
+    75% {
+        transform: translateX(4px);
+    }
+}
+
+/* RESPONSIVE */
+@media (max-width: 480px) {
+    .login-box {
+        padding: 40px 25px;
+    }
+
+    .login-header h2 {
+        font-size: 1.8rem;
+    }
+
+    .back-btn-top {
+        top: 20px;
+        left: 20px;
+        font-size: 0.85rem;
+    }
+}
+
+/* OTP Grid Interaction */
+.login-box div input[id^="otp-"] {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.login-box div input[id^="otp-"]:focus {
+    border-color: #1a237e !important;
+    background-color: #ffffff !important;
+    box-shadow: 0 4px 15px rgba(26, 35, 126, 0.2);
+    transform: translateY(-2px);
+}

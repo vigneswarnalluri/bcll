@@ -1,0 +1,110 @@
+.reports-header {
+    background-color: #1a237e;
+    /* Fallback */
+    background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=1920&q=80');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    color: white !important;
+    text-align: center;
+    padding: 200px 20px 100px;
+    margin-bottom: 40px;
+}
+
+.reports-header h1 {
+    color: white !important;
+    font-size: 3rem;
+    font-weight: 800;
+}
+
+.reports-header p {
+    color: rgba(255, 255, 255, 0.9) !important;
+    font-size: 1.2rem;
+}
+
+.reports-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 30px;
+}
+
+.report-card {
+    background: var(--white);
+    padding: 25px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    border-top: 4px solid var(--secondary);
+}
+
+.report-card h3 {
+    margin-bottom: 20px;
+    color: var(--primary);
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 10px;
+}
+
+.file-list {
+    list-style: none;
+}
+
+.file-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: #f9f9f9;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    border: 1px solid #eee;
+    transition: 0.3s;
+}
+
+.file-list li:hover {
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border-color: #ddd;
+}
+
+.file-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.file-icon {
+    color: #d32f2f;
+    /* PDF Red */
+    font-size: 1.2rem;
+}
+
+.download-btn {
+    background: transparent;
+    color: var(--text-light);
+    font-size: 1rem;
+    padding: 5px;
+}
+
+.download-btn:hover {
+    color: var(--primary);
+}
+
+@media (max-width: 768px) {
+    .reports-header {
+        padding: 110px 20px 40px;
+        text-align: center;
+    }
+
+    .reports-header h1 {
+        font-size: 2.2rem;
+        text-align: center;
+    }
+
+    .reports-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .report-card {
+        padding: 20px;
+    }
+}

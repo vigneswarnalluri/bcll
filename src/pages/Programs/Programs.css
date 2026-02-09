@@ -1,0 +1,581 @@
+/* === 1. HERO (Simple & Focused) === */
+.prog-hero {
+    background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('/image copy 11.png') no-repeat center center/cover;
+    padding: 200px 20px 100px;
+    text-align: center;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.prog-hero h1 {
+    font-size: 3rem;
+    color: white;
+    margin-bottom: 20px;
+    font-weight: 800;
+}
+
+.prog-hero p {
+    font-size: 1.25rem;
+    color: rgba(255, 255, 255, 0.9);
+    max-width: 800px;
+    margin: 0 auto;
+    font-weight: 500;
+}
+
+.prog-search-wrapper {
+    margin: 40px auto 0;
+    max-width: 600px;
+}
+
+.prog-search-relative {
+    position: relative;
+    width: 100%;
+}
+
+.prog-search-icon {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #666;
+    font-size: 1.2rem;
+}
+
+.prog-search-input {
+    width: 100%;
+    padding: 18px 20px 18px 60px;
+    border-radius: 50px;
+    border: none;
+    font-size: 1.1rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    outline: none;
+    transition: all 0.3s ease;
+    background: white;
+    color: var(--text);
+}
+
+.prog-search-input:focus {
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
+}
+
+/* === 2. PROCESS FLOW (Identify -> Support -> Reintegrate) === */
+.process-flow {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 40px;
+    margin-top: 50px;
+    position: relative;
+    max-width: 1000px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.process-step {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    padding: 0 10px;
+}
+
+.p-icon-circle {
+    width: 80px;
+    height: 80px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    /* Soft shadow lift */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: var(--primary);
+    margin-bottom: 20px;
+    z-index: 2;
+    border: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+.process-step h3 {
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+    color: var(--primary-dark);
+    font-weight: 700;
+}
+
+.process-step p {
+    font-size: 0.95rem;
+    color: #666;
+    line-height: 1.4;
+}
+
+/* Connecting Line */
+.p-line {
+    position: absolute;
+    top: 40px;
+    left: 50%;
+    width: 100%;
+    height: 2px;
+    background: #e0e0e0;
+    z-index: 0;
+}
+
+/* === 3. CORE PROGRAMS GRID (2 Rows x 4 Cols) === */
+/* === 3. CORE PROGRAMS GRID (Architectural Overlap Layout) === */
+.prog-grid-section {
+    background-color: var(--accent);
+    /* Soft background */
+    padding: 100px 0;
+}
+
+.programs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+    /* Wide cards */
+    gap: 60px;
+}
+
+.prog-card {
+    position: relative;
+    min-height: 400px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    display: block;
+    /* Reset flex */
+    cursor: pointer;
+}
+
+
+
+
+.prog-img-container {
+    width: 85%;
+    /* Leave space for overlap */
+    height: 320px;
+    border-radius: 4px;
+    /* Sharper edges */
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+    transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.prog-img-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.7s ease;
+}
+
+/* Floating Content Card */
+.prog-info {
+    position: absolute;
+    bottom: 0;
+    right: 10px;
+    width: 55%;
+    /* Overlap width */
+    background: white;
+    padding: 30px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-direction: column;
+    border-radius: 4px;
+    /* Match image sharpness */
+    transition: all 0.4s ease;
+    z-index: 2;
+}
+
+/* Hover effect only triggers when covering over the info card itself */
+.prog-info:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+    /* bg shift */
+    background: var(--primary);
+}
+
+/* Text handling on hover */
+.prog-info h3 {
+    font-size: 1.4rem;
+    color: var(--primary-dark);
+    margin-bottom: 15px;
+    font-weight: 800;
+    transition: color 0.3s ease;
+}
+
+.prog-info:hover h3 {
+    color: white;
+}
+
+.prog-info p {
+    font-size: 0.95rem;
+    color: #666;
+    margin-bottom: 25px;
+    line-height: 1.6;
+    transition: color 0.3s ease;
+}
+
+.prog-info:hover p {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.learn-more-link {
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: color 0.3s ease, gap 0.3s ease;
+    align-self: flex-start;
+}
+
+.prog-info:hover .learn-more-link {
+    color: var(--secondary);
+    gap: 15px;
+    text-decoration: none;
+}
+
+.learn-more-link:hover,
+.prog-info:hover .learn-more-link:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
+
+/* Decorative Accent Line on Content Card */
+.prog-info::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 0;
+    background: var(--secondary);
+    transition: height 0.4s ease;
+}
+
+.prog-info:hover::before {
+    height: 100%;
+}
+
+
+/* Responsive */
+@media (max-width: 768px) {
+    .programs-grid {
+        grid-template-columns: 1fr;
+        gap: 80px;
+    }
+
+    .prog-card {
+        min-height: auto;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .prog-img-container {
+        width: 100%;
+        height: 250px;
+        order: -1;
+    }
+
+    .prog-info {
+        position: relative;
+        bottom: auto;
+        right: auto;
+        width: 90%;
+        margin: -50px auto 0;
+        /* Pull up to overlap */
+        padding: 25px;
+        border-radius: 8px;
+    }
+}
+
+/* === 4. FLAGSHIP HIGHLIGHT (Visual Standout) === */
+.prog-flagship {
+    background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+    /* Deep rich blue */
+    color: white;
+    padding: 0 !important;
+    /* Reset section padding for full container control if needed, but handled by section class usually. Override: */
+    border-radius: 20px;
+    margin: 80px auto;
+    max-width: 1200px;
+    /* Constrain width */
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(26, 35, 126, 0.3);
+}
+
+.flagship-content {
+    display: flex;
+    align-items: center;
+}
+
+.flagship-text {
+    flex: 1;
+    padding: 60px;
+}
+
+.flagship-img {
+    flex: 1;
+    height: 100%;
+    min-height: 450px;
+}
+
+.flagship-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.badge-flagship {
+    background: var(--secondary);
+    color: var(--primary-dark);
+    padding: 5px 15px;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    display: inline-block;
+    margin-bottom: 20px;
+}
+
+.flagship-text h2 {
+    font-size: 2.5rem;
+    margin-bottom: 20px;
+    color: white;
+}
+
+.flagship-text p {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.1rem;
+    margin-bottom: 30px;
+    line-height: 1.6;
+}
+
+.flagship-flow {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 30px;
+    font-weight: 600;
+    color: var(--secondary);
+}
+
+/* === 6. IMPACT SNAPSHOT (Credibility) === */
+.impact-list {
+    display: flex;
+    justify-content: center;
+    gap: 60px;
+    flex-wrap: wrap;
+    background: #f9f9f9;
+    padding: 40px;
+    border-radius: 12px;
+}
+
+.impact-item {
+    font-size: 1.1rem;
+    color: #333;
+    font-weight: 600;
+}
+
+/* === 7. SUPPORT OPTIONS (Split Large Cards) === */
+
+/* === 7. SUPPORT OPTIONS (Split Large Cards) === */
+/* === 7. SUPPORT OPTIONS (Side-by-Side Cards) === */
+.support-split-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.split-card {
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s ease;
+    border: 1px solid rgba(0, 0, 0, 0.02);
+    height: 100%;
+}
+
+.split-card:hover {
+    /* transform: translateY(-10px); Removed to stop movement */
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+}
+
+.split-img {
+    height: 240px;
+    width: 100%;
+    flex: none;
+}
+
+.split-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.split-content {
+    padding: 30px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    justify-content: space-between;
+}
+
+/* Enhance Buttons in Cards */
+.split-content .btn {
+    padding: 12px 30px;
+    border-radius: 50px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    width: 80%;
+    /* Consistent width */
+}
+
+/* Specific styling for Partner button - Outline Button with Standard Underline Hover */
+.split-content .btn-outline-primary {
+    border: 2px solid var(--primary);
+    background: transparent;
+    color: var(--primary);
+    padding: 12px 30px;
+    border-radius: 50px;
+    font-weight: 700;
+    width: 80%;
+    /* Usage of !important might be needed if utilities conflict, but usually locally scoped is fine */
+}
+
+/* Remove the pseudo-element underline animation */
+.split-content .btn-outline-primary::after {
+    content: none;
+}
+
+.split-content .btn-outline-primary:hover {
+    background: var(--primary);
+    color: var(--white);
+    box-shadow: 0 5px 15px rgba(26, 35, 126, 0.2);
+    /* primary-rgb approx */
+    transform: none !important;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
+
+/* Ensure Join Us button doesn't move */
+.split-content .btn-secondary:hover {
+    transform: none !important;
+    background-color: #e0e0e0;
+    /* Slight darken on hover */
+}
+
+.split-content h3 {
+    font-size: 1.5rem;
+    color: var(--primary-dark);
+    margin-bottom: 15px;
+    font-weight: 800;
+}
+
+.split-content p {
+    font-size: 1rem;
+    color: #555;
+    margin-bottom: 25px;
+    line-height: 1.6;
+}
+
+/* Responsive Mobile */
+@media (max-width: 768px) {
+    .support-split-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* === 8. TRANSPARENCY NOTE === */
+.prog-transparency {
+    padding: 30px 20px;
+    background: #fafafa;
+    border-top: 1px solid #eee;
+}
+
+.prog-transparency p {
+    margin-bottom: 10px;
+    color: #777;
+    font-size: 0.9rem;
+}
+
+.view-reports-link {
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 1024px) {
+    .programs-grid {
+        grid-template-columns: repeat(2, 1fr);
+        /* 2 Cols on Tablet */
+    }
+
+    .flagship-content {
+        flex-direction: column-reverse;
+    }
+
+    .flagship-img {
+        min-height: 300px;
+        width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .prog-hero {
+        padding: 110px 20px 40px;
+    }
+
+    .prog-hero h1 {
+        font-size: 2.5rem;
+    }
+
+    .process-flow {
+        flex-direction: column;
+        align-items: center;
+        gap: 30px;
+    }
+
+    .p-line {
+        display: none;
+    }
+
+    /* Remove lines on mobile stack */
+    .programs-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* 1 Col Mobile */
+    .support-split-list {
+        gap: 30px;
+    }
+
+    .impact-list {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+    }
+}
